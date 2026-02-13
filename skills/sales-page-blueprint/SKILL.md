@@ -106,7 +106,7 @@ Unlike traditional pages that lead with features, high-converting pages follow t
 
 - **Page Architecture**: `references/sales-page-section-by-section-guide.md` - Complete structural blueprint
 - **Conversion Elements**: `references/conversion-elements-library.md` - Value stacking and conversion element methodology
-- **Full Template**: `templates/full-sales-page-template.md` - Fill-in-the-blanks framework
+- **Full Template**: `templates/sales-page-copy-template.md` - Fill-in-the-blanks framework
 
 ## Best Practices
 
