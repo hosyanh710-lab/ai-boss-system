@@ -453,7 +453,7 @@ Use exact bank names as listed in the banks.json file. Common formats:
 
 ## Reference Files
 
-- **sepay-embed-guide.md**: Quick reference for QR URL format, parameters, bank codes, and embed snippets
+- **`references/sepay-embed-guide.md`**: Quick reference for QR URL format, parameters, bank codes, and embed snippets
 
 ## Resources
 

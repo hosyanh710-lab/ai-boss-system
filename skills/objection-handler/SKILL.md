@@ -107,10 +107,10 @@ Understanding objection types enables targeted responses:
 
 ## Reference Files
 
-Detailed frameworks and templates in `/references/`:
+Detailed frameworks and templates in `references/`:
 
-- **objection-classification-framework.md**: Objections organized by category with hidden concerns and response directions
-- **objection-response-library.md**: Complete frameworks for handling objections with examples and response templates
+- **`references/objection-classification-framework.md`**: Objections organized by category with hidden concerns and response directions
+- **`references/objection-response-library.md`**: Complete frameworks for handling objections with examples and response templates
 
 ## Best Practices
 

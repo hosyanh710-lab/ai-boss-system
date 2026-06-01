@@ -161,9 +161,9 @@ Proven patterns for the Vietnamese market:
 
 ## Reference Files
 
-1. **`persuasion-formulas-library.md`** - Complete framework breakdowns with examples
-2. **`headline-and-hook-patterns.md`** - 50+ headline templates organized by intent
-3. **`power-words-and-emotional-triggers.md`** - Power words, emotional triggers, CTA formulas, psychological triggers
+1. **`references/persuasion-formulas-library.md`** - Complete framework breakdowns with examples
+2. **`references/headline-and-hook-patterns.md`** - 50+ headline templates organized by intent
+3. **`references/power-words-and-emotional-triggers.md`** - Power words, emotional triggers, CTA formulas, psychological triggers
 
 ## Integration with Other Skills
 
