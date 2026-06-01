@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi" class="scroll-smooth">
 <head>
   <meta charset="UTF-8">
@@ -99,7 +99,7 @@
 
   <!-- URGENCY BAR -->
   <div class="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 py-2 px-4 text-center text-white text-sm font-medium">
-    🔥 <span class="pulse-text">Còn <strong id="seats-count">47</strong> suất Early Bird — 4.990.000₫</span> · Giá thường: 7.990.000₫ · <a href="#pricing" class="underline font-bold">Đăng ký ngay →</a>
+    🔥 <span class="pulse-text">Còn <strong id="seats-count">47</strong> suất Early Bird — 4.990.000₫</span> · Giá thường: 7.990.000₫ · <a href="#dang-ky" class="underline font-bold">Đăng ký ngay →</a>
   </div>
 
   <!-- NAVBAR -->
@@ -112,12 +112,12 @@
       <div class="hidden md:flex items-center space-x-8">
         <a href="#features" class="text-gray-300 hover:text-white transition-colors duration-200">Nội dung</a>
         <a href="#how-it-works" class="text-gray-300 hover:text-white transition-colors duration-200">Quy trình</a>
-        <a href="#pricing" class="text-gray-300 hover:text-white transition-colors duration-200">Học phí</a>
+        <a href="#dang-ky" class="text-gray-300 hover:text-white transition-colors duration-200">Học phí</a>
         <a href="#faq" class="text-gray-300 hover:text-white transition-colors duration-200">FAQ</a>
       </div>
       <div class="flex items-center space-x-4">
-        <a href="#pricing" class="hidden sm:inline-block px-6 py-2.5 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold hover:shadow-lg hover:scale-105 transition-all duration-200">
-          Đăng ký ngay
+        <a href="#dang-ky" class="hidden sm:inline-block px-6 py-2.5 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold hover:shadow-lg hover:scale-105 transition-all duration-200">
+          Đăng Ký Ngay
         </a>
         <button id="mobile-menu-toggle" class="md:hidden text-white">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -129,9 +129,9 @@
     <div id="mobile-menu" class="hidden md:hidden mt-2 glass rounded-2xl p-6 flex flex-col space-y-4">
       <a href="#features" class="text-gray-300 hover:text-white py-2">Nội dung</a>
       <a href="#how-it-works" class="text-gray-300 hover:text-white py-2">Quy trình</a>
-      <a href="#pricing" class="text-gray-300 hover:text-white py-2">Học phí</a>
+      <a href="#dang-ky" class="text-gray-300 hover:text-white py-2">Học phí</a>
       <a href="#faq" class="text-gray-300 hover:text-white py-2">FAQ</a>
-      <a href="#pricing" class="px-6 py-2.5 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold text-center">Đăng ký ngay</a>
+      <a href="#dang-ky" class="px-6 py-2.5 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold text-center">Đăng ký ngay</a>
     </div>
   </nav>
 
@@ -177,7 +177,7 @@
       </div>
 
       <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-        <a href="#pricing" class="w-full sm:w-auto px-8 py-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300 glow-blue">
+        <a href="#dang-ky" class="w-full sm:w-auto px-8 py-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300 glow-blue">
           🚀 Tôi muốn AI hóa doanh nghiệp ngay →
         </a>
         <a href="#how-it-works" class="w-full sm:w-auto px-8 py-4 rounded-full border-2 border-white/20 text-white font-semibold text-lg hover:bg-white/10 transition-all duration-300">
@@ -526,7 +526,7 @@
               <li class="flex items-start gap-3"><svg class="w-6 h-6 text-yellow-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg><span class="text-yellow-300">⚡ Strategy Call 1:1 (còn 20 suất)</span></li>
             </ul>
 
-            <a href="#pricing" class="block w-full py-4 px-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white text-center font-bold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-200" style="box-shadow: 0 0 40px rgba(59,130,246,0.5);">
+            <a href="#dang-ky" class="block w-full py-4 px-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white text-center font-bold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-200" style="box-shadow: 0 0 40px rgba(59,130,246,0.5);">
               🔥 Đăng Ký Gói BOSS Ngay →
             </a>
           </div>
@@ -563,6 +563,185 @@
       </div>
     </div>
   </section>
+
+  <!-- REGISTRATION + PAYMENT MODAL -->
+  <div id="modal-dang-ky" class="hidden fixed inset-0 z-[100] flex items-center justify-center px-4 py-6">
+    <!-- Overlay -->
+    <div id="modal-overlay" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+    <!-- Modal box -->
+    <div class="relative z-10 w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl" style="background:#0F172A; border:1px solid rgba(255,255,255,0.1);">
+      <!-- Close button -->
+      <button id="modal-close" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white text-xl transition-all z-20">×</button>
+
+    <div class="p-8 md:p-10">
+      <div class="text-center mb-10">
+        <h2 class="text-3xl md:text-4xl font-bold text-white mb-3">Đăng Ký & Thanh Toán</h2>
+        <p class="text-gray-400">Điền thông tin → Chọn gói → Quét QR thanh toán ngay</p>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-8">
+
+        <!-- FORM CỘT TRÁI -->
+        <div class="glass rounded-2xl p-8">
+          <h3 class="text-xl font-bold text-white mb-6">📋 Thông Tin Đăng Ký</h3>
+          <form id="registration-form" class="space-y-5">
+
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-2">Họ và tên *</label>
+              <input type="text" id="reg-name" required placeholder="Nguyễn Văn A"
+                class="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-2">Số điện thoại *</label>
+              <input type="tel" id="reg-phone" required placeholder="0912 345 678"
+                class="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-2">Email *</label>
+              <input type="email" id="reg-email" required placeholder="email@congty.com"
+                class="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-2">Tên doanh nghiệp</label>
+              <input type="text" id="reg-company" placeholder="Công ty / Shop / Cửa hàng..."
+                class="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-2">Ngành nghề</label>
+              <select id="reg-industry"
+                class="w-full bg-slate-800 border border-white/20 rounded-xl px-4 py-3 text-gray-300 focus:outline-none focus:border-blue-500 transition-colors">
+                <option value="">-- Chọn ngành --</option>
+                <option value="banle">Bán lẻ / E-commerce</option>
+                <option value="fb">F&B / Nhà hàng / Cà phê</option>
+                <option value="dv">Dịch vụ chuyên nghiệp</option>
+                <option value="giaoduc">Giáo dục / Đào tạo</option>
+                <option value="spa">Spa / Làm đẹp / Sức khỏe</option>
+                <option value="sx">Sản xuất / Thương mại</option>
+                <option value="khac">Khác</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-3">Chọn gói *</label>
+              <div class="space-y-3">
+                <label class="flex items-center gap-3 p-4 glass rounded-xl cursor-pointer hover:border-white/30 transition-all border border-transparent" id="label-starter">
+                  <input type="radio" name="plan" value="starter" id="plan-starter" class="w-5 h-5 accent-blue-500">
+                  <div class="flex-1">
+                    <div class="text-white font-medium">Gói STARTER</div>
+                    <div class="text-gray-400 text-sm">1.990.000₫ — Core Program</div>
+                  </div>
+                </label>
+                <label class="flex items-center gap-3 p-4 rounded-xl cursor-pointer transition-all border border-blue-500/50 bg-blue-500/10" id="label-boss">
+                  <input type="radio" name="plan" value="boss" id="plan-boss" checked class="w-5 h-5 accent-blue-500">
+                  <div class="flex-1">
+                    <div class="text-white font-bold">⭐ Gói BOSS <span class="text-blue-400 text-xs ml-1">PHỔ BIẾN</span></div>
+                    <div class="text-blue-300 text-sm">4.990.000₫ — Full System + Bonuses</div>
+                  </div>
+                </label>
+                <label class="flex items-center gap-3 p-4 glass rounded-xl cursor-pointer hover:border-white/30 transition-all border border-transparent" id="label-vip">
+                  <input type="radio" name="plan" value="vip" id="plan-vip" class="w-5 h-5 accent-blue-500">
+                  <div class="flex-1">
+                    <div class="text-white font-medium">💎 Gói VIP</div>
+                    <div class="text-gray-400 text-sm">9.990.000₫ — Premium + 1:1 Support</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <button type="submit" id="submit-btn"
+              class="w-full py-4 px-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-200"
+              style="box-shadow: 0 0 30px rgba(59,130,246,0.4);">
+              Xem QR Thanh Toán →
+            </button>
+            <p class="text-center text-gray-500 text-xs">🔒 Thông tin của anh/chị được bảo mật tuyệt đối</p>
+          </form>
+        </div>
+
+        <!-- QR + BANK INFO CỘT PHẢI -->
+        <div class="flex flex-col gap-6">
+
+          <!-- QR CARD -->
+          <div class="glass rounded-2xl p-8 text-center" id="qr-section">
+            <div id="qr-placeholder">
+              <div class="text-6xl mb-4">📱</div>
+              <p class="text-lg font-medium text-gray-400">Điền form bên trái</p>
+              <p class="text-sm text-gray-500 mt-2">Mã QR sẽ hiển thị tại đây</p>
+            </div>
+
+            <div id="qr-display" class="hidden">
+              <div class="mb-4">
+                <span class="text-sm text-gray-400">Gói đang chọn:</span>
+                <span id="qr-plan-name" class="ml-2 text-white font-bold"></span>
+              </div>
+              <div class="bg-white rounded-2xl p-3 inline-block mb-4 shadow-lg shadow-blue-500/20">
+                <img id="qr-image" src="" alt="VietQR Payment Code" class="w-52 h-52 object-contain"
+                  onerror="document.getElementById('qr-error').classList.remove('hidden'); this.classList.add('hidden');">
+                <div id="qr-error" class="hidden w-52 h-52 flex items-center justify-center text-gray-500 text-sm text-center p-4">
+                  Không tải được QR. Vui lòng chuyển khoản thủ công.
+                </div>
+              </div>
+              <p class="text-sm text-gray-400 mb-1">Quét bằng app ngân hàng bất kỳ</p>
+              <p class="text-xs text-gray-500 mb-4">44+ ngân hàng VN được hỗ trợ</p>
+              <div class="bg-white/5 rounded-xl p-3 text-left text-sm">
+                <div class="flex justify-between py-1 border-b border-white/10">
+                  <span class="text-gray-400">Nội dung CK:</span>
+                  <span id="qr-des" class="text-yellow-300 font-mono font-bold"></span>
+                </div>
+                <div class="flex justify-between py-1">
+                  <span class="text-gray-400">Số tiền:</span>
+                  <span id="qr-amount-display" class="text-blue-400 font-bold"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- BANK DETAILS CARD -->
+          <div class="glass rounded-2xl p-6">
+            <h4 class="text-white font-bold mb-4">🏦 Thông Tin Chuyển Khoản</h4>
+            <div class="space-y-0 text-sm">
+              <div class="flex justify-between items-center py-2 border-b border-white/10">
+                <span class="text-gray-400">Ngân hàng</span>
+                <span class="text-white font-medium">ACB</span>
+              </div>
+              <div class="flex justify-between items-center py-2 border-b border-white/10">
+                <span class="text-gray-400">Số tài khoản</span>
+                <span class="text-white font-mono font-bold tracking-wider">126295629</span>
+              </div>
+              <div class="flex justify-between items-center py-2 border-b border-white/10">
+                <span class="text-gray-400">Chủ tài khoản</span>
+                <span class="text-white font-medium">HO SY ANH</span>
+              </div>
+              <div class="flex justify-between items-center py-2">
+                <span class="text-gray-400">Nội dung</span>
+                <span class="text-yellow-400 font-mono text-xs">AIBOSS_[Tên]_[Gói]</span>
+              </div>
+            </div>
+            <div class="mt-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3">
+              <p class="text-yellow-300 text-xs">⚡ Sau khi chuyển khoản, chụp màn hình gửi về Zalo <strong>0918 303 039</strong> để được kích hoạt ngay.</p>
+            </div>
+          </div>
+
+          <!-- SUPPORT -->
+          <div class="glass rounded-2xl p-5 text-center">
+            <p class="text-gray-400 text-sm mb-3">Cần hỗ trợ đăng ký?</p>
+            <div class="flex gap-3 justify-center">
+              <a href="tel:0918303039" class="flex-1 py-2 px-4 rounded-xl bg-blue-500/20 border border-blue-500/40 text-blue-300 text-sm font-medium hover:bg-blue-500/30 transition-all">📞 0918 303 039</a>
+              <a href="mailto:hosyanh159@gmail.com" class="flex-1 py-2 px-4 rounded-xl bg-purple-500/20 border border-purple-500/40 text-purple-300 text-sm font-medium hover:bg-purple-500/30 transition-all">📧 Email</a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div><!-- /p-8 -->
+    </div><!-- /modal box -->
+  </div><!-- /modal -->
+
+  <!-- anchor giữ scroll position -->
+  <div id="dang-ky"></div>
 
   <!-- FAQ -->
   <section id="faq" class="py-20 px-4 md:px-8 bg-slate-800/50 fade-in">
@@ -644,7 +823,7 @@
       </div>
 
       <div class="mt-10 text-center">
-        <a href="#pricing" class="inline-block px-8 py-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold text-lg hover:shadow-xl hover:scale-105 transition-all duration-300">
+        <a href="#dang-ky" class="inline-block px-8 py-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold text-lg hover:shadow-xl hover:scale-105 transition-all duration-300">
           🔥 Đăng Ký Ngay →
         </a>
       </div>
@@ -688,7 +867,7 @@
 
       <div class="relative z-10">
         <p class="text-yellow-400 font-semibold mb-4 pulse-text">⚠️ Còn <strong id="seats-count-3">47</strong>/50 suất Early Bird — 4.990.000₫</p>
-        <a href="#pricing" class="inline-block px-10 py-5 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold text-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 glow-blue">
+        <a href="#dang-ky" class="inline-block px-10 py-5 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold text-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 glow-blue">
           🔥 Đăng Ký Ngay →
         </a>
         <p class="text-gray-500 text-sm mt-4">✅ Hoàn tiền 30 ngày · ✅ Truy cập ngay sau đăng ký</p>
@@ -741,6 +920,27 @@
   </footer>
 
   <script>
+    // ─── Modal open/close ───
+    function openModal() {
+      document.getElementById('modal-dang-ky').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeModal() {
+      document.getElementById('modal-dang-ky').classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+    document.getElementById('modal-close').addEventListener('click', closeModal);
+    document.getElementById('modal-overlay').addEventListener('click', closeModal);
+    document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeModal(); });
+
+    // All [href=#dang-ky] buttons open modal instead of scrolling
+    document.querySelectorAll('a[href=]').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.preventDefault();
+        openModal();
+      });
+    });
+
     // Mobile menu toggle
     document.getElementById('mobile-menu-toggle').addEventListener('click', function() {
       document.getElementById('mobile-menu').classList.toggle('hidden');
@@ -778,7 +978,77 @@
       });
     });
 
-    // Seats countdown simulation (replace with real data)
+    // ─── PAYMENT CONFIG ───
+    const BANK_CONFIG = {
+      account: '126295629',
+      bank:    'ACB',
+    };
+
+    const PLANS = {
+      starter: { name: 'STARTER',  amount: 1990000, label: '1.990.000₫' },
+      boss:    { name: 'BOSS',     amount: 4990000, label: '4.990.000₫' },
+      vip:     { name: 'VIP',      amount: 9990000, label: '9.990.000₫' },
+    };
+
+    // Highlight radio labels on change
+    document.querySelectorAll('input[name="plan"]').forEach(radio => {
+      radio.addEventListener('change', function () {
+        ['starter','boss','vip'].forEach(p => {
+          const lbl = document.getElementById('label-' + p);
+          if (p === this.value) {
+            lbl.classList.remove('border-transparent','glass');
+            lbl.classList.add('border-blue-500/50','bg-blue-500/10');
+          } else {
+            lbl.classList.add('border-transparent','glass');
+            lbl.classList.remove('border-blue-500/50','bg-blue-500/10');
+          }
+        });
+      });
+    });
+
+    // Form submit — show QR
+    document.getElementById('registration-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      const name    = document.getElementById('reg-name').value.trim();
+      const phone   = document.getElementById('reg-phone').value.trim();
+      const email   = document.getElementById('reg-email').value.trim();
+      const planKey = document.querySelector('input[name="plan"]:checked').value;
+      const plan    = PLANS[planKey];
+
+      // Build description: AIBOSS_TenVietTat_Goi
+      const namePart = name.split(' ').pop().toUpperCase().replace(/[^A-Z0-9]/g,'').substring(0,10);
+      const des = `AIBOSS_${namePart}_${plan.name}`;
+
+      // Build QR URL
+      const params = new URLSearchParams({
+        acc:      BANK_CONFIG.account,
+        bank:     BANK_CONFIG.bank,
+        amount:   plan.amount,
+        des:      des,
+        template: 'compact',
+      });
+      const qrUrl = `https://qr.sepay.vn/img?${params.toString()}`;
+
+      // Update UI
+      document.getElementById('qr-placeholder').classList.add('hidden');
+      document.getElementById('qr-display').classList.remove('hidden');
+      document.getElementById('qr-image').src = qrUrl;
+      document.getElementById('qr-plan-name').textContent = `${plan.name} — ${plan.label}`;
+      document.getElementById('qr-des').textContent = des;
+      document.getElementById('qr-amount-display').textContent = plan.label;
+
+      // Scroll to QR
+      document.getElementById('qr-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+      // Update submit button
+      const btn = document.getElementById('submit-btn');
+      btn.textContent = '✅ Đã tạo QR — Quét để thanh toán';
+      btn.classList.remove('from-blue-500','to-purple-600');
+      btn.classList.add('from-green-500','to-emerald-600');
+    });
+
+    // ─── Seats countdown ───
     let seats = 47;
     function updateSeats() {
       document.querySelectorAll('#seats-count, #seats-count-2, #seats-count-3').forEach(el => {
