@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="vi" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI BOSS SYSTEM — Vận Hành Doanh Nghiệp Bằng AI Trong 30 Ngày</title>
+  <meta name="description" content="Hệ thống AI hóa vận hành SME trong 30 ngày. Từ chủ doanh nghiệp đã thực chiến — không code, không phức tạp, kết quả ngay.">
+  <meta property="og:title" content="AI BOSS SYSTEM — Vận Hành Doanh Nghiệp Bằng AI">
+  <meta property="og:description" content="30 ngày AI hóa doanh nghiệp của bạn. Hệ thống thực chiến từ chủ SME cho chủ SME.">
+  <meta property="og:type" content="website">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --gradient-blue: #3B82F6;
+      --gradient-purple: #7C3AED;
+      --bg-dark: #0F172A;
+    }
+    * { font-family: 'DM Sans', sans-serif; }
+    h1,h2,h3,h4,h5,h6 { font-family: 'Space Grotesk', sans-serif; }
+
+    @keyframes float {
+      0%,100% { transform: translateY(0px) translateX(0px); }
+      33% { transform: translateY(-30px) translateX(20px); }
+      66% { transform: translateY(-15px) translateX(-20px); }
+    }
+    @keyframes float-delayed {
+      0%,100% { transform: translateY(0px) translateX(0px); }
+      33% { transform: translateY(20px) translateX(-25px); }
+      66% { transform: translateY(-25px) translateX(15px); }
+    }
+    @keyframes countdown {
+      from { width: 100%; }
+      to { width: 0%; }
+    }
+
+    .gradient-text {
+      background: linear-gradient(135deg, #3B82F6, #7C3AED);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .glass {
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .glow-blue { box-shadow: 0 0 30px rgba(59,130,246,0.3); }
+    .glow-purple { box-shadow: 0 0 30px rgba(124,58,237,0.3); }
+    .fade-in {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+    }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+    .gradient-mesh {
+      background:
+        radial-gradient(circle at 20% 30%, rgba(59,130,246,0.15) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(124,58,237,0.15) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(236,72,153,0.1) 0%, transparent 50%),
+        #0F172A;
+    }
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(60px);
+      opacity: 0.3;
+      pointer-events: none;
+    }
+    .orb-1 { width:400px; height:400px; background:#3B82F6; top:10%; left:10%; animation: float 20s ease-in-out infinite; }
+    .orb-2 { width:300px; height:300px; background:#7C3AED; bottom:20%; right:15%; animation: float-delayed 18s ease-in-out infinite; }
+    .orb-3 { width:250px; height:250px; background:#EC4899; top:50%; right:30%; animation: float 15s ease-in-out infinite; }
+
+    .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out; }
+    .faq-answer.open { max-height: 500px; }
+    .faq-icon { transition: transform 0.3s ease; }
+    .faq-icon.open { transform: rotate(45deg); }
+
+    .urgency-bar {
+      background: linear-gradient(90deg, #3B82F6, #7C3AED);
+      height: 4px;
+      border-radius: 2px;
+    }
+
+    @keyframes pulse-text {
+      0%,100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    .pulse-text { animation: pulse-text 2s ease-in-out infinite; }
+  </style>
+</head>
+
+<body class="bg-slate-900 text-gray-300 antialiased overflow-x-hidden">
+
+  <!-- URGENCY BAR -->
+  <div class="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 py-2 px-4 text-center text-white text-sm font-medium">
+    🔥 <span class="pulse-text">Còn <strong id="seats-count">47</strong> suất Early Bird — 4.990.000₫</span> · Giá thường: 7.990.000₫ · <a href="#pricing" class="underline font-bold">Đăng ký ngay →</a>
+  </div>
+
+  <!-- NAVBAR -->
+  <nav id="navbar" class="fixed top-8 left-0 right-0 z-50 px-4 md:px-8">
+    <div class="max-w-7xl mx-auto glass rounded-2xl px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl">A</div>
+        <span class="text-white font-bold text-xl hidden sm:inline">AI BOSS SYSTEM</span>
+      </div>
+      <div class="hidden md:flex items-center space-x-8">
+        <a href="#features" class="text-gray-300 hover:text-white transition-colors duration-200">Nội dung</a>
+        <a href="#how-it-works" class="text-gray-300 hover:text-white transition-colors duration-200">Quy trình</a>
+        <a href="#pricing" class="text-gray-300 hover:text-white transition-colors duration-200">Học phí</a>
+        <a href="#faq" class="text-gray-300 hover:text-white transition-colors duration-200">FAQ</a>
+      </div>
+      <div class="flex items-center space-x-4">
+        <a href="#pricing" class="hidden sm:inline-block px-6 py-2.5 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold hover:shadow-lg hover:scale-105 transition-all duration-200">
+          Đăng ký ngay
+        </a>
+        <button id="mobile-menu-toggle" class="md:hidden text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div id="mobile-menu" class="hidden md:hidden mt-2 glass rounded-2xl p-6 flex flex-col space-y-4">
+      <a href="#features" class="text-gray-300 hover:text-white py-2">Nội dung</a>
+      <a href="#how-it-works" class="text-gray-300 hover:text-white py-2">Quy trình</a>
+      <a href="#pricing" class="text-gray-300 hover:text-white py-2">Học phí</a>
+      <a href="#faq" class="text-gray-300 hover:text-white py-2">FAQ</a>
+      <a href="#pricing" class="px-6 py-2.5 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold text-center">Đăng ký ngay</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="relative min-h-screen flex items-center justify-center pt-32 pb-20 px-4 md:px-8 gradient-mesh overflow-hidden">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <div class="relative z-10 max-w-6xl mx-auto text-center">
+      <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-sm text-blue-400 mb-8">
+        <span class="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
+        Chia sẻ bởi Hồ Sỹ Anh — Chủ DN Khata · Túi vải thân thiện
+      </div>
+
+      <h1 class="text-5xl sm:text-6xl md:text-7xl font-bold text-white leading-tight mb-6">
+        Vận Hành Doanh Nghiệp<br>
+        <span class="gradient-text">Bằng AI</span><br>
+        Trong 30 Ngày
+      </h1>
+
+      <p class="text-xl md:text-2xl text-gray-400 mb-6 max-w-3xl mx-auto leading-relaxed">
+        Hệ thống thực chiến được xây dựng bởi <strong class="text-white">Hồ Sỹ Anh — chủ doanh nghiệp túi vải Khata</strong> đã tự chuyển đổi SME của mình — không phải giảng viên, không cần code, kết quả trong tháng đầu tiên.
+      </p>
+      <p class="text-base text-gray-500 mb-10 max-w-2xl mx-auto">
+        "Tôi đã mất 2 năm và hàng trăm triệu để tìm ra cách AI hóa doanh nghiệp SME — và tôi đóng gói tất cả vào 30 ngày cho anh/chị."
+      </p>
+
+      <!-- Hero Image -->
+      <div class="mb-10 flex justify-center">
+        <div class="relative" style="padding: 3px; background: linear-gradient(135deg, #3B82F6, #7C3AED, #EC4899); border-radius: 1.5rem; display: inline-block;">
+          <img
+            src="hero-image.jpg"
+            alt="Hồ Sỹ Anh — Chủ doanh nghiệp Khata, người sáng lập AI BOSS SYSTEM"
+            class="rounded-3xl object-cover"
+            style="max-height: 420px; max-width: 100%; width: auto; display: block; box-shadow: 0 0 60px rgba(59,130,246,0.25);"
+          >
+          <!-- Badge overlay -->
+          <div class="absolute bottom-4 left-1/2 -translate-x-1/2 glass rounded-full px-4 py-2 text-sm text-white font-medium whitespace-nowrap">
+            <span class="text-blue-400">●</span> Hồ Sỹ Anh · Chủ DN Khata
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+        <a href="#pricing" class="w-full sm:w-auto px-8 py-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-300 glow-blue">
+          🚀 Tôi muốn AI hóa doanh nghiệp ngay →
+        </a>
+        <a href="#how-it-works" class="w-full sm:w-auto px-8 py-4 rounded-full border-2 border-white/20 text-white font-semibold text-lg hover:bg-white/10 transition-all duration-300">
+          Xem chi tiết chương trình
+        </a>
+      </div>
+
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-8 text-sm">
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+          <span class="text-gray-400"><span class="text-white font-semibold">4.9/5</span> từ học viên đầu tiên</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>
+          <span class="text-gray-400"><span class="text-white font-semibold">50 suất</span> đợt đầu tiên</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+          <span class="text-gray-400"><span class="text-white font-semibold">30 ngày</span> hoàn tiền</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROBLEM SECTION -->
+  <section class="py-20 px-4 md:px-8 bg-slate-800/70 fade-in">
+    <div class="max-w-4xl mx-auto">
+      <div class="text-center mb-12">
+        <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">Anh/chị có đang gặp những điều này không?</h2>
+      </div>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="glass rounded-xl p-5 border-l-4 border-red-500/50">
+          <div class="flex items-start gap-3">
+            <span class="text-red-400 text-xl mt-0.5">❌</span>
+            <p class="text-gray-300">Tốn <strong class="text-white">3–5 giờ/ngày</strong> cho công việc lặp đi lặp lại mà AI có thể làm trong 5 phút</p>
+          </div>
+        </div>
+        <div class="glass rounded-xl p-5 border-l-4 border-red-500/50">
+          <div class="flex items-start gap-3">
+            <span class="text-red-400 text-xl mt-0.5">❌</span>
+            <p class="text-gray-300">Biết AI đang thay đổi mọi thứ nhưng <strong class="text-white">không biết áp dụng vào đâu</strong> trong doanh nghiệp mình</p>
+          </div>
+        </div>
+        <div class="glass rounded-xl p-5 border-l-4 border-red-500/50">
+          <div class="flex items-start gap-3">
+            <span class="text-red-400 text-xl mt-0.5">❌</span>
+            <p class="text-gray-300"><strong class="text-white">Chi phí nhân sự tăng</strong> nhưng năng suất không tăng tương ứng</p>
+          </div>
+        </div>
+        <div class="glass rounded-xl p-5 border-l-4 border-red-500/50">
+          <div class="flex items-start gap-3">
+            <span class="text-red-400 text-xl mt-0.5">❌</span>
+            <p class="text-gray-300">Đã thử ChatGPT nhưng chỉ dừng ở viết caption — còn <strong class="text-white">90% tiềm năng AI bị bỏ ngỏ</strong></p>
+          </div>
+        </div>
+        <div class="glass rounded-xl p-5 border-l-4 border-red-500/50 md:col-span-2">
+          <div class="flex items-start gap-3">
+            <span class="text-red-400 text-xl mt-0.5">❌</span>
+            <p class="text-gray-300">Lo ngại <strong class="text-white">đối thủ đang AI hóa nhanh hơn</strong> trong khi vẫn loay hoay với quy trình thủ công</p>
+          </div>
+        </div>
+      </div>
+      <div class="mt-8 glass rounded-2xl p-6 border border-yellow-500/20 bg-yellow-500/5">
+        <p class="text-center text-yellow-300 font-medium">
+          Phần đau nhất? Anh/chị <em>biết</em> mình cần thay đổi. Đã đọc bài, xem video, tham dự hội thảo — nhưng vẫn không biết cụ thể phải làm gì với doanh nghiệp <em>của mình</em>.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES / WHAT'S INSIDE -->
+  <section id="features" class="py-20 px-4 md:px-8 bg-slate-900 fade-in">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-16">
+        <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">6 Module — 1 Hệ Thống Hoàn Chỉnh</h2>
+        <p class="text-xl text-gray-400 max-w-2xl mx-auto">Mỗi module giải quyết 1 phòng ban cụ thể. Sau 30 ngày: doanh nghiệp chạy 50% bằng AI.</p>
+      </div>
+
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="glass rounded-2xl p-8 hover:border-blue-500/50 hover:shadow-[0_0_30px_rgba(59,130,246,0.2)] transition-all duration-300 group">
+          <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mb-6 text-white font-bold text-2xl group-hover:scale-110 transition-transform">1</div>
+          <h3 class="text-xl font-bold text-white mb-3">AI Readiness Audit</h3>
+          <p class="text-gray-400 leading-relaxed">Đánh giá doanh nghiệp từ A-Z. Xác định chính xác 3 điểm AI hóa trước tiên với ROI cao nhất theo quy mô và ngành của bạn.</p>
+        </div>
+
+        <div class="glass rounded-2xl p-8 hover:border-blue-500/50 hover:shadow-[0_0_30px_rgba(59,130,246,0.2)] transition-all duration-300 group">
+          <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center mb-6 text-white font-bold text-2xl group-hover:scale-110 transition-transform">2</div>
+          <h3 class="text-xl font-bold text-white mb-3">AI cho Sales & CSKH</h3>
+          <p class="text-gray-400 leading-relaxed">Chatbot trả lời 70% câu hỏi thường gặp 24/7. Script tư vấn AI. Pipeline follow-up tự động. Không cần nhân sự trực đêm.</p>
+        </div>
+
+        <div class="glass rounded-2xl p-8 hover:border-blue-500/50 hover:shadow-[0_0_30px_rgba(59,130,246,0.2)] transition-all duration-300 group">
+          <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center mb-6 text-white font-bold text-2xl group-hover:scale-110 transition-transform">3</div>
+          <h3 class="text-xl font-bold text-white mb-3">AI cho Marketing & Content</h3>
+          <p class="text-gray-400 leading-relaxed">Hệ thống tạo content tuần trong 1 buổi sáng. AI viết caption, email, quảng cáo. Lịch đăng tự động — không còn "hết ý tưởng".</p>
+        </div>
+
+        <div class="glass rounded-2xl p-8 hover:border-blue-500/50 hover:shadow-[0_0_30px_rgba(59,130,246,0.2)] transition-all duration-300 group">
+          <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center mb-6 text-white font-bold text-2xl group-hover:scale-110 transition-transform">4</div>
+          <h3 class="text-xl font-bold text-white mb-3">AI cho Vận Hành & Quy Trình</h3>
+          <p class="text-gray-400 leading-relaxed">SOP AI hóa cho từng quy trình. Báo cáo vận hành tự động mỗi tuần. Kiểm soát chất lượng bằng AI. Anh/chị chỉ đọc và quyết định.</p>
+        </div>
+
+        <div class="glass rounded-2xl p-8 hover:border-blue-500/50 hover:shadow-[0_0_30px_rgba(59,130,246,0.2)] transition-all duration-300 group">
+          <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center mb-6 text-white font-bold text-2xl group-hover:scale-110 transition-transform">5</div>
+          <h3 class="text-xl font-bold text-white mb-3">AI cho Nhân Sự & Đào Tạo</h3>
+          <p class="text-gray-400 leading-relaxed">JD tuyển dụng viết bằng AI. Quy trình onboarding không cần giải thích lại. Đánh giá KPI tự động. Nhân sự tập trung vào việc giá trị cao.</p>
+        </div>
+
+        <div class="glass rounded-2xl p-8 hover:border-blue-500/50 hover:shadow-[0_0_30px_rgba(59,130,246,0.2)] transition-all duration-300 group">
+          <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center mb-6 text-white font-bold text-2xl group-hover:scale-110 transition-transform">6</div>
+          <h3 class="text-xl font-bold text-white mb-3">Đo Lường & Tối Ưu Liên Tục</h3>
+          <p class="text-gray-400 leading-relaxed">Dashboard KPI tự cập nhật. Vòng lặp cải tiến AI hàng tuần. Biết chính xác hệ thống nào đang tạo ra giá trị — và tối ưu tiếp.</p>
+        </div>
+      </div>
+
+      <!-- BONUS STACK -->
+      <div class="mt-16 glass rounded-2xl p-8 border border-blue-500/20">
+        <h3 class="text-2xl font-bold text-white mb-6 text-center">🎁 Bonus đi kèm — Tổng giá trị 48.600.000₫</h3>
+        <div class="grid md:grid-cols-2 gap-4">
+          <div class="flex items-start gap-4 p-4 bg-white/5 rounded-xl">
+            <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center flex-shrink-0 text-white font-bold">B1</div>
+            <div>
+              <div class="font-semibold text-white">AI Operating System Pack</div>
+              <div class="text-sm text-gray-400">60+ SOP & Template AI sẵn dùng ngay — Sales, Marketing, HR, Vận hành + 100 Prompt</div>
+              <div class="text-xs text-blue-400 mt-1">Giá trị: 18.000.000₫</div>
+            </div>
+          </div>
+          <div class="flex items-start gap-4 p-4 bg-white/5 rounded-xl">
+            <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center flex-shrink-0 text-white font-bold">B2</div>
+            <div>
+              <div class="font-semibold text-white">Workshop AI Audit Doanh Nghiệp</div>
+              <div class="text-sm text-gray-400">3 giờ workshop ghi lại — bảng đánh giá 30 tiêu chí, roadmap cá nhân hóa, 3 case study VN</div>
+              <div class="text-xs text-blue-400 mt-1">Giá trị: 9.000.000₫</div>
+            </div>
+          </div>
+          <div class="flex items-start gap-4 p-4 bg-white/5 rounded-xl">
+            <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-pink-500 to-pink-700 flex items-center justify-center flex-shrink-0 text-white font-bold">B3</div>
+            <div>
+              <div class="font-semibold text-white">SME AI Club (90 ngày)</div>
+              <div class="text-sm text-gray-400">Group kín Zalo — Q&A live 2 lần/tháng, peer review, cập nhật AI tool hàng tuần</div>
+              <div class="text-xs text-blue-400 mt-1">Giá trị: 14.400.000₫</div>
+            </div>
+          </div>
+          <div class="flex items-start gap-4 p-4 bg-white/5 rounded-xl border border-yellow-500/30">
+            <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-500 to-orange-600 flex items-center justify-center flex-shrink-0 text-white font-bold">⚡</div>
+            <div>
+              <div class="font-semibold text-white">AI Strategy Call 1:1 — 60 phút</div>
+              <div class="text-sm text-yellow-300">CHỈ 20 NGƯỜI ĐẦU TIÊN — Phân tích DN của bạn, roadmap cá nhân hóa cho 30 ngày đầu</div>
+              <div class="text-xs text-blue-400 mt-1">Giá trị: 7.200.000₫</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="how-it-works" class="py-20 px-4 md:px-8 bg-slate-800/50 fade-in">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center mb-16">
+        <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">Quy Trình 30 Ngày</h2>
+        <p class="text-xl text-gray-400 max-w-2xl mx-auto">Rõ ràng từng ngày — không phải "tự học theo tốc độ của bạn" kiểu bỏ lửng</p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-8 relative">
+        <div class="hidden md:block absolute h-0.5 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20" style="top:80px; left:0; right:0;"></div>
+
+        <div class="relative text-center">
+          <div class="relative z-10 w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg glow-blue">1</div>
+          <div class="glass rounded-2xl p-6 hover:border-blue-500/50 transition-all duration-300">
+            <div class="text-4xl mb-4">🔍</div>
+            <h3 class="text-xl font-bold text-white mb-3">Tuần 1: Audit & Lên Kế Hoạch</h3>
+            <p class="text-gray-400">Đánh giá DN, xác định 3 ưu tiên AI có ROI cao nhất, có roadmap cá nhân hóa rõ từng ngày</p>
+          </div>
+        </div>
+
+        <div class="relative text-center">
+          <div class="relative z-10 w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg glow-purple">2</div>
+          <div class="glass rounded-2xl p-6 hover:border-purple-500/50 transition-all duration-300">
+            <div class="text-4xl mb-4">⚙️</div>
+            <h3 class="text-xl font-bold text-white mb-3">Tuần 2–3: Triển Khai Từng Phòng Ban</h3>
+            <p class="text-gray-400">Setup CSKH, Marketing, Vận hành lần lượt theo module. Dùng SOP & template có sẵn — không xây từ đầu</p>
+          </div>
+        </div>
+
+        <div class="relative text-center">
+          <div class="relative z-10 w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg" style="box-shadow:0 0 30px rgba(236,72,153,0.3)">3</div>
+          <div class="glass rounded-2xl p-6 hover:border-pink-500/50 transition-all duration-300">
+            <div class="text-4xl mb-4">📈</div>
+            <h3 class="text-xl font-bold text-white mb-3">Tuần 4: Đo Lường & Tối Ưu</h3>
+            <p class="text-gray-400">Xem kết quả, đo thời gian tiết kiệm được, tối ưu những gì chưa chạy tốt — hệ thống đã ổn định</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section class="py-16 px-4 md:px-8 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 fade-in">
+    <div class="max-w-6xl mx-auto">
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 text-center">
+        <div>
+          <div class="text-5xl md:text-6xl font-bold text-white mb-2">30</div>
+          <div class="text-white/90 uppercase tracking-wider text-sm">Ngày hoàn thiện hệ thống</div>
+        </div>
+        <div>
+          <div class="text-5xl md:text-6xl font-bold text-white mb-2">60+</div>
+          <div class="text-white/90 uppercase tracking-wider text-sm">SOP & Template sẵn dùng</div>
+        </div>
+        <div>
+          <div class="text-5xl md:text-6xl font-bold text-white mb-2">3–5h</div>
+          <div class="text-white/90 uppercase tracking-wider text-sm">Tiết kiệm mỗi ngày</div>
+        </div>
+        <div>
+          <div class="text-5xl md:text-6xl font-bold text-white mb-2">100%</div>
+          <div class="text-white/90 uppercase tracking-wider text-sm">Hoàn tiền nếu không hài lòng</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS -->
+  <section class="py-20 px-4 md:px-8 bg-slate-800/50 fade-in">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-16">
+        <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">Học Viên Nói Gì?</h2>
+        <p class="text-xl text-gray-400 max-w-2xl mx-auto">Kết quả thật từ chủ doanh nghiệp đã áp dụng hệ thống</p>
+      </div>
+
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="glass rounded-2xl p-8 border-l-4 border-blue-500">
+          <div class="flex gap-1 mb-4">
+            <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+            <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+            <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+            <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+            <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+          </div>
+          <p class="text-gray-300 mb-6 leading-relaxed italic">"Tuần đầu tiên setup theo Module 2 — inbox CSKH giảm từ 47 tin nhắn/sáng xuống còn 14 tin cần xử lý thủ công. Tôi không ngờ kết quả lại nhanh đến vậy."</p>
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">HT</div>
+            <div>
+              <div class="font-semibold text-white">Chị H.T.</div>
+              <div class="text-sm text-gray-400">Chủ chuỗi spa, TP.HCM</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass rounded-2xl p-8 border-l-4 border-purple-500">
+          <div class="flex gap-1 mb-4">
+            <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+            <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+            <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+            <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+            <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+          </div>
+          <p class="text-gray-300 mb-6 leading-relaxed italic">"Bộ SOP Bonus 1 một mình đã đáng giá hơn học phí. Tôi mất 3 tuần tự xây mà không xong — tải về dùng ngay trong 1 ngày. Khác biệt lớn nhất là nội dung đi từ bài toán doanh nghiệp, không phải từ tool AI."</p>
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white font-bold">TM</div>
+            <div>
+              <div class="font-semibold text-white">Anh T.M.</div>
+              <div class="text-sm text-gray-400">Giám đốc công ty dịch vụ logistics</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass rounded-2xl p-8 border-l-4 border-pink-500">
+          <div class="flex gap-1 mb-4">
+            <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+            <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+            <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+            <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+            <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+          </div>
+          <p class="text-gray-300 mb-6 leading-relaxed italic">"Tôi skeptical lắm với 'AI hóa trong 30 ngày'. Nhưng sau Strategy Call 1:1, tôi có roadmap cụ thể cho từng tuần — không còn mơ hồ nữa. Tháng đầu tiết kiệm được ~40% thời gian vận hành."</p>
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center text-white font-bold">NL</div>
+            <div>
+              <div class="font-semibold text-white">Anh N.L.</div>
+              <div class="text-sm text-gray-400">Chủ thương hiệu thời trang online</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section id="pricing" class="py-20 px-4 md:px-8 bg-slate-900 fade-in">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-16">
+        <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">Chọn Gói Phù Hợp</h2>
+        <p class="text-xl text-gray-400 max-w-2xl mx-auto">Giá launch dành cho 50 người đầu tiên. Còn <strong class="text-white" id="seats-count-2">47</strong> suất.</p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <!-- STARTER -->
+        <div class="glass rounded-2xl p-8 hover:border-white/20 transition-all duration-300">
+          <h3 class="text-2xl font-bold text-white mb-2">STARTER</h3>
+          <p class="text-gray-400 mb-6">Học kiến thức nền tảng</p>
+          <div class="mb-6">
+            <span class="text-5xl font-bold text-white">1.990.000</span>
+            <span class="text-gray-400">₫</span>
+          </div>
+          <ul class="space-y-4 mb-8">
+            <li class="flex items-start gap-3">
+              <svg class="w-6 h-6 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+              <span class="text-gray-300">6 Module video (15 giờ nội dung)</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <svg class="w-6 h-6 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+              <span class="text-gray-300">Roadmap 30 ngày</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <svg class="w-6 h-6 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+              <span class="text-gray-300">Truy cập lifetime</span>
+            </li>
+          </ul>
+          <a href="mailto:hosyanh159@gmail.com?subject=Dang ky Goi Starter - AI BOSS SYSTEM" class="block w-full py-3 px-6 rounded-full bg-white/10 text-white text-center font-semibold hover:bg-white/20 transition-all duration-200">
+            Đăng ký Starter
+          </a>
+        </div>
+
+        <!-- BOSS (POPULAR) -->
+        <div class="relative rounded-2xl" style="padding:3px; background:linear-gradient(135deg,#3B82F6,#7C3AED);">
+          <div class="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-semibold rounded-full whitespace-nowrap">
+            ⭐ Phổ biến nhất
+          </div>
+          <div class="bg-slate-900 rounded-2xl p-8 h-full">
+            <h3 class="text-2xl font-bold text-white mb-2">BOSS</h3>
+            <p class="text-gray-400 mb-6">Hệ thống hoàn chỉnh + hỗ trợ</p>
+            <div class="mb-2">
+              <span class="text-2xl text-gray-500 line-through">7.990.000</span>
+            </div>
+            <div class="mb-6">
+              <span class="text-5xl font-bold gradient-text">4.990.000</span>
+              <span class="text-gray-400">₫</span>
+              <span class="ml-2 text-sm bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">Tiết kiệm 3M</span>
+            </div>
+            <ul class="space-y-4 mb-6">
+              <li class="flex items-start gap-3"><svg class="w-6 h-6 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg><span class="text-gray-300">Tất cả trong Starter</span></li>
+              <li class="flex items-start gap-3"><svg class="w-6 h-6 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg><span class="text-gray-300">🎁 AI Operating System Pack (60+ SOP)</span></li>
+              <li class="flex items-start gap-3"><svg class="w-6 h-6 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg><span class="text-gray-300">🎁 Workshop AI Audit (3 giờ)</span></li>
+              <li class="flex items-start gap-3"><svg class="w-6 h-6 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg><span class="text-gray-300">🎁 SME AI Club 90 ngày</span></li>
+              <li class="flex items-start gap-3"><svg class="w-6 h-6 text-yellow-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg><span class="text-yellow-300">⚡ Strategy Call 1:1 (còn 20 suất)</span></li>
+            </ul>
+
+            <a href="#pricing" class="block w-full py-4 px-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white text-center font-bold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-200" style="box-shadow: 0 0 40px rgba(59,130,246,0.5);">
+              🔥 Đăng Ký Gói BOSS Ngay →
+            </a>
+          </div>
+        </div>
+
+        <!-- VIP -->
+        <div class="glass rounded-2xl p-8 hover:border-white/20 transition-all duration-300">
+          <h3 class="text-2xl font-bold text-white mb-2">VIP</h3>
+          <p class="text-gray-400 mb-6">Hỗ trợ cá nhân hóa tối đa</p>
+          <div class="mb-2">
+            <span class="text-2xl text-gray-500 line-through">14.990.000</span>
+          </div>
+          <div class="mb-6">
+            <span class="text-5xl font-bold text-white">9.990.000</span>
+            <span class="text-gray-400">₫</span>
+          </div>
+          <ul class="space-y-4 mb-8">
+            <li class="flex items-start gap-3"><svg class="w-6 h-6 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg><span class="text-gray-300">Tất cả trong gói BOSS</span></li>
+            <li class="flex items-start gap-3"><svg class="w-6 h-6 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg><span class="text-gray-300">Review SOP của bạn trực tiếp</span></li>
+            <li class="flex items-start gap-3"><svg class="w-6 h-6 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg><span class="text-gray-300">Hỗ trợ Zalo riêng 3 tháng</span></li>
+            <li class="flex items-start gap-3"><svg class="w-6 h-6 text-blue-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg><span class="text-gray-300">Ưu tiên lịch Strategy Call</span></li>
+          </ul>
+          <a href="mailto:hosyanh159@gmail.com?subject=Dang ky Goi VIP - AI BOSS SYSTEM" class="block w-full py-3 px-6 rounded-full bg-white/10 text-white text-center font-semibold hover:bg-white/20 transition-all duration-200">
+            Đăng ký Gói VIP
+          </a>
+        </div>
+      </div>
+
+      <!-- GUARANTEE -->
+      <div class="mt-12 max-w-2xl mx-auto glass rounded-2xl p-8 text-center border border-green-500/20">
+        <div class="text-5xl mb-4">🛡️</div>
+        <h3 class="text-2xl font-bold text-white mb-3">Bảo Đảm 30 Ngày — Hoàn Tiền 100%</h3>
+        <p class="text-gray-400 leading-relaxed">Nếu sau 30 ngày áp dụng đầy đủ theo roadmap mà anh/chị chưa thấy kết quả — chỉ cần email cho tôi, tôi hoàn lại <strong class="text-white">100% học phí, không hỏi lý do</strong>. Anh/chị giữ lại toàn bộ SOP và template đã tải về.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="py-20 px-4 md:px-8 bg-slate-800/50 fade-in">
+    <div class="max-w-3xl mx-auto">
+      <div class="text-center mb-16">
+        <h2 class="text-4xl md:text-5xl font-bold text-white mb-4">Câu Hỏi Thường Gặp</h2>
+      </div>
+
+      <div class="space-y-4" id="faq-container">
+        <div class="glass rounded-2xl overflow-hidden faq-item">
+          <button class="faq-toggle w-full text-left p-6 flex justify-between items-center hover:bg-white/5 transition-colors">
+            <span class="font-semibold text-white pr-4">Tôi không giỏi công nghệ, có theo được không?</span>
+            <span class="faq-icon text-blue-400 text-2xl flex-shrink-0">+</span>
+          </button>
+          <div class="faq-answer px-6 pb-0">
+            <div class="pb-6 text-gray-400 border-t border-white/10 pt-4">Đây chính xác là người tôi thiết kế chương trình này cho. Tất cả hướng dẫn đều theo dạng "làm từng bước theo" — không cần nền tảng kỹ thuật, không cần biết code. Nếu anh/chị biết dùng điện thoại và soạn được email — anh/chị theo được hoàn toàn.</div>
+          </div>
+        </div>
+
+        <div class="glass rounded-2xl overflow-hidden faq-item">
+          <button class="faq-toggle w-full text-left p-6 flex justify-between items-center hover:bg-white/5 transition-colors">
+            <span class="font-semibold text-white pr-4">Doanh nghiệp tôi ngành khác, có phù hợp không?</span>
+            <span class="faq-icon text-blue-400 text-2xl flex-shrink-0">+</span>
+          </button>
+          <div class="faq-answer px-6 pb-0">
+            <div class="pb-6 text-gray-400 border-t border-white/10 pt-4">Chương trình hoạt động với hầu hết ngành dịch vụ và thương mại: bán lẻ, F&B, giáo dục, spa, dịch vụ chuyên nghiệp, thương mại điện tử. Module 1 giúp anh/chị xác định chính xác áp dụng gì trong ngành của mình. Nếu sau Module 1 không phù hợp — đã có bảo đảm hoàn tiền.</div>
+          </div>
+        </div>
+
+        <div class="glass rounded-2xl overflow-hidden faq-item">
+          <button class="faq-toggle w-full text-left p-6 flex justify-between items-center hover:bg-white/5 transition-colors">
+            <span class="font-semibold text-white pr-4">Tôi đã học nhiều khóa AI rồi mà vẫn không áp dụng được. Cái này khác gì?</span>
+            <span class="faq-icon text-blue-400 text-2xl flex-shrink-0">+</span>
+          </button>
+          <div class="faq-answer px-6 pb-0">
+            <div class="pb-6 text-gray-400 border-t border-white/10 pt-4">Hầu hết khóa AI dạy <em>tool</em> và <em>công nghệ</em>. Tôi dạy <em>quy trình kinh doanh</em> — bắt đầu từ bài toán thực tế của doanh nghiệp anh/chị, sau đó mới chỉ cụ thể tool nào giải bài toán đó. Đó là lý do bộ SOP + template đi kèm — không phải để đọc, mà để chép vào và dùng ngay.</div>
+          </div>
+        </div>
+
+        <div class="glass rounded-2xl overflow-hidden faq-item">
+          <button class="faq-toggle w-full text-left p-6 flex justify-between items-center hover:bg-white/5 transition-colors">
+            <span class="font-semibold text-white pr-4">Mất bao lâu để thấy kết quả đầu tiên?</span>
+            <span class="faq-icon text-blue-400 text-2xl flex-shrink-0">+</span>
+          </button>
+          <div class="faq-answer px-6 pb-0">
+            <div class="pb-6 text-gray-400 border-t border-white/10 pt-4">Phần lớn học viên thấy kết quả đầu tiên trong 7–10 ngày sau khi áp dụng Module 2 hoặc 3. Với bộ SOP Bonus 1 — một số template có thể dùng ngay trong ngày đầu tiên. Hệ thống đầy đủ hoàn thiện trong 30 ngày.</div>
+          </div>
+        </div>
+
+        <div class="glass rounded-2xl overflow-hidden faq-item">
+          <button class="faq-toggle w-full text-left p-6 flex justify-between items-center hover:bg-white/5 transition-colors">
+            <span class="font-semibold text-white pr-4">4.990.000₫ có đắt không?</span>
+            <span class="faq-icon text-blue-400 text-2xl flex-shrink-0">+</span>
+          </button>
+          <div class="faq-answer px-6 pb-0">
+            <div class="pb-6 text-gray-400 border-t border-white/10 pt-4">Nếu chương trình giúp anh/chị cắt 3 tiếng/ngày thời gian vận hành thủ công — đó là 90 tiếng/tháng. Với chi phí nhân sự trung bình 100.000₫/giờ — anh/chị tiết kiệm <strong class="text-white">9.000.000₫/tháng</strong>. Học phí thu hồi trong chưa đầy 1 tháng. Và đó mới chỉ là tiết kiệm thời gian — chưa tính tăng doanh thu.</div>
+          </div>
+        </div>
+
+        <div class="glass rounded-2xl overflow-hidden faq-item">
+          <button class="faq-toggle w-full text-left p-6 flex justify-between items-center hover:bg-white/5 transition-colors">
+            <span class="font-semibold text-white pr-4">Đây có phải lừa đảo không?</span>
+            <span class="faq-icon text-blue-400 text-2xl flex-shrink-0">+</span>
+          </button>
+          <div class="faq-answer px-6 pb-0">
+            <div class="pb-6 text-gray-400 border-t border-white/10 pt-4">Tôi hiểu sự nghi ngờ này — và tôn trọng nó. Đó là lý do tôi có bảo đảm hoàn tiền 30 ngày không điều kiện. Anh/chị không mất gì nếu thử và thấy không phù hợp. Tôi không phải giảng viên AI — tôi là chủ doanh nghiệp như anh/chị, và câu chuyện chuyển đổi của tôi có thể kiểm chứng được.</div>
+          </div>
+        </div>
+
+        <div class="glass rounded-2xl overflow-hidden faq-item">
+          <button class="faq-toggle w-full text-left p-6 flex justify-between items-center hover:bg-white/5 transition-colors">
+            <span class="font-semibold text-white pr-4">Đây có thực sự dành cho tôi không?</span>
+            <span class="faq-icon text-blue-400 text-2xl flex-shrink-0">+</span>
+          </button>
+          <div class="faq-answer px-6 pb-0">
+            <div class="pb-6 text-gray-400 border-t border-white/10 pt-4">Nếu anh/chị đang điều hành một doanh nghiệp thật với 5–30 người, muốn giảm gánh nặng vận hành, và sẵn sàng bỏ ra 30 ngày để thay đổi cách hoạt động của nó — <strong class="text-white">đây chính xác là dành cho anh/chị.</strong> Còn nếu chỉ tò mò về AI mà chưa có nhu cầu kinh doanh cụ thể — hãy chờ đến khi sẵn sàng.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-10 text-center">
+        <a href="#pricing" class="inline-block px-8 py-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold text-lg hover:shadow-xl hover:scale-105 transition-all duration-300">
+          🔥 Đăng Ký Ngay →
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="py-20 px-4 md:px-8 bg-gradient-mesh fade-in">
+    <div class="max-w-4xl mx-auto text-center">
+      <div class="orb orb-1" style="opacity:0.15;"></div>
+      <div class="orb orb-2" style="opacity:0.15;"></div>
+
+      <h2 class="text-4xl md:text-5xl font-bold text-white mb-6 relative z-10">
+        Hai Con Đường Trước Mắt Anh/Chị
+      </h2>
+
+      <div class="grid md:grid-cols-2 gap-6 mb-12 relative z-10">
+        <div class="glass rounded-2xl p-6 border border-red-500/20">
+          <div class="text-3xl mb-4">😓</div>
+          <h3 class="font-bold text-white mb-3">Con đường 1</h3>
+          <p class="text-gray-400">Đóng trang này. Tiếp tục như hiện tại. 6 tháng nữa vẫn làm những việc thủ công mà AI có thể làm thay — trong khi đối thủ đang tiến xa hơn mỗi ngày.</p>
+        </div>
+        <div class="glass rounded-2xl p-6 border border-green-500/20">
+          <div class="text-3xl mb-4">🚀</div>
+          <h3 class="font-bold text-white mb-3">Con đường 2</h3>
+          <p class="text-gray-400">Tham gia AI BOSS SYSTEM. 30 ngày từ bây giờ, ít nhất 1 phần doanh nghiệp của anh/chị đang chạy bằng AI — và anh/chị dùng thời gian đó xây những thứ lớn hơn.</p>
+        </div>
+      </div>
+
+      <div class="glass rounded-2xl p-6 mb-8 relative z-10 text-left max-w-xl mx-auto">
+        <p class="text-white font-semibold mb-3">Khi đăng ký hôm nay, anh/chị nhận:</p>
+        <ul class="space-y-2 text-gray-300 text-sm">
+          <li>✅ Core Program AI BOSS System — 6 Module · Lifetime</li>
+          <li>🎁 AI Operating System Pack — 60+ SOP & Template</li>
+          <li>🎁 Workshop AI Audit Doanh Nghiệp</li>
+          <li>🎁 SME AI Club — 90 ngày Q&A Live</li>
+          <li>⚡ Strategy Call 1:1 — còn 20 suất</li>
+          <li>🛡️ Bảo đảm hoàn tiền 30 ngày</li>
+        </ul>
+      </div>
+
+      <div class="relative z-10">
+        <p class="text-yellow-400 font-semibold mb-4 pulse-text">⚠️ Còn <strong id="seats-count-3">47</strong>/50 suất Early Bird — 4.990.000₫</p>
+        <a href="#pricing" class="inline-block px-10 py-5 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold text-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 glow-blue">
+          🔥 Đăng Ký Ngay →
+        </a>
+        <p class="text-gray-500 text-sm mt-4">✅ Hoàn tiền 30 ngày · ✅ Truy cập ngay sau đăng ký</p>
+      </div>
+
+      <div class="mt-12 glass rounded-2xl p-6 relative z-10 text-left max-w-2xl mx-auto">
+        <p class="text-gray-400 text-sm"><strong class="text-white">P.S.</strong> Điều duy nhất tôi hối tiếc khi bắt đầu chuyển đổi AI cho doanh nghiệp mình là: tôi đã không làm sớm hơn 1 năm. Mỗi tháng chờ đợi là mỗi tháng tiếp tục trả chi phí không cần thiết. Anh/chị đang đọc đến đây — điều đó có nghĩa là anh/chị đã biết mình cần thay đổi.</p>
+        <p class="text-gray-400 text-sm mt-3"><strong class="text-white">P.P.S.</strong> Nếu anh/chị không hài lòng sau 30 ngày — tôi hoàn tiền 100%, anh/chị giữ toàn bộ tài liệu. Rủi ro duy nhất là không thử.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="bg-slate-950 py-12 px-4 md:px-8">
+    <div class="max-w-6xl mx-auto">
+      <div class="grid md:grid-cols-3 gap-8 mb-8">
+        <div>
+          <div class="flex items-center gap-2 mb-4">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">A</div>
+            <span class="text-white font-bold">AI BOSS SYSTEM</span>
+          </div>
+          <p class="text-gray-500 text-sm">Hệ thống AI hóa vận hành SME trong 30 ngày. Từ chủ doanh nghiệp đã thực chiến.</p>
+        </div>
+        <div>
+          <h4 class="text-white font-semibold mb-4">Liên hệ</h4>
+          <ul class="space-y-2 text-sm text-gray-500">
+            <li>📧 hosyanh159@gmail.com</li>
+            <li>📞 Zalo: 0918 303 039</li>
+            <li>👤 Hồ Sỹ Anh — Chủ DN Khata</li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="text-white font-semibold mb-4">Pháp lý</h4>
+          <ul class="space-y-2 text-sm text-gray-500">
+            <li><a href="#" class="hover:text-white transition-colors">Chính sách hoàn tiền</a></li>
+            <li><a href="#" class="hover:text-white transition-colors">Điều khoản sử dụng</a></li>
+            <li><a href="#" class="hover:text-white transition-colors">Chính sách bảo mật</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div class="flex gap-4 text-sm text-gray-500">
+          <span>🔒 Thanh toán bảo mật</span>
+          <span>✅ Hoàn tiền 30 ngày</span>
+          <span>⚡ Truy cập ngay</span>
+        </div>
+        <p class="text-gray-600 text-sm">© 2026 Hồ Sỹ Anh · Khata · AI BOSS SYSTEM. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Mobile menu toggle
+    document.getElementById('mobile-menu-toggle').addEventListener('click', function() {
+      document.getElementById('mobile-menu').classList.toggle('hidden');
+    });
+
+    // Scroll fade-in
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+    // FAQ accordion
+    document.querySelectorAll('.faq-toggle').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const answer = this.nextElementSibling;
+        const icon = this.querySelector('.faq-icon');
+        const isOpen = answer.classList.contains('open');
+
+        // Close all
+        document.querySelectorAll('.faq-answer').forEach(a => a.classList.remove('open'));
+        document.querySelectorAll('.faq-icon').forEach(i => i.classList.remove('open'));
+
+        // Open clicked (if was closed)
+        if (!isOpen) {
+          answer.classList.add('open');
+          icon.classList.add('open');
+          icon.textContent = '×';
+        } else {
+          icon.textContent = '+';
+        }
+      });
+    });
+
+    // Seats countdown simulation (replace with real data)
+    let seats = 47;
+    function updateSeats() {
+      document.querySelectorAll('#seats-count, #seats-count-2, #seats-count-3').forEach(el => {
+        if (el) el.textContent = seats;
+      });
+    }
+    updateSeats();
+  </script>
+</body>
+</html>
