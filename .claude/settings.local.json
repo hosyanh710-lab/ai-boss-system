@@ -1,5 +1,10 @@
 {
   "permissions": {
-    "allow": []
+    "allow": [
+      "Bash(git commit:*)",
+      "WebFetch(domain:wesuccess.vn)",
+      "Bash(Get-Date -UFormat \"%y%m%d\")",
+      "Bash(bash:*)"
+    ]
   }
 }
