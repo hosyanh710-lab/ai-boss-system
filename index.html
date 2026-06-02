@@ -699,9 +699,28 @@
               </div>
               <div class="bg-white rounded-2xl p-3 inline-block mb-4 shadow-lg shadow-blue-500/20">
                 <img id="qr-image" src="" alt="VietQR Payment Code" class="w-52 h-52 object-contain"
-                  onerror="document.getElementById('qr-error').classList.remove('hidden'); this.classList.add('hidden');">
-                <div id="qr-error" class="hidden w-52 h-52 flex items-center justify-center text-gray-500 text-sm text-center p-4">
-                  Không tải được QR. Vui lòng chuyển khoản thủ công.
+                  onerror="
+                    var fb = document.getElementById('qr-fallback');
+                    if (!fb.src || fb.src === window.location.href) {
+                      fb.src = buildVietQRFallback(
+                        parseInt(this.src.match(/amount=(\d+)/)?.[1]||0),
+                        decodeURIComponent(this.src.match(/des=([^&]+)/)?.[1]||'')
+                      );
+                      fb.classList.remove('hidden');
+                      this.classList.add('hidden');
+                    } else {
+                      document.getElementById('qr-error').classList.remove('hidden');
+                      fb.classList.add('hidden');
+                      this.classList.add('hidden');
+                    }
+                  ">
+                <img id="qr-fallback" src="" alt="VietQR Fallback" class="hidden w-52 h-52 object-contain"
+                  onerror="this.classList.add('hidden'); document.getElementById('qr-error').classList.remove('hidden');">
+                <div id="qr-error" class="hidden w-52 h-52 flex flex-col items-center justify-center text-sm text-center p-3">
+                  <p class="text-gray-500 mb-3">Không tải được QR tự động.</p>
+                  <p class="text-white font-bold text-base">Chuyển khoản thủ công:</p>
+                  <p class="text-blue-400 font-mono mt-1">ACB — 126295629</p>
+                  <p class="text-white">HO SY ANH</p>
                 </div>
               </div>
               <!-- Timer countdown -->
@@ -1041,17 +1060,26 @@
       vip:     { name: 'VIP',     amount: 9990000, label: '9.990.000₫' },
     };
 
-    // Build VietQR URL (chuẩn quốc gia — hoạt động ngay, không cần đăng ký)
+    // Build VietQR URL — dùng qr.sepay.vn (không cần tài khoản SePay)
     function buildVietQR(amount, description) {
-      // VietQR.io — official Vietnam QR standard, ACB supported
-      const base = 'https://img.vietqr.io/image/' + BANK_CONFIG.bankId
-                 + '-' + BANK_CONFIG.account + '-compact2.png';
+      const p = new URLSearchParams({
+        acc:      BANK_CONFIG.account,
+        bank:     BANK_CONFIG.bankId,
+        amount:   amount,
+        des:      description,
+        template: 'compact',
+      });
+      return 'https://qr.sepay.vn/img?' + p.toString();
+    }
+
+    // Fallback: VietQR.io nếu SePay không load
+    function buildVietQRFallback(amount, description) {
       const p = new URLSearchParams({
         amount:      amount,
         addInfo:     description,
         accountName: BANK_CONFIG.accountName,
       });
-      return base + '?' + p.toString();
+      return 'https://img.vietqr.io/image/ACB-' + BANK_CONFIG.account + '-compact2.png?' + p.toString();
     }
 
     // Polling: check SePay transaction history (optional — needs API token)
