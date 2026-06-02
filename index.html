@@ -1077,6 +1077,27 @@
       bar.classList.remove('hidden');
     }
 
+    // ─── Telegram notification ───────────────────────────────
+    function notifyTelegram(name, phone, plan, des) {
+      const BOT_TOKEN = '8697943146:AAFVoIgms1-WDiNATe1MMfQ85wOa9xyFKqI';
+      const CHAT_ID   = '8528681036';
+      const now = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+      const msg = encodeURIComponent(
+        '🎉 ĐƠN HÀNG MỚI — AI BOSS SYSTEM\n\n'
+        + '👤 Khách: ' + name + '\n'
+        + '📞 SĐT: ' + phone + '\n'
+        + '📦 Gói: ' + plan.name + ' — ' + plan.label + '\n'
+        + '💰 Số tiền: ' + plan.label + '\n'
+        + '🔖 Nội dung CK: ' + des + '\n'
+        + '🕐 Thời gian: ' + now + '\n\n'
+        + '⚡ Gửi link khóa học cho khách ngay!'
+      );
+      const url = 'https://api.telegram.org/bot' + BOT_TOKEN
+                + '/sendMessage?chat_id=' + CHAT_ID
+                + '&text=' + msg + '&parse_mode=HTML';
+      fetch(url).catch(() => {}); // fire and forget
+    }
+
     function showSuccessPage() {
       const name  = document.getElementById('reg-name').value.trim() || 'Anh/Chị';
       const phone = document.getElementById('reg-phone').value.trim();
@@ -1084,6 +1105,9 @@
       const planKey = document.querySelector('input[name="plan"]:checked')?.value || 'boss';
       const plan = PLANS[planKey];
       const des  = document.getElementById('qr-des').textContent;
+
+      // Gửi thông báo Telegram ngay lập tức
+      notifyTelegram(name, phone, plan, des);
 
       // Tạo overlay trang xác nhận
       const overlay = document.createElement('div');
