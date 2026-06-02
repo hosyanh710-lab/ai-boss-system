@@ -1,49 +1,47 @@
-// Vercel Serverless Function — SePay Webhook Handler
-// SePay gửi POST về đây khi có giao dịch ACB
+// Vercel Serverless Function — SePay Webhook
+// POST /api/webhook
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+const https = require('https');
 
-  // Trả 200 ngay để SePay không retry
+function sendTelegram(token, chatId, text) {
+  return new Promise((resolve) => {
+    const body = JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' });
+    const req = https.request({
+      hostname: 'api.telegram.org',
+      path: `/bot${token}/sendMessage`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+    }, resolve);
+    req.on('error', resolve);
+    req.write(body);
+    req.end();
+  });
+}
+
+module.exports = async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   res.status(200).json({ received: true });
 
   try {
-    const data = req.body;
-
-    // Chỉ xử lý giao dịch tiền VÀO
+    const data = req.body || {};
     if (data.transferType !== 'in' || !data.transferAmount) return;
 
-    const BOT_TOKEN  = process.env.TELEGRAM_BOT_TOKEN  || '8697943146:AAFVoIgms1-WDiNATe1MMfQ85wOa9xyFKqI';
-    const ADMIN_CHAT = process.env.TELEGRAM_ADMIN_CHAT || '8528681036';
+    const BOT   = process.env.TELEGRAM_BOT_TOKEN  || '8697943146:AAFVoIgms1-WDiNATe1MMfQ85wOa9xyFKqI';
+    const ADMIN = process.env.TELEGRAM_ADMIN_CHAT || '8528681036';
 
     const amount  = Number(data.transferAmount).toLocaleString('vi-VN');
-    const content = data.content || data.description || '(không có nội dung)';
+    const content = data.content || '(không có nội dung)';
     const time    = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+    const isOrder = content.toUpperCase().includes('AIBOSS');
 
-    // Kiểm tra có phải đơn AI BOSS không
-    const isAIBoss = content.toUpperCase().includes('AIBOSS');
-
-    const msg = (isAIBoss ? '🎉' : '💰') + ' <b>TIỀN VÀO ACB</b>\n\n'
+    const msg = (isOrder ? '🎉' : '💰') + ' <b>TIỀN VÀO ACB</b>\n\n'
       + '💵 Số tiền: <b>' + amount + '₫</b>\n'
       + '📝 Nội dung: <code>' + content + '</code>\n'
-      + '🏦 Ngân hàng: ' + (data.gateway || 'ACB') + '\n'
-      + '🕐 Thời gian: ' + time + '\n'
-      + (isAIBoss ? '\n✅ <b>Đơn AI BOSS SYSTEM — Giao hàng ngay!</b>' : '');
+      + '🕐 Thời gian: ' + time
+      + (isOrder ? '\n\n✅ <b>ĐƠN AI BOSS — Giao hàng ngay!</b>' : '');
 
-    // Gửi Telegram
-    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id:    ADMIN_CHAT,
-        text:       msg,
-        parse_mode: 'HTML',
-      }),
-    });
-
+    await sendTelegram(BOT, ADMIN, msg);
   } catch (err) {
     console.error('Webhook error:', err.message);
   }
-}
+};
