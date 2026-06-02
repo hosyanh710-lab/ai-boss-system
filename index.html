@@ -652,6 +652,26 @@
               </div>
             </div>
 
+            <!-- Telegram username để nhận link tự động -->
+            <div class="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+              <label class="block text-sm font-medium text-blue-300 mb-2">
+                📱 Telegram Username <span class="text-gray-500 font-normal">(để nhận link khóa học tự động)</span>
+              </label>
+              <div class="flex gap-2 items-center mb-3">
+                <span class="text-gray-400 text-lg">@</span>
+                <input type="text" id="reg-telegram" placeholder="username_cua_ban"
+                  class="flex-1 bg-white/5 border border-white/20 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors">
+              </div>
+              <div class="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
+                <span class="text-yellow-400 text-lg flex-shrink-0">⚡</span>
+                <p class="text-yellow-300 text-xs leading-relaxed">
+                  <strong>Bước quan trọng:</strong> Nhắn <code class="bg-white/10 px-1 rounded">/start</code> cho
+                  <a href="https://t.me/AIBossNotifyBot" target="_blank" class="text-blue-400 underline font-bold">@AIBossNotifyBot</a>
+                  trước khi xác nhận — để bot gửi link khóa học cho bạn tự động!
+                </p>
+              </div>
+            </div>
+
             <button type="submit" id="submit-btn"
               class="w-full py-4 px-6 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-200"
               style="box-shadow: 0 0 30px rgba(16,185,129,0.4);">
@@ -1077,25 +1097,75 @@
       bar.classList.remove('hidden');
     }
 
-    // ─── Telegram notification ───────────────────────────────
+    // ─── Config ───────────────────────────────────────────────
+    const BOT_TOKEN   = '8697943146:AAFVoIgms1-WDiNATe1MMfQ85wOa9xyFKqI';
+    const ADMIN_CHAT  = '8528681036'; // Hồ Sỹ Anh
+    const COURSE_LINKS = {
+      starter: 'https://t.me/+[LINK_CHANNEL_STARTER]', // ← Thay link thật
+      boss:    'https://t.me/+[LINK_CHANNEL_BOSS]',    // ← Thay link thật
+      vip:     'https://t.me/+[LINK_CHANNEL_VIP]',     // ← Thay link thật
+    };
+
+    // ─── Gửi link khóa học cho KHÁCH qua Telegram ────────────
+    async function deliverCourseToCustomer(telegramUsername, name, plan) {
+      if (!telegramUsername) return;
+      const username = telegramUsername.replace('@','').trim();
+      if (!username) return;
+
+      // Lấy chat_id của khách từ username (chỉ hoạt động nếu khách đã /start bot)
+      try {
+        const getChatRes = await fetch(
+          'https://api.telegram.org/bot' + BOT_TOKEN + '/getChat?chat_id=@' + username
+        );
+        const chatData = await getChatRes.json();
+        if (!chatData.ok) {
+          // Khách chưa /start bot → thông báo admin giao thủ công
+          sendTelegramMsg(ADMIN_CHAT,
+            '⚠️ Khách <b>' + name + '</b> chưa /start bot.\n'
+            + 'Telegram: @' + username + '\n'
+            + 'Gói: ' + plan.name + '\n'
+            + '→ Giao link thủ công!');
+          return;
+        }
+        const customerChatId = chatData.result.id;
+        const courseLink = COURSE_LINKS[document.querySelector('input[name="plan"]:checked')?.value] || COURSE_LINKS.boss;
+        const accessCode = 'AIBOSS-' + Math.random().toString(36).substring(2,8).toUpperCase();
+
+        const msg = '🎉 Chào <b>' + name + '</b>!\n\n'
+          + 'Cảm ơn bạn đã đăng ký <b>AI BOSS SYSTEM</b> — Gói ' + plan.name + '.\n\n'
+          + '📚 <b>Link truy cập khóa học:</b>\n'
+          + '👉 ' + courseLink + '\n\n'
+          + '🔑 Mã truy cập: <code>' + accessCode + '</code>\n\n'
+          + '📞 Hỗ trợ: Zalo <b>0918 303 039</b> (Hồ Sỹ Anh)\n\n'
+          + 'Chúc bạn học tốt! 🚀';
+
+        sendTelegramMsg(customerChatId, msg);
+      } catch(e) {}
+    }
+
+    function sendTelegramMsg(chatId, text) {
+      const url = 'https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage';
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'HTML' })
+      }).catch(() => {});
+    }
+
+    // ─── Telegram notification admin ─────────────────────────
     function notifyTelegram(name, phone, plan, des) {
-      const BOT_TOKEN = '8697943146:AAFVoIgms1-WDiNATe1MMfQ85wOa9xyFKqI';
-      const CHAT_ID   = '8528681036';
       const now = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
-      const msg = encodeURIComponent(
-        '🎉 ĐƠN HÀNG MỚI — AI BOSS SYSTEM\n\n'
-        + '👤 Khách: ' + name + '\n'
+      const tg  = (document.getElementById('reg-telegram')?.value || '').replace('@','').trim();
+      const msg = '🎉 <b>ĐƠN HÀNG MỚI — AI BOSS SYSTEM</b>\n\n'
+        + '👤 Khách: <b>' + name + '</b>\n'
         + '📞 SĐT: ' + phone + '\n'
-        + '📦 Gói: ' + plan.name + ' — ' + plan.label + '\n'
+        + (tg ? '📱 Telegram: @' + tg + '\n' : '📱 Telegram: Chưa điền\n')
+        + '📦 Gói: <b>' + plan.name + ' — ' + plan.label + '</b>\n'
         + '💰 Số tiền: ' + plan.label + '\n'
-        + '🔖 Nội dung CK: ' + des + '\n'
+        + '🔖 Nội dung CK: <code>' + des + '</code>\n'
         + '🕐 Thời gian: ' + now + '\n\n'
-        + '⚡ Gửi link khóa học cho khách ngay!'
-      );
-      const url = 'https://api.telegram.org/bot' + BOT_TOKEN
-                + '/sendMessage?chat_id=' + CHAT_ID
-                + '&text=' + msg + '&parse_mode=HTML';
-      fetch(url).catch(() => {}); // fire and forget
+        + (tg ? '✅ Bot đang gửi link cho khách...' : '⚠️ Khách chưa điền Telegram → Giao thủ công!');
+      sendTelegramMsg(ADMIN_CHAT, msg);
     }
 
     function showSuccessPage() {
@@ -1106,8 +1176,11 @@
       const plan = PLANS[planKey];
       const des  = document.getElementById('qr-des').textContent;
 
-      // Gửi thông báo Telegram ngay lập tức
+      // 1. Thông báo admin
       notifyTelegram(name, phone, plan, des);
+      // 2. Giao link khóa học tự động cho khách
+      const tgUsername = document.getElementById('reg-telegram')?.value || '';
+      deliverCourseToCustomer(tgUsername, name, plan);
 
       // Tạo overlay trang xác nhận
       const overlay = document.createElement('div');
