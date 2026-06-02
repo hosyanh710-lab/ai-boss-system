@@ -694,12 +694,31 @@
             </div>
 
             <div id="qr-display" class="hidden">
-              <div class="mb-4">
+              <!-- Mã đơn hàng -->
+              <div class="mb-4 bg-white/5 rounded-xl px-4 py-2 inline-block">
+                <span class="text-xs text-gray-400">Mã đơn hàng:</span>
+                <span id="order-id" class="ml-2 text-yellow-300 font-mono font-bold text-sm"></span>
+              </div>
+
+              <div class="mb-1">
                 <span class="text-sm text-gray-400">Gói đang chọn:</span>
                 <span id="qr-plan-name" class="ml-2 text-white font-bold"></span>
               </div>
+
+              <!-- QR Image từ VietQR.io -->
               <div class="bg-white rounded-2xl p-3 inline-block mb-4 shadow-lg shadow-blue-500/20">
-                <div id="qr-canvas" class="w-52 h-52 flex items-center justify-center"></div>
+                <img id="qr-image"
+                  src=""
+                  alt="Mã QR chuyển khoản"
+                  width="208" height="208"
+                  style="display:block; width:208px; height:208px;"
+                  onerror="this.style.display='none'; document.getElementById('qr-manual').style.display='flex';">
+                <div id="qr-manual" style="display:none; width:208px; height:208px; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:12px; color:#6b7280; font-size:13px; gap:4px;">
+                  <div style="font-size:32px;">🏦</div>
+                  <div style="color:#111; font-weight:700; font-size:15px;">Chuyển khoản ACB</div>
+                  <div style="color:#2563eb; font-family:monospace; font-weight:700; font-size:16px;">126295629</div>
+                  <div style="color:#111;">HO SY ANH</div>
+                </div>
               </div>
               <!-- Timer countdown -->
               <div class="flex items-center justify-center gap-2 mb-3">
@@ -1038,72 +1057,23 @@
       vip:     { name: 'VIP',     amount: 9990000, label: '9.990.000₫' },
     };
 
-    // Render QR trực tiếp bằng qrcode.js — không cần API bên ngoài
-    let _qrInstance = null;
+    // Sinh mã đơn hàng duy nhất
+    function generateOrderId() {
+      const d = new Date();
+      const date = d.getDate().toString().padStart(2,'0')
+                 + (d.getMonth()+1).toString().padStart(2,'0')
+                 + d.getFullYear().toString().slice(-2);
+      const rand = Math.random().toString(36).substring(2,6).toUpperCase();
+      return 'AIBOSS-' + date + '-' + rand;
+    }
+
+    // Build VietQR.io URL — public API, không cần đăng ký
     function buildVietQR(amount, description) {
-      // Tạo chuỗi VietQR text mà app ngân hàng VN nhận ra
-      const qrText = 'https://img.vietqr.io/image/ACB-' + BANK_CONFIG.account
-        + '-compact2.png?amount=' + amount
-        + '&addInfo=' + encodeURIComponent(description)
+      return 'https://img.vietqr.io/image/ACB-'
+        + BANK_CONFIG.account + '-compact2.png'
+        + '?amount='      + amount
+        + '&addInfo='     + encodeURIComponent(description)
         + '&accountName=' + encodeURIComponent(BANK_CONFIG.accountName);
-      renderQR(amount, description);
-      return qrText; // vẫn return để các chỗ khác dùng được
-    }
-
-    function renderQR(amount, description) {
-      const container = document.getElementById('qr-canvas');
-      if (!container) return;
-      container.innerHTML = ''; // xóa QR cũ
-
-      // Chuỗi dữ liệu VietQR chuẩn EMV cho app ngân hàng
-      const bankBin  = '970416'; // ACB bank BIN
-      const qrData   = buildEMVQR(bankBin, BANK_CONFIG.account, amount, description, BANK_CONFIG.accountName);
-
-      try {
-        _qrInstance = new QRCode(container, {
-          text:        qrData,
-          width:       208,
-          height:      208,
-          colorDark:   '#000000',
-          colorLight:  '#ffffff',
-          correctLevel: QRCode.CorrectLevel.M,
-        });
-      } catch(e) {
-        // Fallback: hiện ảnh từ VietQR.io
-        const img = document.createElement('img');
-        img.src = 'https://img.vietqr.io/image/ACB-' + BANK_CONFIG.account
-          + '-compact2.png?amount=' + amount
-          + '&addInfo=' + encodeURIComponent(description)
-          + '&accountName=' + encodeURIComponent(BANK_CONFIG.accountName);
-        img.className = 'w-52 h-52 object-contain';
-        img.alt = 'VietQR';
-        container.appendChild(img);
-      }
-    }
-
-    // Tạo chuỗi EMV QR chuẩn VietQR (app ngân hàng VN đọc được)
-    function buildEMVQR(bankBin, accountNo, amount, description, accountName) {
-      const merchantId = '0006' + bankBin.length.toString().padStart(2,'0') + bankBin
-        + '0112' + accountNo;
-      const merchantInfo = '38' + (merchantId.length + 4).toString().padStart(2,'0')
-        + '0010A000000727' + merchantId;
-      const amountField = amount ? '54' + amount.toString().length.toString().padStart(2,'0') + amount : '';
-      const desc = description ? '62' + (description.length + 6).toString().padStart(2,'0')
-        + '08' + description.length.toString().padStart(2,'0') + description : '';
-      const body = '000201' + '010212' + merchantInfo
-        + '5204' + '0000' + '5303704' + amountField + '5802VN'
-        + '5925' + accountName.substring(0,25).padEnd(25,' ').trim().substring(0,25)
-        + '6010Ho Chi Minh' + desc + '6304';
-      // CRC16 checksum
-      let crc = 0xFFFF;
-      for (let i = 0; i < body.length; i++) {
-        crc ^= body.charCodeAt(i) << 8;
-        for (let j = 0; j < 8; j++) {
-          crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : crc << 1;
-        }
-        crc &= 0xFFFF;
-      }
-      return body + crc.toString(16).toUpperCase().padStart(4,'0');
     }
 
     // Polling: check SePay transaction history (optional — needs API token)
@@ -1208,7 +1178,9 @@
     function notifyTelegram(name, phone, plan, des) {
       const now = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
       const tg  = (document.getElementById('reg-telegram')?.value || '').replace('@','').trim();
+      const orderId = window._currentOrderId || '-';
       const msg = '🎉 <b>ĐƠN HÀNG MỚI — AI BOSS SYSTEM</b>\n\n'
+        + '🔖 Mã đơn: <code>' + orderId + '</code>\n'
         + '👤 Khách: <b>' + name + '</b>\n'
         + '📞 SĐT: ' + phone + '\n'
         + (tg ? '📱 Telegram: @' + tg + '\n' : '📱 Telegram: Chưa điền\n')
@@ -1262,6 +1234,10 @@
             </div>
             <div class="space-y-3 text-sm">
               <div class="flex justify-between">
+                <span class="text-gray-400">Mã đơn hàng</span>
+                <span class="text-yellow-300 font-mono font-bold">${window._currentOrderId || orderId}</span>
+              </div>
+              <div class="flex justify-between border-t border-white/10 pt-3">
                 <span class="text-gray-400">Gói đăng ký</span>
                 <span class="text-white font-bold">${plan.name} — ${plan.label}</span>
               </div>
@@ -1338,10 +1314,27 @@
       // Build VietQR URL
       const qrUrl = buildVietQR(plan.amount, des);
 
-      // Hiện QR
+      // Sinh mã đơn hàng nếu chưa có
+      if (!window._currentOrderId) window._currentOrderId = generateOrderId();
+      const orderId = window._currentOrderId;
+
+      // Hiện QR section
       document.getElementById('qr-placeholder').classList.add('hidden');
       document.getElementById('qr-display').classList.remove('hidden');
-      // QR được render bởi renderQR() bên trong buildVietQR()
+
+      // Hiện mã đơn hàng
+      const orderEl = document.getElementById('order-id');
+      if (orderEl) orderEl.textContent = orderId;
+
+      // Set QR image
+      const qrImg = document.getElementById('qr-image');
+      const qrManual = document.getElementById('qr-manual');
+      if (qrImg) {
+        qrImg.style.display = 'block';
+        if (qrManual) qrManual.style.display = 'none';
+        qrImg.src = buildVietQR(plan.amount, des);
+      }
+
       document.getElementById('qr-plan-name').textContent = plan.name + ' — ' + plan.label;
       document.getElementById('qr-des').textContent = des;
       document.getElementById('qr-amount-display').textContent = plan.label;
