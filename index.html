@@ -684,18 +684,47 @@
                   Không tải được QR. Vui lòng chuyển khoản thủ công.
                 </div>
               </div>
+              <!-- Timer countdown -->
+              <div class="flex items-center justify-center gap-2 mb-3">
+                <span class="text-gray-400 text-xs">QR hết hạn sau:</span>
+                <span id="qr-timer" class="text-yellow-300 font-mono font-bold text-sm">15:00</span>
+              </div>
+
               <p class="text-sm text-gray-400 mb-1">Quét bằng app ngân hàng bất kỳ</p>
-              <p class="text-xs text-gray-500 mb-4">44+ ngân hàng VN được hỗ trợ</p>
-              <div class="bg-white/5 rounded-xl p-3 text-left text-sm">
+              <p class="text-xs text-gray-500 mb-3">44+ ngân hàng VN · VietQR chuẩn quốc gia</p>
+
+              <!-- Transfer details -->
+              <div class="bg-white/5 rounded-xl p-3 text-left text-sm mb-2">
+                <div class="flex justify-between py-1 border-b border-white/10">
+                  <span class="text-gray-400">Ngân hàng:</span>
+                  <span class="text-white font-medium">ACB</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-white/10">
+                  <span class="text-gray-400">Số TK:</span>
+                  <span class="text-white font-mono font-bold">126295629</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-white/10">
+                  <span class="text-gray-400">Chủ TK:</span>
+                  <span class="text-white font-medium">HO SY ANH</span>
+                </div>
                 <div class="flex justify-between py-1 border-b border-white/10">
                   <span class="text-gray-400">Nội dung CK:</span>
-                  <span id="qr-des" class="text-yellow-300 font-mono font-bold"></span>
+                  <span id="qr-des" class="text-yellow-300 font-mono font-bold text-xs"></span>
                 </div>
                 <div class="flex justify-between py-1">
                   <span class="text-gray-400">Số tiền:</span>
                   <span id="qr-amount-display" class="text-blue-400 font-bold"></span>
                 </div>
               </div>
+
+              <!-- Payment status bar -->
+              <div id="payment-status-bar" class="hidden mt-3 rounded-xl p-3 border text-sm text-center"></div>
+
+              <!-- Confirm button -->
+              <button onclick="updatePaymentStatus('success'); clearInterval(pollTimer);"
+                class="mt-3 w-full py-2 px-4 rounded-xl bg-green-500/20 border border-green-500/40 text-green-300 text-sm font-medium hover:bg-green-500/30 transition-all">
+                ✅ Tôi đã chuyển khoản xong
+              </button>
             </div>
           </div>
 
@@ -934,7 +963,7 @@
     document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeModal(); });
 
     // All [href=#dang-ky] buttons open modal instead of scrolling
-    document.querySelectorAll('a[href=]').forEach(function(btn){
+    document.querySelectorAll('a[href="#dang-ky"]').forEach(function(btn){
       btn.addEventListener('click', function(e){
         e.preventDefault();
         openModal();
@@ -980,15 +1009,67 @@
 
     // ─── PAYMENT CONFIG ───
     const BANK_CONFIG = {
-      account: '126295629',
-      bank:    'ACB',
+      account:     '126295629',
+      bankId:      'ACB',          // SePay bank name
+      accountName: 'HO SY ANH',
     };
 
     const PLANS = {
-      starter: { name: 'STARTER',  amount: 1990000, label: '1.990.000₫' },
-      boss:    { name: 'BOSS',     amount: 4990000, label: '4.990.000₫' },
-      vip:     { name: 'VIP',      amount: 9990000, label: '9.990.000₫' },
+      starter: { name: 'STARTER', amount: 1990000, label: '1.990.000₫' },
+      boss:    { name: 'BOSS',    amount: 4990000, label: '4.990.000₫' },
+      vip:     { name: 'VIP',     amount: 9990000, label: '9.990.000₫' },
     };
+
+    // Build VietQR URL (chuẩn quốc gia — hoạt động ngay, không cần đăng ký)
+    function buildVietQR(amount, description) {
+      // VietQR.io — official Vietnam QR standard, ACB supported
+      const base = 'https://img.vietqr.io/image/' + BANK_CONFIG.bankId
+                 + '-' + BANK_CONFIG.account + '-compact2.png';
+      const p = new URLSearchParams({
+        amount:      amount,
+        addInfo:     description,
+        accountName: BANK_CONFIG.accountName,
+      });
+      return base + '?' + p.toString();
+    }
+
+    // Polling: check SePay transaction history (optional — needs API token)
+    let pollTimer = null;
+    function startPolling(des, amount) {
+      clearInterval(pollTimer);
+      let elapsed = 0;
+      const MAX = 15 * 60; // 15 phút timeout
+      updatePaymentStatus('pending');
+
+      pollTimer = setInterval(async function () {
+        elapsed += 10;
+        if (elapsed >= MAX) {
+          clearInterval(pollTimer);
+          updatePaymentStatus('timeout');
+          return;
+        }
+        // Update countdown
+        const remaining = MAX - elapsed;
+        const mm = String(Math.floor(remaining / 60)).padStart(2, '0');
+        const ss = String(remaining % 60).padStart(2, '0');
+        const el = document.getElementById('qr-timer');
+        if (el) el.textContent = mm + ':' + ss;
+      }, 10000);
+    }
+
+    function updatePaymentStatus(status) {
+      const bar = document.getElementById('payment-status-bar');
+      if (!bar) return;
+      const states = {
+        pending: { cls: 'bg-yellow-500/20 border-yellow-500/30', icon: '⏳', text: 'Đang chờ thanh toán...' },
+        success: { cls: 'bg-green-500/20 border-green-500/30', icon: '✅', text: 'Thanh toán thành công!' },
+        timeout: { cls: 'bg-red-500/20 border-red-500/30',    icon: '⏰', text: 'Hết thời gian. Vui lòng tạo QR mới.' },
+      };
+      const s = states[status] || states.pending;
+      bar.className = 'mt-3 rounded-xl p-3 border text-sm text-center ' + s.cls;
+      bar.innerHTML = s.icon + ' ' + s.text;
+      bar.classList.remove('hidden');
+    }
 
     // Highlight radio labels on change
     document.querySelectorAll('input[name="plan"]').forEach(radio => {
@@ -1006,7 +1087,7 @@
       });
     });
 
-    // Form submit — show QR
+    // Form submit — show VietQR
     document.getElementById('registration-form').addEventListener('submit', function (e) {
       e.preventDefault();
 
@@ -1016,30 +1097,27 @@
       const planKey = document.querySelector('input[name="plan"]:checked').value;
       const plan    = PLANS[planKey];
 
-      // Build description: AIBOSS_TenVietTat_Goi
+      // Build transfer description
       const namePart = name.split(' ').pop().toUpperCase().replace(/[^A-Z0-9]/g,'').substring(0,10);
-      const des = `AIBOSS_${namePart}_${plan.name}`;
+      const des = 'AIBOSS ' + namePart + ' ' + plan.name;
 
-      // Build QR URL
-      const params = new URLSearchParams({
-        acc:      BANK_CONFIG.account,
-        bank:     BANK_CONFIG.bank,
-        amount:   plan.amount,
-        des:      des,
-        template: 'compact',
-      });
-      const qrUrl = `https://qr.sepay.vn/img?${params.toString()}`;
+      // Build VietQR URL
+      const qrUrl = buildVietQR(plan.amount, des);
 
       // Update UI
       document.getElementById('qr-placeholder').classList.add('hidden');
       document.getElementById('qr-display').classList.remove('hidden');
       document.getElementById('qr-image').src = qrUrl;
-      document.getElementById('qr-plan-name').textContent = `${plan.name} — ${plan.label}`;
+      document.getElementById('qr-plan-name').textContent = plan.name + ' — ' + plan.label;
       document.getElementById('qr-des').textContent = des;
       document.getElementById('qr-amount-display').textContent = plan.label;
 
-      // Scroll to QR
-      document.getElementById('qr-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Start countdown timer
+      startPolling(des, plan.amount);
+
+      // Scroll modal to QR column
+      const modalBox = document.querySelector('#modal-dang-ky .overflow-y-auto');
+      if (modalBox) modalBox.scrollTop = 0;
 
       // Update submit button
       const btn = document.getElementById('submit-btn');
