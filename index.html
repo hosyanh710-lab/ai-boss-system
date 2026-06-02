@@ -10,6 +10,7 @@
   <meta property="og:type" content="website">
 
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -698,30 +699,7 @@
                 <span id="qr-plan-name" class="ml-2 text-white font-bold"></span>
               </div>
               <div class="bg-white rounded-2xl p-3 inline-block mb-4 shadow-lg shadow-blue-500/20">
-                <img id="qr-image" src="" alt="VietQR Payment Code" class="w-52 h-52 object-contain"
-                  onerror="
-                    var fb = document.getElementById('qr-fallback');
-                    if (!fb.src || fb.src === window.location.href) {
-                      fb.src = buildVietQRFallback(
-                        parseInt(this.src.match(/amount=(\d+)/)?.[1]||0),
-                        decodeURIComponent(this.src.match(/des=([^&]+)/)?.[1]||'')
-                      );
-                      fb.classList.remove('hidden');
-                      this.classList.add('hidden');
-                    } else {
-                      document.getElementById('qr-error').classList.remove('hidden');
-                      fb.classList.add('hidden');
-                      this.classList.add('hidden');
-                    }
-                  ">
-                <img id="qr-fallback" src="" alt="VietQR Fallback" class="hidden w-52 h-52 object-contain"
-                  onerror="this.classList.add('hidden'); document.getElementById('qr-error').classList.remove('hidden');">
-                <div id="qr-error" class="hidden w-52 h-52 flex flex-col items-center justify-center text-sm text-center p-3">
-                  <p class="text-gray-500 mb-3">Không tải được QR tự động.</p>
-                  <p class="text-white font-bold text-base">Chuyển khoản thủ công:</p>
-                  <p class="text-blue-400 font-mono mt-1">ACB — 126295629</p>
-                  <p class="text-white">HO SY ANH</p>
-                </div>
+                <div id="qr-canvas" class="w-52 h-52 flex items-center justify-center"></div>
               </div>
               <!-- Timer countdown -->
               <div class="flex items-center justify-center gap-2 mb-3">
@@ -1060,26 +1038,72 @@
       vip:     { name: 'VIP',     amount: 9990000, label: '9.990.000₫' },
     };
 
-    // Build VietQR URL — dùng qr.sepay.vn (không cần tài khoản SePay)
+    // Render QR trực tiếp bằng qrcode.js — không cần API bên ngoài
+    let _qrInstance = null;
     function buildVietQR(amount, description) {
-      const p = new URLSearchParams({
-        acc:      BANK_CONFIG.account,
-        bank:     BANK_CONFIG.bankId,
-        amount:   amount,
-        des:      description,
-        template: 'compact',
-      });
-      return 'https://qr.sepay.vn/img?' + p.toString();
+      // Tạo chuỗi VietQR text mà app ngân hàng VN nhận ra
+      const qrText = 'https://img.vietqr.io/image/ACB-' + BANK_CONFIG.account
+        + '-compact2.png?amount=' + amount
+        + '&addInfo=' + encodeURIComponent(description)
+        + '&accountName=' + encodeURIComponent(BANK_CONFIG.accountName);
+      renderQR(amount, description);
+      return qrText; // vẫn return để các chỗ khác dùng được
     }
 
-    // Fallback: VietQR.io nếu SePay không load
-    function buildVietQRFallback(amount, description) {
-      const p = new URLSearchParams({
-        amount:      amount,
-        addInfo:     description,
-        accountName: BANK_CONFIG.accountName,
-      });
-      return 'https://img.vietqr.io/image/ACB-' + BANK_CONFIG.account + '-compact2.png?' + p.toString();
+    function renderQR(amount, description) {
+      const container = document.getElementById('qr-canvas');
+      if (!container) return;
+      container.innerHTML = ''; // xóa QR cũ
+
+      // Chuỗi dữ liệu VietQR chuẩn EMV cho app ngân hàng
+      const bankBin  = '970416'; // ACB bank BIN
+      const qrData   = buildEMVQR(bankBin, BANK_CONFIG.account, amount, description, BANK_CONFIG.accountName);
+
+      try {
+        _qrInstance = new QRCode(container, {
+          text:        qrData,
+          width:       208,
+          height:      208,
+          colorDark:   '#000000',
+          colorLight:  '#ffffff',
+          correctLevel: QRCode.CorrectLevel.M,
+        });
+      } catch(e) {
+        // Fallback: hiện ảnh từ VietQR.io
+        const img = document.createElement('img');
+        img.src = 'https://img.vietqr.io/image/ACB-' + BANK_CONFIG.account
+          + '-compact2.png?amount=' + amount
+          + '&addInfo=' + encodeURIComponent(description)
+          + '&accountName=' + encodeURIComponent(BANK_CONFIG.accountName);
+        img.className = 'w-52 h-52 object-contain';
+        img.alt = 'VietQR';
+        container.appendChild(img);
+      }
+    }
+
+    // Tạo chuỗi EMV QR chuẩn VietQR (app ngân hàng VN đọc được)
+    function buildEMVQR(bankBin, accountNo, amount, description, accountName) {
+      const merchantId = '0006' + bankBin.length.toString().padStart(2,'0') + bankBin
+        + '0112' + accountNo;
+      const merchantInfo = '38' + (merchantId.length + 4).toString().padStart(2,'0')
+        + '0010A000000727' + merchantId;
+      const amountField = amount ? '54' + amount.toString().length.toString().padStart(2,'0') + amount : '';
+      const desc = description ? '62' + (description.length + 6).toString().padStart(2,'0')
+        + '08' + description.length.toString().padStart(2,'0') + description : '';
+      const body = '000201' + '010212' + merchantInfo
+        + '5204' + '0000' + '5303704' + amountField + '5802VN'
+        + '5925' + accountName.substring(0,25).padEnd(25,' ').trim().substring(0,25)
+        + '6010Ho Chi Minh' + desc + '6304';
+      // CRC16 checksum
+      let crc = 0xFFFF;
+      for (let i = 0; i < body.length; i++) {
+        crc ^= body.charCodeAt(i) << 8;
+        for (let j = 0; j < 8; j++) {
+          crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : crc << 1;
+        }
+        crc &= 0xFFFF;
+      }
+      return body + crc.toString(16).toUpperCase().padStart(4,'0');
     }
 
     // Polling: check SePay transaction history (optional — needs API token)
@@ -1317,7 +1341,7 @@
       // Hiện QR
       document.getElementById('qr-placeholder').classList.add('hidden');
       document.getElementById('qr-display').classList.remove('hidden');
-      document.getElementById('qr-image').src = qrUrl;
+      // QR được render bởi renderQR() bên trong buildVietQR()
       document.getElementById('qr-plan-name').textContent = plan.name + ' — ' + plan.label;
       document.getElementById('qr-des').textContent = des;
       document.getElementById('qr-amount-display').textContent = plan.label;
