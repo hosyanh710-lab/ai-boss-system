@@ -653,9 +653,9 @@
             </div>
 
             <button type="submit" id="submit-btn"
-              class="w-full py-4 px-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-200"
-              style="box-shadow: 0 0 30px rgba(59,130,246,0.4);">
-              Xem QR Thanh Toán →
+              class="w-full py-4 px-6 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-lg hover:shadow-2xl hover:scale-105 transition-all duration-200"
+              style="box-shadow: 0 0 30px rgba(16,185,129,0.4);">
+              ✅ Tôi đã chuyển khoản xong →
             </button>
             <p class="text-center text-gray-500 text-xs">🔒 Thông tin của anh/chị được bảo mật tuyệt đối</p>
           </form>
@@ -667,9 +667,9 @@
           <!-- QR CARD -->
           <div class="glass rounded-2xl p-8 text-center" id="qr-section">
             <div id="qr-placeholder">
-              <div class="text-6xl mb-4">📱</div>
-              <p class="text-lg font-medium text-gray-400">Điền form bên trái</p>
-              <p class="text-sm text-gray-500 mt-2">Mã QR sẽ hiển thị tại đây</p>
+              <div class="text-6xl mb-4">👆</div>
+              <p class="text-lg font-medium text-gray-400">Chọn gói bên trái</p>
+              <p class="text-sm text-gray-500 mt-2">Mã QR sẽ hiển thị ngay lập tức</p>
             </div>
 
             <div id="qr-display" class="hidden">
@@ -1174,7 +1174,33 @@
       requestAnimationFrame(() => { overlay.style.opacity = '1'; });
     }
 
-    // Highlight radio labels on change
+    // Hàm sinh QR ngay khi chọn gói
+    function showQRForPlan(planKey) {
+      const plan = PLANS[planKey];
+      if (!plan) return;
+
+      // Lấy thông tin từ form (nếu đã điền)
+      const name  = (document.getElementById('reg-name').value.trim()  || 'KHACH HANG').toUpperCase().replace(/[^A-Z0-9 ]/g,'').replace(/\s+/g,' ').trim().substring(0,15);
+      const phone = (document.getElementById('reg-phone').value.trim() || '').replace(/\D/g,'').substring(0,10);
+
+      // Build nội dung chuyển khoản
+      const des = phone ? ('AIBOSS ' + name + ' ' + phone) : ('AIBOSS ' + name);
+
+      // Build VietQR URL
+      const qrUrl = buildVietQR(plan.amount, des);
+
+      // Hiện QR
+      document.getElementById('qr-placeholder').classList.add('hidden');
+      document.getElementById('qr-display').classList.remove('hidden');
+      document.getElementById('qr-image').src = qrUrl;
+      document.getElementById('qr-plan-name').textContent = plan.name + ' — ' + plan.label;
+      document.getElementById('qr-des').textContent = des;
+      document.getElementById('qr-amount-display').textContent = plan.label;
+
+      startPolling(des, plan.amount);
+    }
+
+    // Highlight radio + sinh QR ngay khi chọn gói
     document.querySelectorAll('input[name="plan"]').forEach(radio => {
       radio.addEventListener('change', function () {
         ['starter','boss','vip'].forEach(p => {
@@ -1187,47 +1213,32 @@
             lbl.classList.remove('border-blue-500/50','bg-blue-500/10');
           }
         });
+        // Sinh QR ngay lập tức
+        showQRForPlan(this.value);
       });
     });
 
-    // Form submit — show VietQR
+    // Khi form thay đổi name/phone → cập nhật nội dung CK và QR
+    ['reg-name','reg-phone'].forEach(id => {
+      document.getElementById(id).addEventListener('input', function() {
+        const planKey = document.querySelector('input[name="plan"]:checked')?.value;
+        if (planKey && !document.getElementById('qr-display').classList.contains('hidden')) {
+          showQRForPlan(planKey);
+        }
+      });
+    });
+
+    // Hiện QR ngay khi modal mở (gói BOSS mặc định)
+    const origOpenModal = openModal;
+    openModal = function() {
+      origOpenModal();
+      setTimeout(() => showQRForPlan('boss'), 100);
+    };
+
+    // Form submit = xác nhận đã chuyển khoản → show success page
     document.getElementById('registration-form').addEventListener('submit', function (e) {
       e.preventDefault();
-
-      const name    = document.getElementById('reg-name').value.trim();
-      const phone   = document.getElementById('reg-phone').value.trim();
-      const email   = document.getElementById('reg-email').value.trim();
-      const planKey = document.querySelector('input[name="plan"]:checked').value;
-      const plan    = PLANS[planKey];
-
-      // Build transfer description: AIBOSS [TEN+SDT]
-      const phonePart = phone.replace(/\D/g,'').substring(0,10);
-      const namePart  = name.toUpperCase().replace(/[^A-Z0-9 ]/g,'').replace(/\s+/g,' ').trim().substring(0,15);
-      const des = 'AIBOSS ' + namePart + ' ' + phonePart;
-
-      // Build VietQR URL
-      const qrUrl = buildVietQR(plan.amount, des);
-
-      // Update UI
-      document.getElementById('qr-placeholder').classList.add('hidden');
-      document.getElementById('qr-display').classList.remove('hidden');
-      document.getElementById('qr-image').src = qrUrl;
-      document.getElementById('qr-plan-name').textContent = plan.name + ' — ' + plan.label;
-      document.getElementById('qr-des').textContent = des;
-      document.getElementById('qr-amount-display').textContent = plan.label;
-
-      // Start countdown timer
-      startPolling(des, plan.amount);
-
-      // Scroll modal to QR column
-      const modalBox = document.querySelector('#modal-dang-ky .overflow-y-auto');
-      if (modalBox) modalBox.scrollTop = 0;
-
-      // Update submit button
-      const btn = document.getElementById('submit-btn');
-      btn.textContent = '✅ Đã tạo QR — Quét để thanh toán';
-      btn.classList.remove('from-blue-500','to-purple-600');
-      btn.classList.add('from-green-500','to-emerald-600');
+      updatePaymentStatus('success');
     });
 
     // ─── Seats countdown ───
