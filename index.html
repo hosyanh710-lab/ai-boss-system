@@ -1067,13 +1067,16 @@
       return 'AIBOSS-' + date + '-' + rand;
     }
 
-    // Build VietQR.io URL — public API, không cần đăng ký
+    // Build QR URL qua Vercel proxy (tránh hotlink block)
     function buildVietQR(amount, description) {
-      return 'https://img.vietqr.io/image/ACB-'
-        + BANK_CONFIG.account + '-compact2.png'
-        + '?amount='      + amount
-        + '&addInfo='     + encodeURIComponent(description)
-        + '&accountName=' + encodeURIComponent(BANK_CONFIG.accountName);
+      const p = new URLSearchParams({
+        bank:   BANK_CONFIG.bankId,
+        acc:    BANK_CONFIG.account,
+        amount: amount,
+        des:    description,
+        name:   BANK_CONFIG.accountName,
+      });
+      return '/api/qr?' + p.toString();
     }
 
     // Polling: check SePay transaction history (optional — needs API token)
