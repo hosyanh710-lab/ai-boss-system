@@ -1,64 +1,21 @@
 // Vercel Serverless Function — Admin xác nhận thanh toán
 // GET /api/confirm?token=TOKEN&email=X&name=X&phone=X&plan=boss&planLabel=4.990.000%E2%82%AB&orderId=X&telegram=X
 //
-// Khi admin click link này từ Telegram:
-//   1. Gửi Email #1 ngay lập tức (welcome + course access)
-//   2. Lên lịch Email #2 → +1 ngày, #3 → +3 ngày, #4 → +5 ngày, #5 → +7 ngày
-//   3. Gửi Telegram cho khách (link nhóm + link khóa học)
-//   4. Thông báo admin: "✅ Đã xác nhận"
-//
-// KHÔNG cần database, KHÔNG cần cron job.
-// Resend tự quản lý lịch gửi email.
+// Khi admin click link từ Telegram:
+//   1. Gửi Email #1 ngay (welcome + course access) qua Gmail SMTP
+//   2. Gửi Telegram cho khách (link nhóm + link khóa học)
+//   3. Thông báo admin: "✅ Đã xác nhận"
+//   4. Email #2–5 gửi theo sequence (xem send-sequence.js + Vercel Cron)
 
 const https = require('https');
 const { getEmail, EMAIL_SCHEDULE } = require('./email-templates');
+const { sendMail } = require('./mailer');
 
 const COURSE_LINKS = {
   starter: 'https://t.me/+MQ_ugnQPINcyNTc1',
   boss:    'https://t.me/+8nY7V6gmv9RjYjBl',
   vip:     'https://t.me/+AFeLlegMOu43ZDc9',
 };
-
-// ── Resend: gửi email (có thể lên lịch) ──────────────────────
-async function sendEmail(to, subject, html, scheduledAt = null) {
-  const RESEND_KEY = process.env.RESEND_API_KEY;
-  const FROM_EMAIL = process.env.FROM_EMAIL || 'AI BOSS SYSTEM <onboarding@resend.dev>';
-
-  if (!RESEND_KEY) {
-    console.warn('RESEND_API_KEY chưa được cấu hình');
-    return { ok: false, reason: 'no_resend_key' };
-  }
-
-  const body = { from: FROM_EMAIL, to: [to], subject, html };
-  if (scheduledAt) body.scheduled_at = scheduledAt; // Resend scheduled delivery
-
-  const payload = JSON.stringify(body);
-
-  return new Promise((resolve) => {
-    const req = https.request({
-      hostname: 'api.resend.com',
-      path: '/emails',
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${RESEND_KEY}`,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(payload),
-      },
-    }, (res) => {
-      const chunks = [];
-      res.on('data', c => chunks.push(c));
-      res.on('end', () => {
-        try {
-          const data = JSON.parse(Buffer.concat(chunks).toString());
-          resolve({ ok: res.statusCode === 200 || res.statusCode === 201, data, status: res.statusCode });
-        } catch { resolve({ ok: false, reason: 'parse_error' }); }
-      });
-    });
-    req.on('error', e => resolve({ ok: false, reason: e.message }));
-    req.write(payload);
-    req.end();
-  });
-}
 
 // ── Telegram request ──────────────────────────────────────────
 function tgRequest(token, path, body) {
@@ -90,14 +47,10 @@ async function notifyCustomerViaTelegram(botToken, adminChat, telegramUsername, 
   if (!username) return false;
 
   const chatData = await tgRequest(botToken, '/getChat', { chat_id: '@' + username });
-
   if (!chatData.ok) {
-    // Báo admin giao thủ công
     await tgRequest(botToken, '/sendMessage', {
       chat_id: adminChat,
-      text: `⚠️ Khách <b>${name}</b> chưa /start @AIBossNotifyBot.\n`
-          + `Telegram: @${username}\n`
-          + `→ Gửi link khóa học thủ công!`,
+      text: `⚠️ Khách <b>${name}</b> chưa /start @AIBossNotifyBot.\nTelegram: @${username}\n→ Giao link thủ công!`,
       parse_mode: 'HTML',
     });
     return false;
@@ -108,15 +61,34 @@ async function notifyCustomerViaTelegram(botToken, adminChat, telegramUsername, 
     + `Thanh toán đã được <b>xác nhận</b> 🎊\n\n`
     + `📚 <b>Link truy cập khóa học:</b>\n👉 ${courseLink}\n\n`
     + `📧 Email hướng dẫn đã gửi vào hộp thư của bạn.\n`
-    + `💬 Nhắn tôi qua Zalo <b>0918 303 039</b> để vào nhóm SME AI Club.\n\n`
+    + `💬 Nhắn Zalo <b>0918 303 039</b> để vào nhóm SME AI Club.\n\n`
     + `Chúc bạn học tốt! 🚀\n— Hồ Sỹ Anh`;
 
-  await tgRequest(botToken, '/sendMessage', {
-    chat_id: chatData.result.id,
-    text: msg,
-    parse_mode: 'HTML',
-  });
+  await tgRequest(botToken, '/sendMessage', { chat_id: chatData.result.id, text: msg, parse_mode: 'HTML' });
   return true;
+}
+
+// ── Lưu subscriber cho email sequence ────────────────────────
+// Dùng Vercel Blob nếu có — bỏ qua nếu chưa cấu hình
+async function saveSubscriber(data) {
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!token) {
+    console.warn('[Confirm] BLOB_READ_WRITE_TOKEN chưa cấu hình — bỏ qua lưu subscriber');
+    return false;
+  }
+  try {
+    const key = `subscriber-${data.email.replace(/[^a-z0-9]/gi, '_')}.json`;
+    const payload = JSON.stringify({ ...data, emailsSent: [0, 1], confirmedAt: new Date().toISOString() });
+    const res = await fetch(`https://blob.vercel-storage.com/${key}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'x-content-type': 'application/json' },
+      body: payload,
+    });
+    return res.ok;
+  } catch (e) {
+    console.error('[Confirm] Blob save error:', e.message);
+    return false;
+  }
 }
 
 // ── Main handler ──────────────────────────────────────────────
@@ -125,20 +97,17 @@ module.exports = async function handler(req, res) {
   const ADMIN_CHAT  = process.env.TELEGRAM_ADMIN_CHAT;
   const ADMIN_TOKEN = process.env.ADMIN_CONFIRM_TOKEN;
 
-  // Lấy params từ GET hoặc POST
   const params = req.method === 'GET' ? req.query : (req.body || {});
   const { token, email, name, phone, plan, planLabel, orderId, telegram } = params;
 
   // Xác thực admin token
   if (!ADMIN_TOKEN || token !== ADMIN_TOKEN) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    return res.status(401).send(errorPage('Token không hợp lệ hoặc đã hết hạn.'));
+    return res.status(401).send(errorPage('Token không hợp lệ.'));
   }
-
-  // Validate
   if (!email || !name || !plan || !orderId) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    return res.status(400).send(errorPage('Thiếu thông tin. Cần: email, name, plan, orderId.'));
+    return res.status(400).send(errorPage('Thiếu thông tin: email, name, plan, orderId.'));
   }
 
   const planKey    = plan.toLowerCase();
@@ -146,115 +115,75 @@ module.exports = async function handler(req, res) {
   const courseLink = COURSE_LINKS[planKey] || COURSE_LINKS.boss;
   const now        = new Date();
 
-  const results = {
-    email1: false,
-    scheduledEmails: [],
-    telegram: false,
-  };
+  const results = { email1: false, savedSubscriber: false, telegram: false };
 
-  // ── 1. Gửi Email #1 ngay lập tức ─────────────────────────
+  // 1. Gửi Email #1 ngay lập tức qua Gmail SMTP
   try {
     const tpl = getEmail(1, { name, planName, planLabel: planLabel || '', courseLink, orderId });
-    const r = await sendEmail(email, tpl.subject, tpl.html);
+    const r = await sendMail(email, tpl.subject, tpl.html);
     results.email1 = r.ok;
-    console.log(`Email #1 → ${email}: ${r.ok ? 'OK' : 'FAIL'} (${r.reason || r.status || ''})`);
   } catch (e) {
     console.error('Email #1 error:', e.message);
   }
 
-  // ── 2. Lên lịch Email #2 → #5 ────────────────────────────
-  for (const { emailNum, daysAfter } of EMAIL_SCHEDULE) {
-    try {
-      // Tính thời điểm gửi: confirmedAt + daysAfter ngày, lúc 9:00 SA giờ VN (UTC+7)
-      const scheduledDate = new Date(now);
-      scheduledDate.setDate(scheduledDate.getDate() + daysAfter);
-      scheduledDate.setUTCHours(2, 0, 0, 0); // 9:00 SA VN = 02:00 UTC
-      const scheduledAt = scheduledDate.toISOString();
+  // 2. Lưu subscriber để cron job gửi Email #2–5
+  results.savedSubscriber = await saveSubscriber({
+    email, name, phone: phone || '', planKey, planName,
+    planLabel: planLabel || '', orderId, telegram: telegram || '', courseLink,
+  });
 
-      const tpl = getEmail(emailNum, { name, planName, planLabel: planLabel || '', courseLink, orderId });
-      const r = await sendEmail(email, tpl.subject, tpl.html, scheduledAt);
-
-      results.scheduledEmails.push({
-        emailNum,
-        scheduledAt: scheduledDate.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
-        ok: r.ok,
-      });
-      console.log(`Email #${emailNum} scheduled ${scheduledAt}: ${r.ok ? 'OK' : 'FAIL'}`);
-    } catch (e) {
-      console.error(`Email #${emailNum} schedule error:`, e.message);
-      results.scheduledEmails.push({ emailNum, ok: false, error: e.message });
-    }
-  }
-
-  // ── 3. Gửi Telegram cho khách ─────────────────────────────
+  // 3. Gửi Telegram cho khách
   if (BOT_TOKEN && telegram) {
     results.telegram = await notifyCustomerViaTelegram(BOT_TOKEN, ADMIN_CHAT, telegram, name, planKey);
   }
 
-  // ── 4. Thông báo admin trên Telegram ──────────────────────
+  // 4. Thông báo admin
   if (BOT_TOKEN && ADMIN_CHAT) {
     const nowVN = now.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
-    const scheduleLines = results.scheduledEmails
-      .map(s => `• Email #${s.emailNum} → ${s.scheduledAt}: ${s.ok ? '✅' : '❌'}`)
-      .join('\n');
-
     await tgRequest(BOT_TOKEN, '/sendMessage', {
       chat_id: ADMIN_CHAT,
       text: `✅ <b>XÁC NHẬN HOÀN TẤT</b>\n\n`
           + `👤 Khách: <b>${name}</b> (${email})\n`
           + `📦 Gói: <b>${planName}</b>\n`
           + `🔖 Đơn: <code>${orderId}</code>\n`
-          + `🕐 Thời gian: ${nowVN}\n\n`
-          + `📨 Email #1: ${results.email1 ? '✅ Đã gửi' : '❌ Lỗi — kiểm tra RESEND_API_KEY'}\n`
-          + `📅 Lịch email tiếp theo:\n${scheduleLines}\n\n`
-          + `📱 Telegram khách: ${results.telegram ? '✅ Đã gửi' : telegram ? '⚠️ Lỗi' : '⚠️ Chưa điền'}`,
+          + `🕐 ${nowVN}\n\n`
+          + `📨 Email #1: ${results.email1 ? '✅ Đã gửi' : '❌ Lỗi — kiểm tra GMAIL_USER/GMAIL_APP_PASS'}\n`
+          + `💾 Subscriber: ${results.savedSubscriber ? '✅ Lưu → Email #2-5 sẽ tự gửi' : '⚠️ Chưa lưu (BLOB chưa cấu hình)'}\n`
+          + `📱 Telegram: ${results.telegram ? '✅' : telegram ? '❌' : '⚠️ Chưa điền'}`,
       parse_mode: 'HTML',
     });
   }
 
-  // ── 5. Trả về trang xác nhận cho admin ───────────────────
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.status(200).send(successPage(name, email, planName, results));
 };
 
 // ── HTML pages ────────────────────────────────────────────────
 function successPage(name, email, planName, results) {
-  const rows = results.scheduledEmails.map(s =>
-    `<div class="row"><span>Email #${s.emailNum}</span><span class="${s.ok ? 'ok' : 'err'}">${s.ok ? '✅ Lên lịch' : '❌ Lỗi'}</span><span class="date">${s.scheduledAt || ''}</span></div>`
-  ).join('');
-
   return `<!DOCTYPE html><html lang="vi">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Xác nhận thành công</title>
-<style>
-  body{font-family:system-ui,sans-serif;background:#0F172A;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:16px}
-  .card{background:#1E293B;border-radius:16px;padding:36px;max-width:500px;width:100%;text-align:center;border:1px solid rgba(255,255,255,.1)}
-  .icon{font-size:56px;margin-bottom:12px}
-  h1{font-size:22px;margin:0 0 6px;color:#fff}
-  .sub{color:#94A3B8;font-size:14px;margin-bottom:24px}
-  .table{background:#0F172A;border-radius:10px;padding:16px;text-align:left;margin:0 0 20px}
-  .row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.07);font-size:13px;gap:8px}
-  .row:last-child{border:none}
-  .date{color:#64748B;font-size:11px}
-  .ok{color:#4ADE80}.err{color:#F87171}
-  .note{color:#64748B;font-size:12px;margin-top:16px;line-height:1.6}
-</style></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Xác nhận thành công</title>
+<style>body{font-family:system-ui,sans-serif;background:#0F172A;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:16px}
+.card{background:#1E293B;border-radius:16px;padding:36px;max-width:480px;width:100%;text-align:center;border:1px solid rgba(255,255,255,.1)}
+.icon{font-size:52px;margin-bottom:12px}h1{font-size:22px;margin:0 0 6px}
+.sub{color:#94A3B8;font-size:14px;margin-bottom:20px}
+.table{background:#0F172A;border-radius:10px;padding:16px;text-align:left;margin:0 0 16px}
+.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.07);font-size:14px}
+.row:last-child{border:none}.ok{color:#4ADE80}.err{color:#F87171}.warn{color:#FBBF24}</style></head>
 <body><div class="card">
   <div class="icon">✅</div>
   <h1>Xác nhận thành công!</h1>
-  <div class="sub">Đơn hàng của <strong>${name}</strong> (${email}) — Gói ${planName}</div>
+  <div class="sub"><strong>${name}</strong> (${email}) — Gói ${planName}</div>
   <div class="table">
-    <div class="row" style="font-weight:700;color:#fff"><span>Email</span><span>Trạng thái</span><span class="date">Lịch gửi (VN)</span></div>
-    <div class="row"><span>Email #1 — Welcome</span><span class="${results.email1 ? 'ok' : 'err'}">${results.email1 ? '✅ Đã gửi' : '❌ Lỗi'}</span><span class="date">Ngay bây giờ</span></div>
-    ${rows}
+    <div class="row"><span>Email #1 — Welcome</span><span class="${results.email1 ? 'ok' : 'err'}">${results.email1 ? '✅ Đã gửi' : '❌ Lỗi Gmail'}</span></div>
+    <div class="row"><span>Email #2–5 sequence</span><span class="${results.savedSubscriber ? 'ok' : 'warn'}">${results.savedSubscriber ? '✅ Lưu → cron tự gửi' : '⚠️ Cần cấu hình Blob'}</span></div>
+    <div class="row"><span>Telegram khách</span><span class="${results.telegram ? 'ok' : 'warn'}">${results.telegram ? '✅ Đã gửi' : '⚠️ Chưa gửi'}</span></div>
   </div>
-  <div class="note">Resend sẽ tự động giao email theo lịch.<br>Không cần làm gì thêm.</div>
 </div></body></html>`;
 }
 
 function errorPage(msg) {
   return `<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><title>Lỗi</title>
-<style>body{font-family:system-ui,sans-serif;background:#0F172A;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
-.card{background:#1E293B;border-radius:16px;padding:40px;text-align:center;border:1px solid rgba(255,0,0,.3)}</style></head>
-<body><div class="card"><div style="font-size:48px">❌</div><h2>${msg}</h2></div></body></html>`;
+<style>body{font-family:system-ui;background:#0F172A;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
+.c{background:#1E293B;border-radius:16px;padding:40px;text-align:center}</style></head>
+<body><div class="c"><div style="font-size:48px">❌</div><h2>${msg}</h2></div></body></html>`;
 }

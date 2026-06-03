@@ -5,60 +5,7 @@
 
 const https = require('https');
 const { getEmail } = require('./email-templates');
-
-// ── Resend: gửi email xác nhận đăng ký ────────────────────────
-async function sendConfirmationEmail(to, subject, html) {
-  const RESEND_KEY = process.env.RESEND_API_KEY;
-  const FROM_EMAIL = process.env.FROM_EMAIL || 'AI BOSS SYSTEM <onboarding@resend.dev>';
-
-  if (!RESEND_KEY) {
-    console.error('[Email #0] RESEND_API_KEY chưa được cấu hình trong env vars');
-    return;
-  }
-  if (!to) {
-    console.error('[Email #0] Thiếu địa chỉ email khách hàng (to)');
-    return;
-  }
-
-  console.log(`[Email #0] Đang gửi tới: ${to} | From: ${FROM_EMAIL}`);
-
-  const payload = JSON.stringify({ from: FROM_EMAIL, to: [to], subject, html });
-  return new Promise((resolve) => {
-    const req = https.request({
-      hostname: 'api.resend.com',
-      path: '/emails',
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${RESEND_KEY}`,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(payload),
-      },
-    }, (res) => {
-      const chunks = [];
-      res.on('data', c => chunks.push(c));
-      res.on('end', () => {
-        try {
-          const body = Buffer.concat(chunks).toString();
-          const data = JSON.parse(body);
-          if (res.statusCode === 200 || res.statusCode === 201) {
-            console.log(`[Email #0] ✅ Gửi thành công → id: ${data.id}`);
-          } else {
-            console.error(`[Email #0] ❌ Lỗi HTTP ${res.statusCode}:`, body);
-          }
-        } catch (e) {
-          console.error('[Email #0] Parse error:', e.message);
-        }
-        resolve();
-      });
-    });
-    req.on('error', (e) => {
-      console.error('[Email #0] Network error:', e.message);
-      resolve();
-    });
-    req.write(payload);
-    req.end();
-  });
-}
+const { sendMail } = require('./mailer');
 
 const COURSE_LINKS = {
   starter: 'https://t.me/+MQ_ugnQPINcyNTc1',
@@ -139,7 +86,7 @@ module.exports = async function handler(req, res) {
 
       await telegramRequest(BOT_TOKEN, '/sendMessage', { chat_id: ADMIN_CHAT, text: msg, parse_mode: 'HTML' });
 
-      // Gửi Email #0 — Xác nhận đăng ký cho khách ngay lập tức (không cần admin confirm)
+      // Gửi Email #0 — Xác nhận đăng ký ngay lập tức (Gmail SMTP)
       if (email) {
         try {
           const tpl = getEmail(0, {
@@ -148,7 +95,7 @@ module.exports = async function handler(req, res) {
             planLabel: planLabel || '',
             orderId:   orderId || '-',
           });
-          if (tpl) await sendConfirmationEmail(email, tpl.subject, tpl.html);
+          if (tpl) await sendMail(email, tpl.subject, tpl.html);
         } catch (e) {
           console.error('Email #0 error:', e.message);
         }
