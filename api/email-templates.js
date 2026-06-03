@@ -332,11 +332,71 @@ function email5({ name, planName, courseLink }) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// EMAIL #0 — Xác nhận đăng ký (gửi ngay khi khách submit form)
+// Chưa có link khóa học — chỉ xác nhận nhận được đơn
+// ─────────────────────────────────────────────────────────────
+function email0({ name, planName, planLabel, orderId }) {
+  const subject = `✅ Đã nhận đăng ký của ${name} — AI BOSS SYSTEM đang xác minh`;
+  const preview = 'Chúng tôi đã nhận được đăng ký. Thanh toán sẽ được xác minh trong 1–2 giờ.';
+
+  const body = `
+    <h1 style="font-size:26px;font-weight:800;color:#0F172A;margin:0 0 8px;">Cảm ơn ${name}! 🙌</h1>
+    <p style="font-size:15px;color:#475569;margin:0 0 24px;">Chúng tôi đã nhận được đăng ký của anh/chị và đang xác minh thanh toán.</p>
+
+    <div style="background:#FFF7ED;border:2px solid #FED7AA;border-radius:12px;padding:24px;margin-bottom:24px;">
+      <p style="margin:0 0 10px;font-weight:700;color:#9A3412;font-size:16px;">⏳ Đang xác minh thanh toán</p>
+      <p style="margin:0 0 8px;font-size:14px;color:#9A3412;">Thời gian xác minh: <strong>1–2 giờ</strong> trong giờ hành chính.</p>
+      <p style="margin:0;font-size:13px;color:#C2410C;">Sau khi xác nhận xong, anh/chị sẽ nhận được email với link truy cập khóa học ngay.</p>
+    </div>
+
+    <div style="background:#F8FAFC;border-radius:12px;padding:20px;margin-bottom:24px;">
+      <p style="margin:0 0 10px;font-weight:700;color:#0F172A;font-size:15px;">📋 Thông tin đăng ký của anh/chị:</p>
+      <div style="font-size:14px;color:#475569;">
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #E2E8F0;">
+          <span>Họ tên</span><strong style="color:#0F172A;">${name}</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #E2E8F0;">
+          <span>Gói đăng ký</span><strong style="color:#0F172A;">${planName} — ${planLabel}</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;">
+          <span>Mã đơn hàng</span><strong style="color:#3B82F6;font-family:monospace;">${orderId}</strong>
+        </div>
+      </div>
+    </div>
+
+    ${highlight('💡 <strong>Trong lúc chờ xác minh:</strong> Anh/chị có thể nhắn Zalo <strong>0918 303 039</strong> (Hồ Sỹ Anh) kèm ảnh chụp bill chuyển khoản để được xác minh nhanh hơn.')}
+
+    <h2 style="font-size:17px;font-weight:700;color:#0F172A;margin:24px 0 12px;">Tiếp theo anh/chị sẽ nhận được:</h2>
+    <table cellpadding="0" cellspacing="0" style="width:100%;">
+      <tr>
+        <td style="padding:8px 0;vertical-align:top;width:32px;"><div style="width:26px;height:26px;background:#3B82F6;border-radius:50%;text-align:center;line-height:26px;color:#fff;font-weight:700;font-size:12px;">1</div></td>
+        <td style="padding:8px 0 8px 10px;font-size:14px;color:#334155;">Email <strong>xác nhận thanh toán</strong> + link truy cập khóa học</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0;vertical-align:top;"><div style="width:26px;height:26px;background:#7C3AED;border-radius:50%;text-align:center;line-height:26px;color:#fff;font-weight:700;font-size:12px;">2</div></td>
+        <td style="padding:8px 0 8px 10px;font-size:14px;color:#334155;">Lời mời vào nhóm <strong>SME AI Club</strong> (Zalo)</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0;vertical-align:top;"><div style="width:26px;height:26px;background:#10B981;border-radius:50%;text-align:center;line-height:26px;color:#fff;font-weight:700;font-size:12px;">3</div></td>
+        <td style="padding:8px 0 8px 10px;font-size:14px;color:#334155;">Chuỗi <strong>7 ngày onboarding</strong> — tips thực chiến AI hóa doanh nghiệp</td>
+      </tr>
+    </table>
+
+    <p style="font-size:15px;color:#334155;margin:28px 0 4px;">Hẹn gặp anh/chị trong email tiếp theo!</p>
+    <p style="font-size:15px;font-weight:700;color:#0F172A;margin:0;">Hồ Sỹ Anh</p>
+    <p style="font-size:13px;color:#64748B;margin:4px 0 0;">Chủ DN Khata · Founder AI BOSS SYSTEM</p>
+    <p style="font-size:13px;color:#94A3B8;margin:16px 0 0;font-style:italic;">P.S. Nếu anh/chị chưa chuyển khoản — vui lòng bỏ qua email này. Đơn hàng sẽ tự hủy sau 24 giờ nếu không có thanh toán.</p>`;
+
+  return { subject, html: htmlWrapper(body, preview) };
+}
+
+// ─────────────────────────────────────────────────────────────
 // Exports
 // ─────────────────────────────────────────────────────────────
 module.exports = {
   getEmail: (emailNum, data) => {
     switch (emailNum) {
+      case 0: return email0(data);
       case 1: return email1(data);
       case 2: return email2(data);
       case 3: return email3(data);

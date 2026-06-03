@@ -4,6 +4,35 @@
 //     | { action: 'customer', telegram, name, planKey, planName, planLabel }
 
 const https = require('https');
+const { getEmail } = require('./email-templates');
+
+// ── Resend: gửi email xác nhận đăng ký ────────────────────────
+async function sendConfirmationEmail(to, subject, html) {
+  const RESEND_KEY = process.env.RESEND_API_KEY;
+  const FROM_EMAIL = process.env.FROM_EMAIL || 'AI BOSS SYSTEM <onboarding@resend.dev>';
+  if (!RESEND_KEY || !to) return;
+
+  const payload = JSON.stringify({ from: FROM_EMAIL, to: [to], subject, html });
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname: 'api.resend.com',
+      path: '/emails',
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${RESEND_KEY}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload),
+      },
+    }, (res) => {
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => resolve());
+    });
+    req.on('error', () => resolve());
+    req.write(payload);
+    req.end();
+  });
+}
 
 const COURSE_LINKS = {
   starter: 'https://t.me/+MQ_ugnQPINcyNTc1',
@@ -83,6 +112,22 @@ module.exports = async function handler(req, res) {
         + '─────────────────────';
 
       await telegramRequest(BOT_TOKEN, '/sendMessage', { chat_id: ADMIN_CHAT, text: msg, parse_mode: 'HTML' });
+
+      // Gửi Email #0 — Xác nhận đăng ký cho khách ngay lập tức (không cần admin confirm)
+      if (email) {
+        try {
+          const tpl = getEmail(0, {
+            name:      name || 'Anh/Chị',
+            planName:  planName || '',
+            planLabel: planLabel || '',
+            orderId:   orderId || '-',
+          });
+          if (tpl) await sendConfirmationEmail(email, tpl.subject, tpl.html);
+        } catch (e) {
+          console.error('Email #0 error:', e.message);
+        }
+      }
+
       return res.status(200).json({ ok: true });
     }
 
