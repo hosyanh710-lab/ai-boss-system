@@ -1,6 +1,8 @@
 {
   "rewrites": [
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    { "source": "/sales",      "destination": "/assets/sales-page/sales-page.html" },
+    { "source": "/sales-page", "destination": "/assets/sales-page/sales-page.html" },
+    { "source": "/((?!api/|assets/).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
