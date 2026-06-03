@@ -1,4 +1,10 @@
 {
+  "crons": [
+    {
+      "path": "/api/send-sequence",
+      "schedule": "0 2 * * *"
+    }
+  ],
   "rewrites": [
     { "source": "/sales",      "destination": "/assets/sales-page/sales-page.html" },
     { "source": "/sales-page", "destination": "/assets/sales-page/sales-page.html" },
