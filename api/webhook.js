@@ -26,8 +26,9 @@ module.exports = async function handler(req, res) {
     const data = req.body || {};
     if (data.transferType !== 'in' || !data.transferAmount) return;
 
-    const BOT   = process.env.TELEGRAM_BOT_TOKEN  || '8697943146:AAFVoIgms1-WDiNATe1MMfQ85wOa9xyFKqI';
-    const ADMIN = process.env.TELEGRAM_ADMIN_CHAT || '8528681036';
+    const BOT   = process.env.TELEGRAM_BOT_TOKEN;
+    const ADMIN = process.env.TELEGRAM_ADMIN_CHAT;
+    if (!BOT || !ADMIN) return;
 
     const amount  = Number(data.transferAmount).toLocaleString('vi-VN');
     const content = data.content || '(không có nội dung)';

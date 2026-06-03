@@ -1122,77 +1122,43 @@
       bar.classList.remove('hidden');
     }
 
-    // ─── Config ───────────────────────────────────────────────
-    const BOT_TOKEN   = '8697943146:AAFVoIgms1-WDiNATe1MMfQ85wOa9xyFKqI';
-    const ADMIN_CHAT  = '8528681036'; // Hồ Sỹ Anh
-    const COURSE_LINKS = {
-      starter: 'https://t.me/+MQ_ugnQPINcyNTc1',
-      boss:    'https://t.me/+8nY7V6gmv9RjYjBl',
-      vip:     'https://t.me/+AFeLlegMOu43ZDc9',
-    };
-
-    // ─── Gửi link khóa học cho KHÁCH qua Telegram ────────────
-    async function deliverCourseToCustomer(telegramUsername, name, plan) {
-      if (!telegramUsername) return;
-      const username = telegramUsername.replace('@','').trim();
-      if (!username) return;
-
-      // Lấy chat_id của khách từ username (chỉ hoạt động nếu khách đã /start bot)
-      try {
-        const getChatRes = await fetch(
-          'https://api.telegram.org/bot' + BOT_TOKEN + '/getChat?chat_id=@' + username
-        );
-        const chatData = await getChatRes.json();
-        if (!chatData.ok) {
-          // Khách chưa /start bot → thông báo admin giao thủ công
-          sendTelegramMsg(ADMIN_CHAT,
-            '⚠️ Khách <b>' + name + '</b> chưa /start bot.\n'
-            + 'Telegram: @' + username + '\n'
-            + 'Gói: ' + plan.name + '\n'
-            + '→ Giao link thủ công!');
-          return;
-        }
-        const customerChatId = chatData.result.id;
-        const courseLink = COURSE_LINKS[document.querySelector('input[name="plan"]:checked')?.value] || COURSE_LINKS.boss;
-        const accessCode = 'AIBOSS-' + Math.random().toString(36).substring(2,8).toUpperCase();
-
-        const msg = '🎉 Chào <b>' + name + '</b>!\n\n'
-          + 'Cảm ơn bạn đã đăng ký <b>AI BOSS SYSTEM</b> — Gói ' + plan.name + '.\n\n'
-          + '📚 <b>Link truy cập khóa học:</b>\n'
-          + '👉 ' + courseLink + '\n\n'
-          + '🔑 Mã truy cập: <code>' + accessCode + '</code>\n\n'
-          + '📞 Hỗ trợ: Zalo <b>0918 303 039</b> (Hồ Sỹ Anh)\n\n'
-          + 'Chúc bạn học tốt! 🚀';
-
-        sendTelegramMsg(customerChatId, msg);
-      } catch(e) {}
-    }
-
-    function sendTelegramMsg(chatId, text) {
-      const url = 'https://api.telegram.org/bot' + BOT_TOKEN + '/sendMessage';
-      fetch(url, {
+    // ─── Telegram — gọi server-side /api/notify (token không lộ) ───
+    function notifyTelegram(name, phone, plan, des) {
+      const tg    = (document.getElementById('reg-telegram')?.value || '').replace('@','').trim();
+      const email = (document.getElementById('reg-email')?.value || '').trim();
+      const planKey = document.querySelector('input[name="plan"]:checked')?.value || 'boss';
+      fetch('/api/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'HTML' })
+        body: JSON.stringify({
+          action:    'admin',
+          name, phone, email,
+          telegram:  tg,
+          planKey,
+          planName:  plan.name,
+          planLabel: plan.label,
+          orderId:   window._currentOrderId || '-',
+          des,
+        }),
       }).catch(() => {});
     }
 
-    // ─── Telegram notification admin ─────────────────────────
-    function notifyTelegram(name, phone, plan, des) {
-      const now = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
-      const tg  = (document.getElementById('reg-telegram')?.value || '').replace('@','').trim();
-      const orderId = window._currentOrderId || '-';
-      const msg = '🎉 <b>ĐƠN HÀNG MỚI — AI BOSS SYSTEM</b>\n\n'
-        + '🔖 Mã đơn: <code>' + orderId + '</code>\n'
-        + '👤 Khách: <b>' + name + '</b>\n'
-        + '📞 SĐT: ' + phone + '\n'
-        + (tg ? '📱 Telegram: @' + tg + '\n' : '📱 Telegram: Chưa điền\n')
-        + '📦 Gói: <b>' + plan.name + ' — ' + plan.label + '</b>\n'
-        + '💰 Số tiền: ' + plan.label + '\n'
-        + '🔖 Nội dung CK: <code>' + des + '</code>\n'
-        + '🕐 Thời gian: ' + now + '\n\n'
-        + (tg ? '✅ Bot đang gửi link cho khách...' : '⚠️ Khách chưa điền Telegram → Giao thủ công!');
-      sendTelegramMsg(ADMIN_CHAT, msg);
+    async function deliverCourseToCustomer(telegramUsername, name, plan, planKey) {
+      if (!telegramUsername) return;
+      const username = telegramUsername.replace('@','').trim();
+      if (!username) return;
+      fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action:    'customer',
+          telegram:  username,
+          name,
+          planKey,
+          planName:  plan.name,
+          planLabel: plan.label,
+        }),
+      }).catch(() => {});
     }
 
     function showSuccessPage() {
@@ -1207,7 +1173,7 @@
       notifyTelegram(name, phone, plan, des);
       // 2. Giao link khóa học tự động cho khách
       const tgUsername = document.getElementById('reg-telegram')?.value || '';
-      deliverCourseToCustomer(tgUsername, name, plan);
+      deliverCourseToCustomer(tgUsername, name, plan, planKey);
 
       // Tạo overlay trang xác nhận
       const overlay = document.createElement('div');
