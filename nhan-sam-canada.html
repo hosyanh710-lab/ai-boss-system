@@ -57,8 +57,8 @@
       <span class="text-2xl">🌿</span>
       <span class="serif font-bold text-lg" style="color:var(--forest)">Nhân Sâm Canada</span>
     </div>
-    <a href="#cta" class="hidden sm:inline-block bg-forest text-cream text-sm font-semibold px-5 py-2.5 rounded-full hover:bg-forest-deep transition">
-      Tư Vấn Miễn Phí
+    <a href="https://zalo.me/0918303039" target="_blank" rel="noopener" class="hidden sm:inline-block bg-forest text-cream text-sm font-semibold px-5 py-2.5 rounded-full hover:bg-forest-deep transition">
+      Zalo: 0918 303 039
     </a>
   </div>
 </nav>
@@ -77,14 +77,14 @@
       Hỗ trợ tim mạch, giấc ngủ và tinh thần minh mẫn cho người lớn tuổi.
     </p>
     <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-      <a href="#cta" class="w-full sm:w-auto bg-gold text-forest-deep font-bold px-8 py-4 rounded-full hover:brightness-110 transition text-lg">
+      <a href="https://zalo.me/0918303039" target="_blank" rel="noopener" class="w-full sm:w-auto bg-gold text-forest-deep font-bold px-8 py-4 rounded-full hover:brightness-110 transition text-lg">
         Nhận Tư Vấn Miễn Phí Ngay
       </a>
       <a href="#offer" class="w-full sm:w-auto border border-cream/30 text-cream font-semibold px-8 py-4 rounded-full hover:bg-cream/10 transition text-lg">
         Xem Ưu Đãi Hôm Nay ↓
       </a>
     </div>
-    <p class="text-cream/50 text-sm mt-6">Giao hàng toàn quốc trong 24h · Tư vấn 1:1 riêng tư qua Zalo</p>
+    <p class="text-cream/50 text-sm mt-6">Giao hàng toàn quốc trong 24h · Zalo/Hotline: <strong class="text-gold">0918 303 039</strong> · Email: <strong class="text-gold">nhansamcanada@gmail.com</strong></p>
   </div>
 </header>
 
@@ -207,7 +207,7 @@
           <span class="serif text-4xl font-bold" style="color:var(--forest)">490.000đ</span>
           <span class="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded">-43%</span>
         </div>
-        <a href="#cta" class="block text-center bg-forest text-cream font-bold py-3.5 rounded-full hover:bg-forest-deep transition">Đặt Combo Ngay</a>
+        <a href="https://zalo.me/0918303039" target="_blank" rel="noopener" class="block text-center bg-forest text-cream font-bold py-3.5 rounded-full hover:bg-forest-deep transition">Đặt Combo Ngay Qua Zalo</a>
       </div>
     </div>
 
@@ -290,17 +290,17 @@
     <p class="text-cream/75 mb-10 leading-relaxed">Để lại thông tin, đội ngũ tư vấn sẽ liên hệ trong 24h để giúp bạn chọn gói phù hợp nhất với tình trạng sức khỏe của bố mẹ.</p>
 
     <div class="bg-white rounded-3xl p-8 sm:p-10 text-left card-shadow">
-      <p class="placeholder-field text-forest-deep/70 text-sm rounded-lg p-4 mb-6">
-        ⚠️ <strong>Cần điền trước khi đăng:</strong> số Zalo/Hotline tư vấn, link đặt hàng hoặc form thu thông tin thực tế. Hiện khung này đang để trống làm mẫu.
-      </p>
       <div class="grid gap-4 mb-6">
-        <input type="text" placeholder="Họ tên của bạn" class="w-full border border-forest/20 rounded-xl px-4 py-3 text-forest-deep focus:outline-none focus:border-gold">
-        <input type="tel" placeholder="Số điện thoại / Zalo" class="w-full border border-forest/20 rounded-xl px-4 py-3 text-forest-deep focus:outline-none focus:border-gold">
-        <textarea placeholder="Tình trạng sức khỏe của bố mẹ bạn (không bắt buộc)" rows="3" class="w-full border border-forest/20 rounded-xl px-4 py-3 text-forest-deep focus:outline-none focus:border-gold"></textarea>
+        <input id="f-name" type="text" placeholder="Họ tên của bạn" class="w-full border border-forest/20 rounded-xl px-4 py-3 text-forest-deep focus:outline-none focus:border-gold">
+        <input id="f-phone" type="tel" placeholder="Số điện thoại / Zalo" class="w-full border border-forest/20 rounded-xl px-4 py-3 text-forest-deep focus:outline-none focus:border-gold">
+        <textarea id="f-note" placeholder="Tình trạng sức khỏe của bố mẹ bạn (không bắt buộc)" rows="3" class="w-full border border-forest/20 rounded-xl px-4 py-3 text-forest-deep focus:outline-none focus:border-gold"></textarea>
       </div>
-      <button type="button" class="w-full bg-forest text-cream font-bold py-4 rounded-full hover:bg-forest-deep transition text-lg">
-        Gửi Yêu Cầu Tư Vấn
+      <button type="button" onclick="sendZaloRequest()" class="w-full bg-forest text-cream font-bold py-4 rounded-full hover:bg-forest-deep transition text-lg">
+        Gửi Qua Zalo: 0918 303 039
       </button>
+      <a href="mailto:nhansamcanada@gmail.com" class="block text-center text-forest-deep/60 text-sm mt-4 hover:text-forest underline underline-offset-2">
+        Hoặc gửi email tới nhansamcanada@gmail.com
+      </a>
       <p class="text-center text-forest-deep/40 text-xs mt-4">Thông tin của bạn được bảo mật, chỉ dùng để liên hệ tư vấn.</p>
     </div>
   </div>
@@ -310,9 +310,10 @@
 <footer class="bg-forest-deep text-cream/50 py-10 px-5 text-center text-xs leading-relaxed">
   <div class="max-w-2xl mx-auto space-y-2">
     <p class="text-cream/70 font-semibold">Nhân Sâm Canada</p>
+    <p>Zalo/Hotline: 0918 303 039 · Email: nhansamcanada@gmail.com</p>
     <p>Thực phẩm này không phải là thuốc và không có tác dụng thay thế thuốc chữa bệnh.</p>
     <p>Hiệu quả sử dụng có thể khác nhau tùy theo cơ địa của từng người dùng.</p>
-    <p class="pt-3">© 2026 Nhân Sâm Canada. Mọi thông tin cần được xác nhận và cập nhật trước khi đưa trang vào sử dụng chính thức.</p>
+    <p class="pt-3">© 2026 Nhân Sâm Canada.</p>
   </div>
 </footer>
 
@@ -322,6 +323,19 @@
     entries.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('visible'); });
   }, {threshold:0.1});
   els.forEach(el=>{ el.classList.add('fade-in'); obs.observe(el); });
+
+  function sendZaloRequest(){
+    const name = document.getElementById('f-name').value.trim();
+    const phone = document.getElementById('f-phone').value.trim();
+    const note = document.getElementById('f-note').value.trim();
+    if(!phone){
+      alert('Vui lòng nhập số điện thoại để đội ngũ tư vấn liên hệ lại nhé.');
+      return;
+    }
+    let msg = `Xin chào, tôi muốn được tư vấn về Nhân Sâm Canada.\nHọ tên: ${name || '(chưa điền)'}\nSĐT: ${phone}`;
+    if(note) msg += `\nGhi chú: ${note}`;
+    window.open(`https://zalo.me/0918303039?text=${encodeURIComponent(msg)}`, '_blank');
+  }
 </script>
 
 </body>
