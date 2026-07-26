@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="vi" class="scroll-smooth">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CND GINSENG Nhân Sâm Táo Đỏ & Lạc Tiên Hòa Tan — Thư Giãn Tinh Thần Mỗi Ngày</title>
+<meta name="description" content="Nhân sâm Canada kết hợp táo đỏ, lạc tiên, táo nhân — các vị quen thuộc trong y học cổ truyền, dạng bột hòa tan tiện dùng mỗi ngày. Tư vấn miễn phí, giao hàng toàn quốc.">
+<meta property="og:title" content="CND GINSENG Nhân Sâm Táo Đỏ & Lạc Tiên Hòa Tan">
+<meta property="og:description" content="Thực phẩm bảo vệ sức khỏe — nhân sâm Canada, táo đỏ, lạc tiên, táo nhân. Dạng bột hòa tan tiện dùng. Tư vấn miễn phí, giao hàng toàn quốc.">
+<meta property="og:type" content="website">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          night: '#1E2A56',
+          'night-deep': '#10162E',
+          gold: '#C9A66B',
+          cream: '#FBF3E7',
+        }
+      }
+    }
+  }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --night:#1E2A56;
+    --night-deep:#10162E;
+    --gold:#C9A66B;
+    --cream:#FBF3E7;
+  }
+  *{font-family:'Be Vietnam Pro',sans-serif;}
+  h1,h2,h3,.serif{font-family:'Playfair Display',serif;}
+  body{background:var(--cream);}
+  .bg-night{background:var(--night);}
+  .bg-night-deep{background:var(--night-deep);}
+  .text-gold{color:var(--gold);}
+  .bg-gold{background:var(--gold);}
+  .border-gold{border-color:var(--gold);}
+  .gradient-hero{
+    background:
+      radial-gradient(circle at 15% 20%, rgba(201,166,107,0.18) 0%, transparent 45%),
+      radial-gradient(circle at 85% 80%, rgba(255,255,255,0.08) 0%, transparent 45%),
+      linear-gradient(160deg, var(--night) 0%, var(--night-deep) 100%);
+  }
+  .card-shadow{box-shadow:0 20px 50px -20px rgba(16,22,46,0.3);}
+  .fade-in{opacity:0;transform:translateY(24px);transition:opacity .7s ease-out,transform .7s ease-out;}
+  .fade-in.visible{opacity:1;transform:translateY(0);}
+  ::selection{background:var(--gold);color:#fff;}
+
+  .img-slot{
+    position:relative;
+    overflow:hidden;
+    background:#FBF6EC;
+    border:2px dashed var(--gold);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .img-slot img{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+  .img-slot .img-slot-hint{
+    display:none;
+    position:relative;
+    z-index:1;
+    color:#8a7147;
+    font-size:0.85rem;
+    line-height:1.5;
+    text-align:center;
+    padding:1.5rem;
+  }
+  .img-slot-empty .img-slot-hint{ display:block; }
+  .img-slot .img-slot-hint code{
+    background:rgba(201,166,107,0.15);
+    padding:0.1rem 0.4rem;
+    border-radius:0.25rem;
+    font-size:0.8rem;
+  }
+  .avatar-slot{
+    width:44px;
+    height:44px;
+    min-width:44px;
+    border-radius:9999px;
+    flex-shrink:0;
+  }
+  .avatar-slot .img-slot-hint{
+    font-size:1rem;
+    padding:0;
+  }
+</style>
+</head>
+<body class="text-night-deep antialiased">
+
+<!-- NAV -->
+<nav class="fixed top-0 left-0 right-0 z-50 bg-cream/90 backdrop-blur border-b border-gold/20">
+  <div class="max-w-6xl mx-auto px-5 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <span class="text-2xl">🌙</span>
+      <span class="serif font-bold text-lg" style="color:var(--night)">CND GINSENG Táo Đỏ Lạc Tiên</span>
+    </div>
+    <a href="https://zalo.me/0918303039" target="_blank" rel="noopener" class="hidden sm:inline-block bg-night text-cream text-sm font-semibold px-5 py-2.5 rounded-full hover:bg-night-deep transition">
+      Zalo: 0918 303 039
+    </a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="gradient-hero text-cream pt-28 pb-20 px-5">
+  <div class="max-w-4xl mx-auto text-center">
+    <span class="inline-block bg-gold/20 border border-gold/40 text-gold text-xs font-semibold tracking-wide px-4 py-1.5 rounded-full mb-6">
+      THỰC PHẨM BẢO VỆ SỨC KHỎE — NHÂN SÂM HÒA TAN
+    </span>
+    <h1 class="serif text-4xl sm:text-5xl md:text-6xl font-bold leading-tight mb-6">
+      Một ngày căng thẳng xứng đáng<br class="hidden sm:block"> <span class="text-gold">kết thúc bằng sự thư thái</span>
+    </h1>
+    <p class="text-lg sm:text-xl text-cream/80 max-w-2xl mx-auto mb-10 leading-relaxed">
+      Nhân sâm Canada kết hợp táo đỏ, lạc tiên, táo nhân — 4 vị quen thuộc trong y học cổ truyền,
+      dạng bột hòa tan tiện dùng mỗi ngày.
+    </p>
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+      <a href="https://zalo.me/0918303039" target="_blank" rel="noopener" class="w-full sm:w-auto bg-gold text-night-deep font-bold px-8 py-4 rounded-full hover:brightness-110 transition text-lg">
+        Nhận Tư Vấn Miễn Phí Ngay
+      </a>
+      <a href="#offer" class="w-full sm:w-auto border border-cream/30 text-cream font-semibold px-8 py-4 rounded-full hover:bg-cream/10 transition text-lg">
+        Xem Giá Sản Phẩm ↓
+      </a>
+    </div>
+    <p class="text-cream/50 text-sm mt-6 mb-10">Giao hàng toàn quốc trong 24h · Zalo/Hotline: <strong class="text-gold">0918 303 039</strong> · Email: <strong class="text-gold">nhansamcanada@gmail.com</strong></p>
+
+    <div class="img-slot rounded-3xl max-w-3xl mx-auto" style="aspect-ratio:16/9;">
+      <img src="images/tdlt-hero.jpg" alt="Nhân sâm táo đỏ lạc tiên hòa tan CND GINSENG" onerror="this.remove(); this.parentElement.classList.add('img-slot-empty');">
+      <div class="img-slot-hint">📷 Ảnh hero (sản phẩm / khoảnh khắc thư giãn buổi tối)<br>Đặt file <code>tdlt-hero.jpg</code> vào thư mục <code>images/</code></div>
+    </div>
+  </div>
+</header>
+
+<!-- PAIN -->
+<section class="py-20 px-5">
+  <div class="max-w-4xl mx-auto">
+    <h2 class="serif text-3xl sm:text-4xl font-bold text-center mb-4" style="color:var(--night)">
+      Bạn có đang tự hỏi lúc 2 giờ sáng...
+    </h2>
+    <p class="text-center text-night-deep/60 mb-12 max-w-xl mx-auto">Rất nhiều người đi làm ở độ tuổi 28-45 có chung những trăn trở này</p>
+    <div class="grid sm:grid-cols-2 gap-5">
+      <div class="bg-white rounded-2xl p-6 card-shadow border border-gold/10">
+        <p class="text-lg font-medium">"Nằm mãi mà đầu óc vẫn suy nghĩ về công việc, tiền bạc?"</p>
+      </div>
+      <div class="bg-white rounded-2xl p-6 card-shadow border border-gold/10">
+        <p class="text-lg font-medium">"Ngủ được nhưng hay trằn trọc, giật mình giữa đêm?"</p>
+      </div>
+      <div class="bg-white rounded-2xl p-6 card-shadow border border-gold/10">
+        <p class="text-lg font-medium">"Sáng dậy vẫn thấy mệt mỏi, thiếu sức sống?"</p>
+      </div>
+      <div class="bg-white rounded-2xl p-6 card-shadow border border-gold/10">
+        <p class="text-lg font-medium">"Muốn thư giãn tinh thần mỗi ngày một cách tự nhiên?"</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STORY -->
+<section class="bg-night text-cream py-20 px-5">
+  <div class="max-w-3xl mx-auto">
+    <span class="text-gold text-sm font-semibold tracking-wide">CÂU CHUYỆN CỦA MỘT NGƯỜI DÙNG</span>
+    <h2 class="serif text-3xl sm:text-4xl font-bold mt-3 mb-8 leading-snug">
+      "Đầu óc tôi cứ suy nghĩ mãi dù người đã rất mệt."
+    </h2>
+
+    <div class="img-slot rounded-2xl mb-8" style="aspect-ratio:16/9;">
+      <img src="images/tdlt-story.jpg" alt="Khoảnh khắc thư giãn buổi tối" onerror="this.remove(); this.parentElement.classList.add('img-slot-empty');">
+      <div class="img-slot-hint">📷 Ảnh minh họa câu chuyện<br>Đặt file <code>tdlt-story.jpg</code> vào thư mục <code>images/</code></div>
+    </div>
+
+    <div class="space-y-5 text-cream/85 text-lg leading-relaxed">
+      <p>Tôi làm văn phòng, mấy tháng gần đây công việc nhiều biến động, tối nào đầu óc cũng không ngừng suy nghĩ dù cơ thể đã rất mệt.</p>
+      <p>Một người bạn giới thiệu tôi gói nhân sâm táo đỏ lạc tiên hòa tan của CND GINSENG — táo đỏ, lạc tiên, táo nhân đều là những vị quen thuộc trong y học cổ truyền, kết hợp cùng nhân sâm Canada.</p>
+      <p>Tôi pha uống đều đặn mỗi ngày theo đúng hướng dẫn. Dần dần tôi thấy tinh thần thư thái hơn vào buổi tối, đỡ suy nghĩ vẩn vơ hơn trước khi lên giường.</p>
+    </div>
+    <p class="text-cream/40 text-sm mt-8 italic">* Trải nghiệm cá nhân, cảm nhận có thể khác nhau tùy cơ địa từng người. Đây là thực phẩm bảo vệ sức khỏe, không phải là thuốc.</p>
+  </div>
+</section>
+
+<!-- MECHANISM -->
+<section class="py-20 px-5">
+  <div class="max-w-5xl mx-auto">
+    <h2 class="serif text-3xl sm:text-4xl font-bold text-center mb-4" style="color:var(--night)">4 Vị Quen Thuộc, Kết Hợp Cùng Nhau</h2>
+    <p class="text-center text-night-deep/60 mb-14 max-w-xl mx-auto">Mỗi vị đều là thảo dược quen thuộc lâu đời trong y học cổ truyền</p>
+
+    <div class="grid md:grid-cols-2 gap-6 mb-14">
+      <div class="bg-white rounded-2xl p-7 card-shadow border-l-4 border-gold">
+        <div class="text-3xl mb-3">🌱</div>
+        <h3 class="font-bold text-lg mb-2">Nhân sâm Canada</h3>
+        <p class="text-night-deep/70 leading-relaxed">Có tính hàn, dịu nhẹ hơn nhân sâm Á Đông — được nhiều người lựa chọn để dùng hằng ngày mà không lo tính nóng.</p>
+      </div>
+      <div class="bg-white rounded-2xl p-7 card-shadow border-l-4 border-gold">
+        <div class="text-3xl mb-3">🌰</div>
+        <h3 class="font-bold text-lg mb-2">Táo đỏ</h3>
+        <p class="text-night-deep/70 leading-relaxed">Vị thuốc quen thuộc trong y học cổ truyền, thường dùng để bồi bổ và làm dịu cơ thể sau một ngày dài.</p>
+      </div>
+      <div class="bg-white rounded-2xl p-7 card-shadow border-l-4 border-gold">
+        <div class="text-3xl mb-3">🌸</div>
+        <h3 class="font-bold text-lg mb-2">Lạc tiên</h3>
+        <p class="text-night-deep/70 leading-relaxed">Thảo dược dân gian quen thuộc, nhiều người dùng vào buổi tối để cảm thấy thư giãn hơn.</p>
+      </div>
+      <div class="bg-white rounded-2xl p-7 card-shadow border-l-4 border-gold">
+        <div class="text-3xl mb-3">🍃</div>
+        <h3 class="font-bold text-lg mb-2">Táo nhân (toan táo nhân)</h3>
+        <p class="text-night-deep/70 leading-relaxed">Vị thuốc cổ truyền thường được phối hợp trong các bài thuốc dân gian giúp tinh thần nhẹ nhàng hơn.</p>
+      </div>
+    </div>
+
+    <!-- usage guide -->
+    <div class="bg-night-deep rounded-3xl p-8 sm:p-10 text-cream">
+      <h3 class="serif text-2xl font-bold mb-8 text-center">Hướng Dẫn Sử Dụng</h3>
+      <div class="grid sm:grid-cols-3 gap-6">
+        <div class="text-center">
+          <div class="w-12 h-12 rounded-full bg-gold text-night-deep font-bold flex items-center justify-center mx-auto mb-3">1</div>
+          <p class="font-semibold mb-1">Người mới dùng</p>
+          <p class="text-cream/70 text-sm">1 gói/ngày trong 5-7 ngày đầu để cơ thể làm quen</p>
+        </div>
+        <div class="text-center">
+          <div class="w-12 h-12 rounded-full bg-gold text-night-deep font-bold flex items-center justify-center mx-auto mb-3">2</div>
+          <p class="font-semibold mb-1">Duy trì</p>
+          <p class="text-cream/70 text-sm">1-2 gói/ngày, chia 2 lần buổi sáng và đầu giờ chiều</p>
+        </div>
+        <div class="text-center">
+          <div class="w-12 h-12 rounded-full bg-gold text-night-deep font-bold flex items-center justify-center mx-auto mb-3">3</div>
+          <p class="font-semibold mb-1">Dùng lâu dài</p>
+          <p class="text-cream/70 text-sm">Có thể dùng 2-4 gói/ngày, liên tục và lâu dài</p>
+        </div>
+      </div>
+      <p class="text-cream/40 text-xs text-center mt-8">* Pha 1 gói với 300-500ml nước ấm hoặc nước nguội, khuấy tan, uống ngay hoặc nhâm nhi trong ngày. Người có tiền sử dạ dày nhạy cảm nên uống sau khi ăn no.</p>
+    </div>
+  </div>
+</section>
+
+<!-- OFFER / PRICING -->
+<section id="offer" class="py-20 px-5" style="background:#EEF0F8;">
+  <div class="max-w-5xl mx-auto">
+    <h2 class="serif text-3xl sm:text-4xl font-bold text-center mb-4" style="color:var(--night)">Bảng Giá Sản Phẩm</h2>
+    <p class="text-center text-night-deep/60 mb-14 max-w-xl mx-auto">Chọn quy cách phù hợp với nhu cầu sử dụng</p>
+
+    <!-- Main box -->
+    <div class="bg-white rounded-3xl card-shadow border-2 border-gold overflow-hidden mb-6 grid md:grid-cols-5">
+      <div class="img-slot md:col-span-2" style="min-height:260px;">
+        <img src="images/tdlt-box.jpg" alt="Hộp 20 gói CND GINSENG Táo Đỏ Lạc Tiên" onerror="this.remove(); this.parentElement.classList.add('img-slot-empty');">
+        <div class="img-slot-hint">📷 Ảnh sản phẩm<br>Đặt file <code>tdlt-box.jpg</code> vào thư mục <code>images/</code></div>
+        <span class="absolute top-4 left-4 z-10 bg-night text-cream text-xs font-bold tracking-wide px-3 py-1 rounded-full">PHÙ HỢP DÙNG LÂU DÀI</span>
+      </div>
+      <div class="md:col-span-3 p-8">
+        <h3 class="serif text-2xl font-bold mb-1" style="color:var(--night)">Hộp 20 Gói</h3>
+        <p class="text-night-deep/60 text-sm mb-4">Mỗi gói 3g — dùng được khoảng 2-3 tuần (1 gói/ngày)</p>
+        <ul class="space-y-2 mb-6 text-night-deep/80">
+          <li class="flex gap-2"><span class="text-gold">✓</span> Tư vấn liều dùng phù hợp 1:1 miễn phí qua Zalo</li>
+          <li class="flex gap-2"><span class="text-gold">✓</span> Giao hàng toàn quốc trong 24h</li>
+          <li class="flex gap-2"><span class="text-gold">✓</span> Đổi trả nếu sản phẩm lỗi do nhà sản xuất</li>
+        </ul>
+        <div class="flex items-end gap-3 mb-6">
+          <span class="serif text-4xl font-bold" style="color:var(--night)">360.000đ</span>
+          <span class="text-night-deep/50 text-sm mb-1">/ hộp 20 gói</span>
+        </div>
+        <a href="https://zalo.me/0918303039" target="_blank" rel="noopener" class="block text-center bg-night text-cream font-bold py-3.5 rounded-full hover:bg-night-deep transition">Đặt Hàng Ngay Qua Zalo</a>
+      </div>
+    </div>
+
+    <!-- Trial box -->
+    <div class="bg-white rounded-2xl p-6 card-shadow border border-gold/10 flex flex-col sm:flex-row items-center justify-between gap-4 max-w-xl mx-auto">
+      <div>
+        <p class="font-semibold text-night-deep/60 text-sm mb-1">HỘP 7 GÓI — DÙNG THỬ</p>
+        <p class="serif text-2xl font-bold" style="color:var(--night)">132.000đ</p>
+        <p class="text-sm text-night-deep/60 mt-1">Phù hợp dùng thử trước khi mua hộp lớn</p>
+      </div>
+      <a href="https://zalo.me/0918303039" target="_blank" rel="noopener" class="w-full sm:w-auto text-center bg-gold text-night-deep font-bold px-6 py-3 rounded-full hover:brightness-110 transition whitespace-nowrap">Đặt Ngay</a>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="py-20 px-5">
+  <div class="max-w-5xl mx-auto">
+    <h2 class="serif text-3xl sm:text-4xl font-bold text-center mb-14" style="color:var(--night)">Người Dùng Nói Gì</h2>
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="bg-white rounded-2xl p-7 card-shadow border border-gold/10">
+        <p class="text-night-deep/80 leading-relaxed mb-4">"Dạo này công việc nhiều áp lực, tối nào đầu óc cũng suy nghĩ miên man. Từ khi dùng đều, tôi thấy tinh thần thư thái hơn hẳn trước khi lên giường."</p>
+        <div class="flex items-center gap-3">
+          <div class="img-slot avatar-slot" title="Đặt file images/tdlt-testimonial-1.jpg">
+            <img src="images/tdlt-testimonial-1.jpg" alt="Chị Mai" onerror="this.remove(); this.parentElement.classList.add('img-slot-empty');">
+            <div class="img-slot-hint">👤</div>
+          </div>
+          <p class="font-semibold text-sm" style="color:var(--night)">— Chị Mai, 34 tuổi, nhân viên văn phòng</p>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl p-7 card-shadow border border-gold/10">
+        <p class="text-night-deep/80 leading-relaxed mb-4">"Sản phẩm dễ pha, vị ngọt nhẹ mùi hạt sen, dễ uống. Tôi dùng đều mỗi ngày theo đúng hướng dẫn."</p>
+        <div class="flex items-center gap-3">
+          <div class="img-slot avatar-slot" title="Đặt file images/tdlt-testimonial-2.jpg">
+            <img src="images/tdlt-testimonial-2.jpg" alt="Anh Đức" onerror="this.remove(); this.parentElement.classList.add('img-slot-empty');">
+            <div class="img-slot-hint">👤</div>
+          </div>
+          <p class="font-semibold text-sm" style="color:var(--night)">— Anh Đức, 40 tuổi</p>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl p-7 card-shadow border border-gold/10">
+        <p class="text-night-deep/80 leading-relaxed mb-4">"Tôi hay lo lắng chuyện công việc, từ khi dùng đều đặn cảm thấy tâm trạng nhẹ nhàng hơn."</p>
+        <div class="flex items-center gap-3">
+          <div class="img-slot avatar-slot" title="Đặt file images/tdlt-testimonial-3.jpg">
+            <img src="images/tdlt-testimonial-3.jpg" alt="Chị Linh" onerror="this.remove(); this.parentElement.classList.add('img-slot-empty');">
+            <div class="img-slot-hint">👤</div>
+          </div>
+          <p class="font-semibold text-sm" style="color:var(--night)">— Chị Linh, 29 tuổi</p>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl p-7 card-shadow border border-gold/10">
+        <p class="text-night-deep/80 leading-relaxed mb-4">"Ba mẹ tôi lớn tuổi, tôi mua cho ông bà dùng hằng ngày, cả nhà đều thấy hợp."</p>
+        <div class="flex items-center gap-3">
+          <div class="img-slot avatar-slot" title="Đặt file images/tdlt-testimonial-4.jpg">
+            <img src="images/tdlt-testimonial-4.jpg" alt="Anh Nam" onerror="this.remove(); this.parentElement.classList.add('img-slot-empty');">
+            <div class="img-slot-hint">👤</div>
+          </div>
+          <p class="font-semibold text-sm" style="color:var(--night)">— Anh Nam, 36 tuổi (mua cho bố mẹ)</p>
+        </div>
+      </div>
+    </div>
+    <p class="text-night-deep/40 text-xs text-center mt-8 max-w-2xl mx-auto">* Chia sẻ từ người dùng thực tế. Cảm nhận có thể khác nhau tùy theo cơ địa mỗi người.</p>
+  </div>
+</section>
+
+<!-- PRODUCT INFO -->
+<section class="py-20 px-5" style="background:#EEF0F8;">
+  <div class="max-w-3xl mx-auto">
+    <h2 class="serif text-3xl sm:text-4xl font-bold text-center mb-12" style="color:var(--night)">Thông Tin Sản Phẩm</h2>
+    <div class="bg-white rounded-2xl card-shadow border border-gold/10 divide-y divide-gold/10">
+      <div class="p-6">
+        <p class="font-semibold mb-2" style="color:var(--night)">Thành phần</p>
+        <p class="text-night-deep/70 leading-relaxed">Chất độn (Maltitol), cao bột nhân sâm Canada (Panax Quinquefolii 11.97%), cao táo đỏ 11.67%, cao lạc tiên 3.33%, cao táo nhân 2.67%, chất ổn định (Polyvinylpyrrolidone K30), hương liệu hạt sen, chất tạo ngọt (Steviol Glycosides), chống đông vón (Silicon dioxide), Magie Oxide 0.5%, chất mang (Maltodextrin), chất bảo quản (Methyl para-hydroxybenzoat). Khối lượng tịnh: 3g/gói.</p>
+      </div>
+      <div class="p-6">
+        <p class="font-semibold mb-2" style="color:var(--night)">Thành phần dinh dưỡng (mỗi gói 3g)</p>
+        <p class="text-night-deep/70 leading-relaxed">Năng lượng: 4.31 Kcal · Carbohydrate: 1.00g · Protein: 0.05g · Lipid: 0.00g · Natri: 0.26mg</p>
+      </div>
+      <div class="p-6">
+        <p class="font-semibold mb-2" style="color:var(--night)">Đối tượng sử dụng</p>
+        <p class="text-night-deep/70 leading-relaxed">Người từ 10 tuổi trở lên. Phù hợp cho người trung niên, người cao tuổi, người làm việc văn phòng, người lao động và người có nhu cầu bổ sung nhân sâm Canada, táo đỏ, lạc tiên, táo nhân vào chế độ sử dụng hằng ngày.</p>
+      </div>
+      <div class="p-6">
+        <p class="font-semibold mb-2" style="color:var(--night)">Cách dùng</p>
+        <p class="text-night-deep/70 leading-relaxed">Bóc 1 gói cho vào ly hoặc bình, thêm khoảng 300-500ml nước ấm hoặc nước nguội, khuấy hoặc lắc nhẹ cho tan đều. Có thể uống ngay hoặc nhâm nhi trong ngày. Người có tiền sử dạ dày nhạy cảm nên uống sau ăn no; nếu cơ thể khỏe mạnh có thể dùng trước bữa ăn.</p>
+      </div>
+      <div class="p-6">
+        <p class="font-semibold mb-2" style="color:var(--night)">Quy cách đóng gói</p>
+        <p class="text-night-deep/70 leading-relaxed">Hộp 20 gói hoặc hộp 7 gói, mỗi gói 3g.</p>
+      </div>
+      <div class="p-6">
+        <p class="font-semibold mb-2" style="color:var(--night)">Hạn sử dụng & Bảo quản</p>
+        <p class="text-night-deep/70 leading-relaxed">24 tháng kể từ ngày sản xuất (xem trên nhãn sản phẩm). Bảo quản nơi khô ráo, thoáng mát, tránh ánh nắng chiếu trực tiếp.</p>
+      </div>
+      <div class="p-6">
+        <p class="font-semibold mb-2" style="color:var(--night)">Lưu ý quan trọng</p>
+        <ul class="text-night-deep/70 leading-relaxed space-y-1 list-disc list-inside">
+          <li>Sản phẩm không phải là thuốc, không thay thế thuốc chữa bệnh</li>
+          <li>Không sử dụng nếu mẫn cảm với bất kỳ thành phần nào của sản phẩm</li>
+          <li>Phụ nữ mang thai hoặc đang cho con bú nên tham khảo ý kiến phù hợp trước khi sử dụng</li>
+          <li>Không khuyến khích sử dụng cho trẻ em dưới 10 tuổi</li>
+        </ul>
+      </div>
+      <div class="p-6">
+        <p class="font-semibold mb-2" style="color:var(--night)">Sản xuất & Công bố</p>
+        <p class="text-night-deep/70 leading-relaxed">Sản xuất tại: Công Ty Cổ Phần Dược Phẩm La Terre France — 08A ấp Phú Thành, xã Phước Lý, Tây Ninh, Việt Nam.<br>Thương nhân công bố & chịu trách nhiệm về sản phẩm: 528 Xô Viết Nghệ Tĩnh, Phường Thạnh Mỹ Tây, TP. Hồ Chí Minh.<br>Xuất xứ: Việt Nam. TCSX: TCCS. Web: cndginseng.com.vn</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="bg-night-deep text-cream py-20 px-5">
+  <div class="max-w-3xl mx-auto">
+    <h2 class="serif text-3xl sm:text-4xl font-bold text-center mb-12">Câu Hỏi Thường Gặp</h2>
+    <div class="space-y-5">
+      <div class="bg-white/5 rounded-xl p-6 border border-cream/10">
+        <p class="font-semibold mb-2">Sản phẩm có thay thế thuốc ngủ hoặc thuốc điều trị không?</p>
+        <p class="text-cream/70 leading-relaxed">Không. Đây là thực phẩm bảo vệ sức khỏe, không phải là thuốc và không có tác dụng thay thế thuốc chữa bệnh.</p>
+      </div>
+      <div class="bg-white/5 rounded-xl p-6 border border-cream/10">
+        <p class="font-semibold mb-2">Phụ nữ mang thai, cho con bú hoặc trẻ em có dùng được không?</p>
+        <p class="text-cream/70 leading-relaxed">Phụ nữ mang thai hoặc đang cho con bú nên tham khảo ý kiến phù hợp trước khi sử dụng. Không khuyến khích dùng cho trẻ em dưới 10 tuổi.</p>
+      </div>
+      <div class="bg-white/5 rounded-xl p-6 border border-cream/10">
+        <p class="font-semibold mb-2">Người mới dùng nhân sâm lần đầu nên dùng thế nào?</p>
+        <p class="text-cream/70 leading-relaxed">Nên bắt đầu với 1 gói/ngày trong 5-7 ngày đầu, sau đó điều chỉnh duy trì 1-2 gói/ngày, chia buổi sáng và đầu giờ chiều.</p>
+      </div>
+      <div class="bg-white/5 rounded-xl p-6 border border-cream/10">
+        <p class="font-semibold mb-2">Có thể dùng lâu dài không?</p>
+        <p class="text-cream/70 leading-relaxed">Có, có thể dùng liên tục và lâu dài theo liều khuyến nghị (2-4 gói/ngày). Nếu mẫn cảm với bất kỳ thành phần nào thì không nên dùng.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section id="cta" class="py-24 px-5 gradient-hero text-cream">
+  <div class="max-w-2xl mx-auto text-center">
+    <h2 class="serif text-3xl sm:text-4xl font-bold mb-4">Nhận Tư Vấn Miễn Phí</h2>
+    <p class="text-cream/75 mb-10 leading-relaxed">Để lại thông tin, đội ngũ tư vấn sẽ liên hệ trong 24h để giúp bạn chọn liều dùng phù hợp.</p>
+
+    <div class="bg-white rounded-3xl p-8 sm:p-10 text-left card-shadow">
+      <div class="grid gap-4 mb-6">
+        <input id="f-name" type="text" placeholder="Họ tên của bạn" class="w-full border border-night/20 rounded-xl px-4 py-3 text-night-deep focus:outline-none focus:border-gold">
+        <input id="f-phone" type="tel" placeholder="Số điện thoại / Zalo" class="w-full border border-night/20 rounded-xl px-4 py-3 text-night-deep focus:outline-none focus:border-gold">
+        <textarea id="f-note" placeholder="Ghi chú (không bắt buộc)" rows="3" class="w-full border border-night/20 rounded-xl px-4 py-3 text-night-deep focus:outline-none focus:border-gold"></textarea>
+      </div>
+      <button type="button" onclick="sendZaloRequest()" class="w-full bg-night text-cream font-bold py-4 rounded-full hover:bg-night-deep transition text-lg">
+        Gửi Qua Zalo: 0918 303 039
+      </button>
+      <a href="mailto:nhansamcanada@gmail.com" class="block text-center text-night-deep/60 text-sm mt-4 hover:text-night underline underline-offset-2">
+        Hoặc gửi email tới nhansamcanada@gmail.com
+      </a>
+      <p class="text-center text-night-deep/40 text-xs mt-4">Thông tin của bạn được bảo mật, chỉ dùng để liên hệ tư vấn.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER / LEGAL -->
+<footer class="bg-night-deep text-cream/50 py-10 px-5 text-center text-xs leading-relaxed">
+  <div class="max-w-2xl mx-auto space-y-2">
+    <p class="text-cream/70 font-semibold">CND GINSENG — Nhân Sâm Táo Đỏ & Lạc Tiên Hòa Tan</p>
+    <p>Zalo/Hotline: 0918 303 039 · Email: nhansamcanada@gmail.com</p>
+    <p>Sản xuất: Công Ty Cổ Phần Dược Phẩm La Terre France — Tây Ninh</p>
+    <p>Thương nhân công bố & chịu trách nhiệm: 528 Xô Viết Nghệ Tĩnh, P. Thạnh Mỹ Tây, TP.HCM</p>
+    <p>Thực phẩm này không phải là thuốc và không có tác dụng thay thế thuốc chữa bệnh.</p>
+    <p>Không khuyến khích dùng cho trẻ em dưới 10 tuổi. Hiệu quả sử dụng có thể khác nhau tùy theo cơ địa của từng người dùng.</p>
+    <p class="pt-3">© 2026 CND GINSENG.</p>
+  </div>
+</footer>
+
+<script>
+  const els = document.querySelectorAll('section');
+  const obs = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('visible'); });
+  }, {threshold:0.1});
+  els.forEach(el=>{ el.classList.add('fade-in'); obs.observe(el); });
+
+  function sendZaloRequest(){
+    const name = document.getElementById('f-name').value.trim();
+    const phone = document.getElementById('f-phone').value.trim();
+    const note = document.getElementById('f-note').value.trim();
+    if(!phone){
+      alert('Vui lòng nhập số điện thoại để đội ngũ tư vấn liên hệ lại nhé.');
+      return;
+    }
+    let msg = `Xin chào, tôi muốn được tư vấn về Nhân Sâm Táo Đỏ Lạc Tiên hòa tan.\nHọ tên: ${name || '(chưa điền)'}\nSĐT: ${phone}`;
+    if(note) msg += `\nGhi chú: ${note}`;
+    window.open(`https://zalo.me/0918303039?text=${encodeURIComponent(msg)}`, '_blank');
+  }
+</script>
+
+</body>
+</html>
