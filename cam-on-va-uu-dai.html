@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="vi" class="scroll-smooth">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cảm Ơn Bạn — Ebook Của Bạn Đã Sẵn Sàng</title>
+<meta name="robots" content="noindex">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          night: '#1E2A56',
+          'night-deep': '#10162E',
+          gold: '#C9A66B',
+          cream: '#FBF3E7',
+        }
+      }
+    }
+  }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{ --night:#1E2A56; --night-deep:#10162E; --gold:#C9A66B; --cream:#FBF3E7; }
+  *{font-family:'Be Vietnam Pro',sans-serif;}
+  h1,h2,h3,.serif{font-family:'Playfair Display',serif;}
+  body{background:var(--cream);}
+  .gradient-hero{
+    background:
+      radial-gradient(circle at 15% 20%, rgba(201,166,107,0.18) 0%, transparent 45%),
+      radial-gradient(circle at 85% 80%, rgba(255,255,255,0.08) 0%, transparent 45%),
+      linear-gradient(160deg, var(--night) 0%, var(--night-deep) 100%);
+  }
+  .card-shadow{box-shadow:0 20px 50px -20px rgba(16,22,46,0.3);}
+  .img-slot{
+    position:relative; overflow:hidden; background:#FBF6EC;
+    border:2px dashed var(--gold); display:flex; align-items:center; justify-content:center;
+  }
+  .img-slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;}
+  .img-slot .img-slot-hint{display:none;position:relative;z-index:1;color:#8a7147;font-size:0.85rem;line-height:1.5;text-align:center;padding:1.5rem;}
+  .img-slot-empty .img-slot-hint{display:block;}
+  .img-slot .img-slot-hint code{background:rgba(201,166,107,0.15);padding:0.1rem 0.4rem;border-radius:0.25rem;font-size:0.8rem;}
+  .qr-slot{
+    border:2px dashed var(--gold); background:#FFF9EE; border-radius:1rem;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:1.5rem; color:#8a7147; font-size:0.85rem; text-align:center; line-height:1.5;
+  }
+</style>
+</head>
+<body class="text-night-deep antialiased">
+
+<!-- THANK YOU + DOWNLOAD -->
+<section class="gradient-hero text-cream py-16 px-5 text-center">
+  <div class="max-w-2xl mx-auto">
+    <span class="text-5xl mb-4 block">🎉</span>
+    <h1 class="serif text-3xl sm:text-4xl font-bold mb-4">Cảm Ơn Bạn! Ebook Đã Sẵn Sàng</h1>
+    <p class="text-cream/80 mb-8 leading-relaxed">Bấm nút bên dưới để tải ebook "5 Dấu Hiệu Mất Ngủ Do Stress Bạn Không Nên Bỏ Qua" về máy.</p>
+    <a href="ebook-giac-ngu-ngon.pdf" download class="inline-block bg-gold text-night-deep font-bold px-8 py-4 rounded-full hover:brightness-110 transition text-lg">
+      ⬇️ Tải Ebook Miễn Phí
+    </a>
+  </div>
+</section>
+
+<!-- ORDER BUMP OFFER -->
+<section class="py-20 px-5" style="background:#EEF0F8;">
+  <div class="max-w-3xl mx-auto">
+    <div class="text-center mb-10">
+      <span class="inline-block bg-night text-cream text-xs font-bold tracking-wide px-4 py-1.5 rounded-full mb-4">
+        ƯU ĐÃI DÀNH RIÊNG CHO BẠN — CHỈ HIỂN THỊ HÔM NAY
+      </span>
+      <h2 class="serif text-3xl sm:text-4xl font-bold" style="color:var(--night)">Trải Nghiệm Ngay Trong Khi Chờ Đọc Ebook</h2>
+      <p class="text-night-deep/60 mt-3 max-w-xl mx-auto">Nhân sâm Táo Đỏ &amp; Lạc Tiên hòa tan — 4 vị quen thuộc trong y học cổ truyền, dùng mỗi ngày để cảm thấy thư giãn hơn.</p>
+    </div>
+
+    <div class="bg-white rounded-3xl card-shadow border-2 border-gold overflow-hidden grid md:grid-cols-5">
+      <div class="img-slot md:col-span-2" style="min-height:220px;">
+        <img src="images/tdlt-box.jpg" alt="Hộp 20 gói CND GINSENG Táo Đỏ Lạc Tiên" onerror="this.remove(); this.parentElement.classList.add('img-slot-empty');">
+        <div class="img-slot-hint">📷 Ảnh sản phẩm<br>Đặt file <code>tdlt-box.jpg</code> vào thư mục <code>images/</code></div>
+      </div>
+      <div class="md:col-span-3 p-7">
+        <h3 class="serif text-xl font-bold mb-1" style="color:var(--night)">Hộp 20 Gói — Táo Đỏ &amp; Lạc Tiên Hòa Tan</h3>
+        <p class="text-night-deep/60 text-sm mb-4">Mỗi gói 3g, dùng được khoảng 2-3 tuần</p>
+        <div class="flex items-end gap-3 mb-5">
+          <span class="serif text-3xl font-bold" style="color:var(--night)">360.000đ</span>
+        </div>
+        <a href="#thanh-toan" class="block text-center bg-night text-cream font-bold py-3 rounded-full hover:bg-night-deep transition">
+          Đặt Ngay — Thanh Toán Bên Dưới ↓
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PAYMENT -->
+<section id="thanh-toan" class="py-20 px-5">
+  <div class="max-w-xl mx-auto">
+    <h2 class="serif text-2xl sm:text-3xl font-bold text-center mb-8" style="color:var(--night)">Thanh Toán Đơn Hàng</h2>
+
+    <div class="bg-white rounded-2xl card-shadow border border-gold/10 p-6 mb-6">
+      <div class="flex justify-between text-night-deep/70 mb-2">
+        <span>Hộp 20 gói Táo Đỏ &amp; Lạc Tiên</span>
+        <span class="font-semibold">360.000đ</span>
+      </div>
+      <div class="border-t border-gold/20 pt-2 flex justify-between font-bold" style="color:var(--night)">
+        <span>Tổng cộng</span>
+        <span>360.000đ</span>
+      </div>
+    </div>
+
+    <div class="qr-slot mb-6">
+      📱 Mã QR chuyển khoản (VietQR)<br>
+      Cần thông tin: <code>tên ngân hàng, số tài khoản, tên chủ tài khoản</code> để tạo mã QR tự động tại đây.
+    </div>
+
+    <div class="bg-white rounded-2xl card-shadow border border-gold/10 p-6 mb-6 text-sm text-night-deep/80 space-y-1">
+      <p><strong>Ngân hàng:</strong> (chờ thông tin)</p>
+      <p><strong>Số tài khoản:</strong> (chờ thông tin)</p>
+      <p><strong>Chủ tài khoản:</strong> (chờ thông tin)</p>
+      <p><strong>Số tiền:</strong> 360.000đ</p>
+      <p><strong>Nội dung CK:</strong> <code>DH [Số điện thoại của bạn]</code></p>
+    </div>
+
+    <button type="button" onclick="confirmPayment()" class="w-full bg-gold text-night-deep font-bold py-4 rounded-full hover:brightness-110 transition text-lg mb-3">
+      Tôi Đã Chuyển Khoản — Xác Nhận Qua Zalo
+    </button>
+    <p class="text-center text-night-deep/40 text-xs">Sau khi chuyển khoản, bấm nút trên để gửi xác nhận qua Zalo — đội ngũ sẽ đóng gói và giao hàng trong 24h.</p>
+  </div>
+</section>
+
+<script>
+  function confirmPayment(){
+    const msg = `Xin chào, tôi vừa chuyển khoản đặt hàng:\nSản phẩm: Hộp 20 gói Táo Đỏ & Lạc Tiên hòa tan\nSố tiền: 360.000đ\nTôi gửi kèm ảnh chụp màn hình chuyển khoản để xác nhận.`;
+    window.open(`https://zalo.me/0918303039?text=${encodeURIComponent(msg)}`, '_blank');
+  }
+</script>
+
+</body>
+</html>
