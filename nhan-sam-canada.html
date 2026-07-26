@@ -56,6 +56,52 @@
     background:repeating-linear-gradient(135deg,var(--gold),var(--gold) 10px,#a97d38 10px,#a97d38 20px);
   }
   ::selection{background:var(--gold);color:#fff;}
+
+  .img-slot{
+    position:relative;
+    overflow:hidden;
+    background:#FFF8EE;
+    border:2px dashed var(--gold);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .img-slot img{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+  .img-slot .img-slot-hint{
+    display:none;
+    position:relative;
+    z-index:1;
+    color:#8a6d3b;
+    font-size:0.85rem;
+    line-height:1.5;
+    text-align:center;
+    padding:1.5rem;
+  }
+  .img-slot-empty .img-slot-hint{ display:block; }
+  .img-slot .img-slot-hint code{
+    background:rgba(204,154,74,0.15);
+    padding:0.1rem 0.4rem;
+    border-radius:0.25rem;
+    font-size:0.8rem;
+  }
+  .avatar-slot{
+    width:44px;
+    height:44px;
+    min-width:44px;
+    border-radius:9999px;
+    flex-shrink:0;
+  }
+  .avatar-slot .img-slot-hint{
+    font-size:1rem;
+    padding:0;
+  }
 </style>
 </head>
 <body class="text-forest-deep antialiased">
@@ -94,7 +140,12 @@
         Xem Ưu Đãi Hôm Nay ↓
       </a>
     </div>
-    <p class="text-cream/50 text-sm mt-6">Giao hàng toàn quốc trong 24h · Zalo/Hotline: <strong class="text-gold">0918 303 039</strong> · Email: <strong class="text-gold">nhansamcanada@gmail.com</strong></p>
+    <p class="text-cream/50 text-sm mt-6 mb-10">Giao hàng toàn quốc trong 24h · Zalo/Hotline: <strong class="text-gold">0918 303 039</strong> · Email: <strong class="text-gold">nhansamcanada@gmail.com</strong></p>
+
+    <div class="img-slot rounded-3xl max-w-3xl mx-auto" style="aspect-ratio:16/9;">
+      <img src="images/hero-family.jpg" alt="Gia đình chăm sóc bố mẹ với Nhân Sâm Canada" onerror="this.remove(); this.parentElement.classList.add('img-slot-empty');">
+      <div class="img-slot-hint">📷 Ảnh hero (gia đình / sản phẩm)<br>Đặt file <code>hero-family.jpg</code> vào thư mục <code>images/</code></div>
+    </div>
   </div>
 </header>
 
@@ -129,6 +180,12 @@
     <h2 class="serif text-3xl sm:text-4xl font-bold mt-3 mb-8 leading-snug">
       "4 tiếng chờ đợi ở bệnh viện là quãng thời gian dài nhất đời tôi."
     </h2>
+
+    <div class="img-slot rounded-2xl mb-8" style="aspect-ratio:16/9;">
+      <img src="images/story-mother.jpg" alt="Mẹ hồi phục sức khỏe cùng gia đình" onerror="this.remove(); this.parentElement.classList.add('img-slot-empty');">
+      <div class="img-slot-hint">📷 Ảnh minh họa câu chuyện<br>Đặt file <code>story-mother.jpg</code> vào thư mục <code>images/</code></div>
+    </div>
+
     <div class="space-y-5 text-cream/85 text-lg leading-relaxed">
       <p>Năm 2023, mẹ tôi phải nhập viện đột ngột. Trong những ngày hồi phục sau đó, cả nhà tôi chỉ có một câu hỏi: <em>làm sao để chăm sóc mẹ đúng cách, an toàn, mà không lo ảnh hưởng đến huyết áp vốn đã cao của mẹ?</em></p>
       <p>Tôi tìm hiểu rất nhiều, và nhận ra phần lớn các sản phẩm bồi bổ phổ biến trên thị trường đều khuyến cáo <strong class="text-gold">không dùng cho người huyết áp cao</strong>. Đó là lúc tôi biết đến nhân sâm Canada.</p>
@@ -200,12 +257,14 @@
 
     <!-- Hot combo -->
     <div class="bg-white rounded-3xl card-shadow border-2 border-gold overflow-hidden mb-10 grid md:grid-cols-5">
-      <div class="ribbon md:col-span-2 p-8 flex flex-col justify-center text-cream">
-        <span class="bg-white/20 text-xs font-bold tracking-wide px-3 py-1 rounded-full w-fit mb-4">ĐƯỢC CHỌN NHIỀU NHẤT</span>
-        <h3 class="serif text-2xl font-bold mb-2">Combo Chăm Sóc Bố Mẹ</h3>
-        <p class="text-cream/90 text-sm">Nhân sâm Canada dạng viên (60 viên) + Trà nhân sâm (20 gói)</p>
+      <div class="img-slot md:col-span-2" style="min-height:260px;">
+        <img src="images/combo-box.jpg" alt="Combo Chăm Sóc Bố Mẹ - Nhân Sâm Canada" onerror="this.remove(); this.parentElement.classList.add('img-slot-empty');">
+        <div class="img-slot-hint">📷 Ảnh sản phẩm combo<br>Đặt file <code>combo-box.jpg</code> vào thư mục <code>images/</code></div>
+        <span class="absolute top-4 left-4 z-10 bg-forest text-cream text-xs font-bold tracking-wide px-3 py-1 rounded-full">ĐƯỢC CHỌN NHIỀU NHẤT</span>
       </div>
       <div class="md:col-span-3 p-8">
+        <h3 class="serif text-2xl font-bold mb-1" style="color:var(--forest)">Combo Chăm Sóc Bố Mẹ</h3>
+        <p class="text-forest-deep/60 text-sm mb-4">Nhân sâm Canada dạng viên (60 viên) + Trà nhân sâm (20 gói)</p>
         <ul class="space-y-2 mb-6 text-forest-deep/80">
           <li class="flex gap-2"><span class="text-gold">✓</span> Tư vấn sức khỏe 1:1 miễn phí qua Zalo</li>
           <li class="flex gap-2"><span class="text-gold">✓</span> Sổ tay theo dõi sức khỏe kèm theo</li>
@@ -249,19 +308,43 @@
     <div class="grid md:grid-cols-2 gap-6">
       <div class="bg-white rounded-2xl p-7 card-shadow border border-gold/10">
         <p class="text-forest-deep/80 leading-relaxed mb-4">"Sau khoảng 2 tháng dùng đều, tôi thấy ngủ sâu hơn hẳn, sáng dậy tỉnh táo. Rất phù hợp vì tôi có huyết áp cao mà không dùng được nhiều loại thực phẩm bổ sung khác."</p>
-        <p class="font-semibold text-sm" style="color:var(--forest)">— Chị A., 52 tuổi</p>
+        <div class="flex items-center gap-3">
+          <div class="img-slot avatar-slot" title="Đặt file images/testimonial-1.jpg">
+            <img src="images/testimonial-1.jpg" alt="Chị A." onerror="this.remove(); this.parentElement.classList.add('img-slot-empty');">
+            <div class="img-slot-hint">👤</div>
+          </div>
+          <p class="font-semibold text-sm" style="color:var(--forest)">— Chị A., 52 tuổi</p>
+        </div>
       </div>
       <div class="bg-white rounded-2xl p-7 card-shadow border border-gold/10">
         <p class="text-forest-deep/80 leading-relaxed mb-4">"Mẹ tôi dùng đều đặn 3 tháng, tinh thần minh mẫn hơn hẳn so với trước. Cả nhà rất yên tâm vì sản phẩm lành tính, hợp với người lớn tuổi."</p>
-        <p class="font-semibold text-sm" style="color:var(--forest)">— Anh B., 48 tuổi</p>
+        <div class="flex items-center gap-3">
+          <div class="img-slot avatar-slot" title="Đặt file images/testimonial-2.jpg">
+            <img src="images/testimonial-2.jpg" alt="Anh B." onerror="this.remove(); this.parentElement.classList.add('img-slot-empty');">
+            <div class="img-slot-hint">👤</div>
+          </div>
+          <p class="font-semibold text-sm" style="color:var(--forest)">— Anh B., 48 tuổi</p>
+        </div>
       </div>
       <div class="bg-white rounded-2xl p-7 card-shadow border border-gold/10">
         <p class="text-forest-deep/80 leading-relaxed mb-4">"Tôi dùng được khoảng 6 tuần, cảm nhận rõ tinh thần thoải mái và ngủ ngon hơn trước nhiều."</p>
-        <p class="font-semibold text-sm" style="color:var(--forest)">— Anh Minh, 45 tuổi</p>
+        <div class="flex items-center gap-3">
+          <div class="img-slot avatar-slot" title="Đặt file images/testimonial-3.jpg">
+            <img src="images/testimonial-3.jpg" alt="Anh Minh" onerror="this.remove(); this.parentElement.classList.add('img-slot-empty');">
+            <div class="img-slot-hint">👤</div>
+          </div>
+          <p class="font-semibold text-sm" style="color:var(--forest)">— Anh Minh, 45 tuổi</p>
+        </div>
       </div>
       <div class="bg-white rounded-2xl p-7 card-shadow border border-gold/10">
         <p class="text-forest-deep/80 leading-relaxed mb-4">"Lần đầu tiên sau nhiều năm tôi ngủ ngon trở lại. Sản phẩm dễ dùng, vị nhẹ, không khó uống."</p>
-        <p class="font-semibold text-sm" style="color:var(--forest)">— Chị Liên, 52 tuổi</p>
+        <div class="flex items-center gap-3">
+          <div class="img-slot avatar-slot" title="Đặt file images/testimonial-4.jpg">
+            <img src="images/testimonial-4.jpg" alt="Chị Liên" onerror="this.remove(); this.parentElement.classList.add('img-slot-empty');">
+            <div class="img-slot-hint">👤</div>
+          </div>
+          <p class="font-semibold text-sm" style="color:var(--forest)">— Chị Liên, 52 tuổi</p>
+        </div>
       </div>
     </div>
     <p class="text-forest-deep/40 text-xs text-center mt-8 max-w-2xl mx-auto">* Chia sẻ từ khách hàng thực tế. Cảm nhận và kết quả có thể khác nhau tùy theo cơ địa mỗi người.</p>
