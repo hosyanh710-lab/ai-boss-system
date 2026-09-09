@@ -103,6 +103,8 @@
   .brandcard .name{font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:13px; color:var(--thread); margin-bottom:6px;}
   .brandcard .role{font-weight:600; margin-bottom:6px; font-size:15px;}
   .brandcard .who{color:var(--grey); font-size:13.5px;}
+  .brandcard .voice{margin-top:8px; padding-top:8px; border-top:1px dashed var(--line); font-size:12.5px; color:var(--olive);}
+  .brandcard .voice b{font-family:'IBM Plex Mono',monospace; font-weight:600; text-transform:uppercase; font-size:10px; letter-spacing:0.05em; color:var(--grey); display:block; margin-bottom:3px;}
 
   .principles{list-style:none; padding:0; margin:20px 0 8px; display:grid; gap:10px;}
   .principles li{
@@ -133,6 +135,7 @@
   .status.now{background:var(--thread); color:var(--card);}
   .status.next{background:transparent; color:var(--olive); border:1px solid var(--olive);}
   .status.later{background:transparent; color:var(--grey); border:1px solid var(--line);}
+  .status.manual{background:transparent; color:var(--warn); border:1px solid var(--warn);}
 
   .goal{
     font-size:15px; margin:14px 0 20px; padding:14px 16px;
@@ -201,33 +204,36 @@
 
   <div class="kicker">Bản thảo vận hành · Khata / Ecovina / Tuivaibo</div>
   <h1>Lộ Trình Vận Hành Khata</h1>
-  <p class="subtitle">Xây hệ thống bán hàng &amp; quản lý để doanh nghiệp túi vải 20 năm chạy hiệu quả một mình — có AI agent hỗ trợ xuyên suốt, từng lớp một, không dàn trải.</p>
+  <p class="subtitle">Marketing đi trước — hoàn thiện 3 phễu đúng 3 nhóm khách hàng, để AI tìm và trả lời đúng người trước khi hệ thống hóa xưởng gia công.</p>
 
   <div class="metabar">
     <div><b>Doanh nghiệp</b>Khata · 20+ năm · Bình Thạnh, TP.HCM</div>
     <div><b>Mô hình</b>Nhận đơn → đặt gia công xưởng ngoài</div>
     <div><b>Vận hành</b>1 người — chủ DN</div>
-    <div><b>Cập nhật</b>09/09/2026</div>
+    <div><b>Cập nhật</b>09/09/2026 · v2 — ưu tiên marketing trước</div>
   </div>
 
   <section>
-    <h2 class="section-title">Ba mặt trận, một doanh nghiệp</h2>
-    <p class="section-note">Trước khi vào từng giai đoạn — bức tranh hiện tại của Khata đang chạy song song trên 3 kênh, mỗi kênh một vai trò riêng.</p>
+    <h2 class="section-title">Ba phễu, ba nhóm khách, ba ngôn ngữ</h2>
+    <p class="section-note">Nguyên tắc mới: mỗi phễu phải nói đúng ngôn ngữ của đúng 1 nhóm khách — không lẫn lộn thông điệp giữa 3 trang.</p>
     <div class="brandgrid">
       <div class="brandcard">
         <div class="name">ECOVINA.VN</div>
         <div class="role">Sản xuất OEM / xuất khẩu</div>
         <div class="who">Nhà mua hàng Nhật, EU, Mỹ · VI/EN/JA · 3.000+ KH, &lt;5% lỗi</div>
+        <div class="voice"><b>Ngôn ngữ nhóm này</b>Kỹ thuật, số liệu, uy tín, chuẩn xuất khẩu — quyết định chậm, cần tin cậy dài hạn</div>
       </div>
       <div class="brandcard">
         <div class="name">KHATA.NET</div>
         <div class="role">Bán lẻ trong nước — có giỏ hàng</div>
         <div class="who">Khách đặt in túi trực tiếp: túi jean, tote, canvas</div>
+        <div class="voice"><b>Ngôn ngữ nhóm này</b>Giá rõ, mẫu có sẵn, đặt nhanh — quyết định nhanh, so giá</div>
       </div>
       <div class="brandcard">
         <div class="name">TUIVAIBO.COM</div>
         <div class="role">Funnel túi thương hiệu cho SME</div>
         <div class="who">Bán lẻ, F&amp;B, dược phẩm — MOQ 50, mockup 4h</div>
+        <div class="voice"><b>Ngôn ngữ nhóm này</b>Lợi ích marketing/thương hiệu, rào cản thấp, thấy kết quả trước khi cam kết</div>
       </div>
     </div>
   </section>
@@ -235,100 +241,34 @@
   <section>
     <h2 class="section-title">Nguyên tắc xuyên suốt</h2>
     <ul class="principles">
-      <li>Việc nội bộ, ít rủi ro làm trước — việc tìm khách mới làm sau cùng.</li>
-      <li>Mỗi giai đoạn có mốc đánh giá rõ, không chạy vô thời hạn không xem lại.</li>
-      <li>Hệ thống Giai đoạn 2 &amp; 3 phải tổng quát hóa được — vì sau này chính là dịch vụ AI agent bán cho SME khác.</li>
-      <li>Dữ liệu đơn hàng, khách hàng, xưởng gia công là dữ liệu nội bộ — không dùng thật để demo cho khách ngoài.</li>
+      <li>Marketing &amp; phễu đi trước — có khách rồi mọi việc vận hành mới có ý nghĩa để tối ưu.</li>
+      <li>Đưa đơn hàng tới xưởng làm thủ công trong giai đoạn đầu — chỉ hệ thống hóa khi đã thấy rõ khối lượng và mẫu hình đơn hàng thật.</li>
+      <li>Mỗi phễu chỉ nói với đúng 1 nhóm khách — không dùng chung 1 thông điệp cho cả 3.</li>
+      <li>Những gì xây cho AI trả lời khách &amp; marketing phải tổng quát hóa được — vì sau này chính là dịch vụ AI agent bán cho SME khác.</li>
     </ul>
   </section>
-
-  <!-- PHASE 0 -->
-  <div class="phase">
-    <div class="phase-head">
-      <div class="phase-num">0</div>
-      <div class="phase-titles">
-        <h3>Chuẩn bị dữ liệu nền</h3>
-        <div class="phase-when">Tuần 1</div>
-      </div>
-      <div class="status now">Bắt đầu ngay</div>
-    </div>
-    <div class="goal"><b>Mục tiêu —</b> có đủ dữ kiện thật trước khi dựng hệ thống, tránh xây trên phỏng đoán.</div>
-
-    <h4 class="sub">Việc cần làm</h4>
-    <ul class="checklist">
-      <li><label><input type="checkbox" data-id="p0-1"><span>Chốt công cụ ghi đơn hàng hiện tại (Excel / sổ tay / chưa có gì) — xác nhận với người dựng hệ thống</span></label></li>
-      <li><label><input type="checkbox" data-id="p0-2"><span>Liệt kê toàn bộ xưởng gia công đang hợp tác: tên, mặt hàng mạnh, thời gian SX trung bình, đầu mối liên hệ</span></label></li>
-      <li><label><input type="checkbox" data-id="p0-3"><span>Xác nhận kênh phát sinh đơn hàng chính: đặt online qua khata.net, hay tư vấn Zalo/điện thoại (SĐT 0918 303 039)</span></label></li>
-      <li><label><input type="checkbox" data-id="p0-4"><span>Gom bảng giá theo số lượng hiện có (nếu có) cho các mặt hàng chính: túi jean, tote canvas, túi in logo</span></label></li>
-    </ul>
-    <div class="assumption"><b>Giả định tạm dùng:</b> chưa có xác nhận cụ thể — Giai đoạn 1 dưới đây mặc định dùng Google Sheets làm nền (không cần đăng ký gì thêm), sẽ đổi ngay khi có câu trả lời.</div>
-  </div>
 
   <!-- PHASE 1 -->
   <div class="phase">
     <div class="phase-head">
       <div class="phase-num">1</div>
       <div class="phase-titles">
-        <h3>Quản lý đơn hàng &amp; xưởng gia công</h3>
-        <div class="phase-when">Tuần 1 – 4</div>
+        <h3>Hoàn thiện 3 phễu theo đúng 3 nhóm khách</h3>
+        <div class="phase-when">Bắt đầu ngay</div>
       </div>
       <div class="status now">Ưu tiên cao nhất</div>
     </div>
-    <div class="goal"><b>Mục tiêu —</b> một nơi duy nhất theo dõi vòng đời mỗi đơn hàng, thay việc nhớ thủ công.</div>
-
-    <h4 class="sub">Cấu trúc dữ liệu đơn hàng</h4>
-    <div class="tablewrap">
-      <table class="fields">
-        <tr><th>Trường</th><th>Ghi chú</th></tr>
-        <tr><td class="k">Mã đơn</td><td>Định danh duy nhất, ví dụ KH-2609-01</td></tr>
-        <tr><td class="k">Khách hàng</td><td>Tên công ty/người đặt + liên hệ</td></tr>
-        <tr><td class="k">Sản phẩm</td><td>Loại túi/bao bì, số lượng, quy cách (kích thước, chất liệu, in logo)</td></tr>
-        <tr><td class="k">Xưởng gia công</td><td>Xưởng nhận sản xuất đơn này</td></tr>
-        <tr><td class="k">Ngày đặt / hẹn giao KH / hẹn xưởng giao</td><td>3 mốc thời gian riêng biệt</td></tr>
-        <tr><td class="k">Trạng thái SX</td><td>Chưa bắt đầu / Đang làm / Đã xong / Đã giao</td></tr>
-        <tr><td class="k">Thanh toán</td><td>Chưa cọc / Đã cọc / Đã đủ</td></tr>
-        <tr><td class="k">Ghi chú</td><td>Vấn đề phát sinh, yêu cầu riêng</td></tr>
-      </table>
-    </div>
+    <div class="goal"><b>Mục tiêu —</b> mỗi trang chốt rõ 1 nhóm khách, 1 lời hứa, 1 CTA — không mập mờ, không lẫn thông điệp giữa 3 phễu.</div>
 
     <h4 class="sub">Việc cần làm</h4>
     <ul class="checklist">
-      <li><label><input type="checkbox" data-id="p1-1"><span>Dựng bảng đơn hàng + bảng xưởng gia công trên Google Sheets theo đúng cấu trúc trên</span></label></li>
-      <li><label><input type="checkbox" data-id="p1-2"><span>Nhập lại toàn bộ đơn đang chạy hiện tại (chưa giao xong) vào bảng</span></label></li>
-      <li><label><input type="checkbox" data-id="p1-3"><span>Thiết lập AI agent nhắc mỗi sáng: đơn sắp đến hạn giao KH, xưởng sắp trễ hẹn, đơn chưa thanh toán</span></label></li>
-      <li><label><input type="checkbox" data-id="p1-4"><span>Thiết lập nhập liệu bằng câu nói/gõ tự nhiên qua Zalo hoặc Telegram — không bắt điền form</span></label></li>
-      <li><label><input type="checkbox" data-id="p1-5"><span>Thiết lập báo cáo nhanh theo yêu cầu: tổng đơn đang chạy, doanh thu dự kiến, đơn trễ hẹn</span></label></li>
+      <li><label><input type="checkbox" data-id="v2-p1-1"><span>Audit ecovina.vn: headline/offer có đang nói đúng với người mua hàng quốc tế không, lead magnet "25 câu hỏi đánh giá nhà cung cấp" + Telegram EcovinaBot có đang hoạt động và thu lead thật không</span></label></li>
+      <li><label><input type="checkbox" data-id="v2-p1-2"><span>Audit tuivaibo.com: xác nhận nút "Nhận Mockup Miễn Phí Trong 4 Giờ" thực sự gửi lead về đâu, có ai xử lý kịp trong 4h không</span></label></li>
+      <li><label><input type="checkbox" data-id="v2-p1-3"><span>Quyết định vai trò khata.net: giữ song song để bán lẻ nhanh, hay dẫn bớt traffic về 2 phễu kia cho gọn thông điệp</span></label></li>
+      <li><label><input type="checkbox" data-id="v2-p1-4"><span>Đảm bảo 3 trang dùng chung 1 đầu mối liên hệ (Zalo/hotline 0918 303 039) để không rối khi khách phản hồi</span></label></li>
+      <li><label><input type="checkbox" data-id="v2-p1-5"><span>Với mỗi phễu: viết rõ 1 câu định vị (VD Tuivaibo — "biến túi mua hàng thành nhân viên marketing 24/7") để dùng xuyên suốt content và AI trả lời sau này</span></label></li>
     </ul>
-
-    <div class="kpis">
-      <div class="kpi"><div class="n">1</div><div class="l">nơi theo dõi duy nhất</div></div>
-      <div class="kpi"><div class="n">0</div><div class="l">đơn bị quên/trễ do nhớ nhầm</div></div>
-      <div class="kpi"><div class="n">30</div><div class="l">ngày dùng thử</div></div>
-    </div>
-
-    <div class="milestone"><b>Mốc đánh giá:</b> sau 30 ngày — nếu giảm rõ công sức nhớ/theo dõi thủ công thì tiếp tục cải tiến; nếu không, xem lại thiết kế trước khi sang Giai đoạn 2.</div>
-  </div>
-
-  <!-- PHASE 1.5 -->
-  <div class="phase">
-    <div class="phase-head">
-      <div class="phase-num">1.5</div>
-      <div class="phase-titles">
-        <h3>Rà soát 3 phễu bán hàng hiện có</h3>
-        <div class="phase-when">Song song, không cản Giai đoạn 1</div>
-      </div>
-      <div class="status next">Chạy song song</div>
-    </div>
-    <div class="goal"><b>Mục tiêu —</b> tận dụng đúng những gì đã có sẵn (3 trang đã build) trước khi nghĩ tới AI CSKH hay marketing mới.</div>
-
-    <h4 class="sub">Việc cần làm</h4>
-    <ul class="checklist">
-      <li><label><input type="checkbox" data-id="p15-1"><span>Xác nhận tuivaibo.com đang là funnel tốt nhất (hook + lead magnet "Mockup miễn phí 4h" rõ ràng) — kiểm tra form đó thực sự gửi lead về đâu</span></label></li>
-      <li><label><input type="checkbox" data-id="p15-2"><span>Kiểm tra checklist "25 câu hỏi đánh giá nhà cung cấp" + Telegram EcovinaBot trên ecovina.vn có đang hoạt động, có thu được lead không</span></label></li>
-      <li><label><input type="checkbox" data-id="p15-3"><span>Khata.net (giỏ hàng cũ) — quyết định: tiếp tục duy trì song song, hay dẫn hết traffic về tuivaibo.com/ecovina.vn cho gọn</span></label></li>
-      <li><label><input type="checkbox" data-id="p15-4"><span>Đảm bảo cả 3 trang đều có cùng 1 số Zalo/hotline duy nhất để không rối đầu mối liên hệ</span></label></li>
-    </ul>
-    <div class="milestone"><b>Không cần build gì mới ở bước này</b> — chỉ dọn dẹp và xác nhận đường đi của lead đã có trước khi thêm lớp AI.</div>
+    <div class="milestone"><b>Xong khi:</b> mỗi phễu có 1 lead magnet hoạt động thật, 1 câu định vị rõ, và đường đi của lead không bị thất lạc.</div>
   </div>
 
   <!-- PHASE 2 -->
@@ -336,21 +276,22 @@
     <div class="phase-head">
       <div class="phase-num">2</div>
       <div class="phase-titles">
-        <h3>AI trả lời khách hàng tự động</h3>
-        <div class="phase-when">Sau khi Giai đoạn 1 ổn định</div>
+        <h3>AI trả lời riêng theo từng nhóm khách</h3>
+        <div class="phase-when">Sau khi 3 phễu đã rõ ràng</div>
       </div>
       <div class="status next">Tiếp theo</div>
     </div>
-    <div class="goal"><b>Mục tiêu —</b> tự động hóa câu hỏi thường gặp, đồng thời tạo case study thật để sau này bán dịch vụ AI agent cho SME khác.</div>
+    <div class="goal"><b>Mục tiêu —</b> mỗi phễu có một "giọng" trả lời đúng ngôn ngữ và mối quan tâm của đúng nhóm khách đó — không dùng 1 kịch bản chung cho cả 3.</div>
 
     <h4 class="sub">Việc cần làm</h4>
     <ul class="checklist">
-      <li><label><input type="checkbox" data-id="p2-1"><span>Tổng hợp 5-10 câu hỏi khách hỏi nhiều nhất 20 năm qua (giá theo SL, quy cách in logo, MOQ, thời gian SX/giao, chính sách cọc)</span></label></li>
-      <li><label><input type="checkbox" data-id="p2-2"><span>Dựng chatbot trả lời trên đúng kênh khách hay liên hệ (Zalo OA là chính, dựa theo SĐT 0918 303 039 đang dùng chung)</span></label></li>
-      <li><label><input type="checkbox" data-id="p2-3"><span>Thiết lập quy tắc chuyển tiếp cho anh xử lý trực tiếp: đơn lớn, yêu cầu đặc biệt, khách phàn nàn</span></label></li>
-      <li><label><input type="checkbox" data-id="p2-4"><span>Đo trước/sau: thời gian phản hồi trung bình, số khách được trả lời ngoài giờ, tỷ lệ hỏi → đặt hàng</span></label></li>
+      <li><label><input type="checkbox" data-id="v2-p2-1"><span>Ecovina: kịch bản trả lời kỹ thuật/số liệu (năng lực SX, chứng nhận, MOQ xuất khẩu, thời gian & điều khoản giao hàng quốc tế) — đa ngôn ngữ VI/EN/JA</span></label></li>
+      <li><label><input type="checkbox" data-id="v2-p2-2"><span>Khata.net: kịch bản trả lời nhanh về giá theo số lượng, mẫu có sẵn, thời gian giao trong nước</span></label></li>
+      <li><label><input type="checkbox" data-id="v2-p2-3"><span>Tuivaibo: kịch bản trả lời về MOQ thấp (50 cái), quy trình mockup 4h, lợi ích thương hiệu — đúng tông "gỡ rào cản, dễ bắt đầu"</span></label></li>
+      <li><label><input type="checkbox" data-id="v2-p2-4"><span>Mỗi kịch bản đều có quy tắc chuyển tiếp cho anh xử lý trực tiếp: đơn lớn, yêu cầu đặc biệt, khách phàn nàn</span></label></li>
+      <li><label><input type="checkbox" data-id="v2-p2-5"><span>Triển khai trên đúng kênh từng nhóm hay dùng (Zalo OA chung, Telegram cho Ecovina, webchat cho Tuivaibo)</span></label></li>
     </ul>
-    <div class="milestone"><b>Mốc đánh giá:</b> 2–4 tuần thu số liệu → tổng kết thành case study thật, dùng làm minh chứng khi giới thiệu dịch vụ cho SME khác.</div>
+    <div class="milestone"><b>Mốc đánh giá:</b> 2–4 tuần đo thời gian phản hồi &amp; tỷ lệ hỏi→đặt hàng theo từng nhóm riêng, không gộp chung số liệu 3 phễu.</div>
   </div>
 
   <!-- PHASE 3 -->
@@ -358,20 +299,21 @@
     <div class="phase-head">
       <div class="phase-num">3</div>
       <div class="phase-titles">
-        <h3>AI chủ động marketing &amp; tìm khách mới</h3>
-        <div class="phase-when">Sau khi Giai đoạn 2 có số liệu</div>
+        <h3>Marketing tạo nhu cầu, đưa đúng khách vào đúng phễu</h3>
+        <div class="phase-when">Sau khi AI trả lời đã chạy ổn từng nhóm</div>
       </div>
-      <div class="status later">Sau cùng</div>
+      <div class="status next">Tiếp theo</div>
     </div>
-    <div class="goal"><b>Mục tiêu —</b> chủ động tiếp cận doanh nghiệp mới, thay vì chỉ chờ khách tự tìm đến.</div>
+    <div class="goal"><b>Mục tiêu —</b> chủ động tìm đúng khách cho từng nhóm, không chỉ ngồi chờ khách tự đến.</div>
 
     <h4 class="sub">Việc cần làm</h4>
     <ul class="checklist">
-      <li><label><input type="checkbox" data-id="p3-1"><span>AI soạn nội dung theo mùa vụ: Tết, hội nghị khách hàng, sự kiện doanh nghiệp, quà tặng cuối năm</span></label></li>
-      <li><label><input type="checkbox" data-id="p3-2"><span>AI lọc nhóm DN tiềm năng: SME mới thành lập, DN sắp có sự kiện — ưu tiên đúng nhóm tuivaibo.com đang nhắm (bán lẻ, F&amp;B, dược phẩm, siêu thị)</span></label></li>
-      <li><label><input type="checkbox" data-id="p3-3"><span>Thiết kế nội dung/quy trình đủ tổng quát để tái dùng làm dịch vụ AI marketing bán cho SME khác</span></label></li>
+      <li><label><input type="checkbox" data-id="v2-p3-1"><span>Ecovina: content/outreach nhắm nhà mua hàng quốc tế theo mùa nhập hàng (đặt hàng trước mùa lễ Tết/Giáng sinh ở thị trường Nhật/EU/Mỹ)</span></label></li>
+      <li><label><input type="checkbox" data-id="v2-p3-2"><span>Tuivaibo: content/ads nhắm đúng SME bán lẻ/F&amp;B/dược phẩm theo mùa vụ (khai trương, sự kiện, quà tặng cuối năm)</span></label></li>
+      <li><label><input type="checkbox" data-id="v2-p3-3"><span>Khata.net: chạy remarketing/ưu đãi cho khách cũ quay lại đặt thêm</span></label></li>
+      <li><label><input type="checkbox" data-id="v2-p3-4"><span>Thiết kế nội dung/quy trình đủ tổng quát để tái dùng làm dịch vụ AI marketing bán cho SME khác sau này</span></label></li>
     </ul>
-    <div class="milestone"><b>Mốc đánh giá:</b> chu kỳ 6 tháng — không thấy thêm khách/đơn hàng rõ rệt thì xem lại cách tiếp cận, không kéo dài không kiểm soát.</div>
+    <div class="milestone"><b>Mốc đánh giá:</b> chu kỳ 6 tháng — không thấy thêm khách/đơn hàng rõ rệt ở nhóm nào thì xem lại cách tiếp cận nhóm đó.</div>
   </div>
 
   <!-- PHASE 4 -->
@@ -379,32 +321,52 @@
     <div class="phase-head">
       <div class="phase-num">4</div>
       <div class="phase-titles">
+        <h3>Đưa đơn hàng đến đúng nhóm xưởng</h3>
+        <div class="phase-when">Làm thủ công trước — hệ thống hóa sau</div>
+      </div>
+      <div class="status manual">Thủ công tạm thời</div>
+    </div>
+    <div class="goal"><b>Mục tiêu —</b> khi khách đã vào đều từ 3 phễu, mới hệ thống hóa việc phân đơn đến đúng xưởng — tránh xây hệ thống trước khi biết rõ mẫu hình đơn hàng thật.</div>
+
+    <h4 class="sub">Trong lúc làm thủ công</h4>
+    <ul class="checklist">
+      <li><label><input type="checkbox" data-id="v2-p4-1"><span>Ghi nhanh mỗi đơn vào 1 chỗ tạm (kể cả 1 sheet đơn giản) — chỉ cần đủ để không quên, chưa cần tự động hóa</span></label></li>
+      <li><label><input type="checkbox" data-id="v2-p4-2"><span>Theo dõi xưởng nào đang nhận đơn từ phễu nào — dữ liệu này sẽ là nền để tự động hóa sau</span></label></li>
+    </ul>
+    <div class="assumption"><b>Khi nào quay lại phần này:</b> sau khi Giai đoạn 1–3 chạy ổn và có đủ khối lượng đơn hàng thật để thấy rõ mẫu hình phân bổ theo xưởng — lúc đó mới dựng hệ thống quản lý đơn hàng &amp; nhắc tự động đầy đủ.</div>
+  </div>
+
+  <!-- PHASE 5 -->
+  <div class="phase">
+    <div class="phase-head">
+      <div class="phase-num">5</div>
+      <div class="phase-titles">
         <h3>Đóng gói thành dịch vụ AI agent</h3>
-        <div class="phase-when">Sau khi 3 giai đoạn trên chạy ổn</div>
+        <div class="phase-when">Sau khi hệ thống chạy ổn</div>
       </div>
       <div class="status later">Tầm nhìn năm 2</div>
     </div>
-    <div class="goal"><b>Mục tiêu —</b> chính hệ thống anh dùng cho Khata trở thành gói dịch vụ AI Boss System bán cho SME cùng ngành hàng tiêu dùng.</div>
+    <div class="goal"><b>Mục tiêu —</b> chính hệ thống 3-phễu + AI trả lời + marketing anh dùng cho Khata trở thành gói dịch vụ bán cho SME cùng ngành hàng tiêu dùng.</div>
     <ul class="checklist">
-      <li><label><input type="checkbox" data-id="p4-1"><span>Viết lại case study Giai đoạn 1 &amp; 2 thành tài liệu bán hàng (ẩn dữ liệu thật của khách)</span></label></li>
-      <li><label><input type="checkbox" data-id="p4-2"><span>Đóng gói theo đúng bảng giá Audit / Pilot / Hệ thống hoàn chỉnh đã có trong AI Boss Consulting Playbook</span></label></li>
+      <li><label><input type="checkbox" data-id="v2-p5-1"><span>Viết case study từ Giai đoạn 1–3 thành tài liệu bán hàng (ẩn dữ liệu thật của khách)</span></label></li>
+      <li><label><input type="checkbox" data-id="v2-p5-2"><span>Đóng gói theo bảng giá Audit / Pilot / Hệ thống hoàn chỉnh đã có trong AI Boss Consulting Playbook</span></label></li>
     </ul>
   </div>
 
   <div class="now-box">
     <h2>Việc làm ngay tuần này</h2>
-    <p class="section-note">Không làm cả 5 giai đoạn cùng lúc — 4 việc này là đủ để bắt đầu đúng hướng.</p>
+    <p class="section-note">Bắt đầu từ đúng phễu đang mạnh nhất — không làm cả 3 phễu cùng lúc.</p>
     <ul class="checklist">
-      <li><label><input type="checkbox" data-id="now-1"><span>Trả lời 2 câu hỏi nền: đang ghi đơn bằng gì, đơn chủ yếu đến từ kênh nào</span></label></li>
-      <li><label><input type="checkbox" data-id="now-2"><span>Liệt kê danh sách xưởng gia công đang hợp tác</span></label></li>
-      <li><label><input type="checkbox" data-id="now-3"><span>Dựng bảng Google Sheets theo cấu trúc Giai đoạn 1</span></label></li>
-      <li><label><input type="checkbox" data-id="now-4"><span>Nhập các đơn đang chạy dở vào bảng để có điểm bắt đầu thật</span></label></li>
+      <li><label><input type="checkbox" data-id="v2-now-1"><span>Chọn 1 phễu để hoàn thiện trước (gợi ý: tuivaibo.com — đã có hook &amp; lead magnet rõ nhất)</span></label></li>
+      <li><label><input type="checkbox" data-id="v2-now-2"><span>Kiểm tra thật kỹ lead magnet của phễu đó có đang hoạt động và có người xử lý kịp không</span></label></li>
+      <li><label><input type="checkbox" data-id="v2-now-3"><span>Viết 1 câu định vị rõ ràng cho phễu đó, dùng xuyên suốt content sau này</span></label></li>
+      <li><label><input type="checkbox" data-id="v2-now-4"><span>Lặp lại tương tự cho 2 phễu còn lại trước khi sang Giai đoạn 2 (AI trả lời)</span></label></li>
     </ul>
   </div>
 
   <footer>
     <span>Khata · Lộ trình vận hành AI agent</span>
-    <span>Cập nhật 09/09/2026</span>
+    <span>Cập nhật 09/09/2026 · v2</span>
   </footer>
 
 </div>
