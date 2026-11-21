@@ -18,12 +18,13 @@
         <td>{{ c.name }}</td><td>{{ c.mst }}</td>
         <td>{{ c.email or '' }}{% if not c.email %}<span class="muted">Chưa khai</span>{% endif %}</td>
         <td>{% if c.google_email %}<span class="tag thap">Đã kết nối</span>
-              <button class="danger" formaction="{{ url_for('google_ngat', mst=c.mst) }}" formnovalidate>Ngắt</button>
-            {% elif c.email %}<button class="ghost" formaction="{{ url_for('google_ket_noi', mst=c.mst) }}" formnovalidate>Kết nối Drive</button>
+              {% if co_quyen('quan_ly') %}<button class="danger" formaction="{{ url_for('google_ngat', mst=c.mst) }}" formnovalidate>Ngắt</button>{% endif %}
+            {% elif c.email and co_quyen('quan_ly') %}<button class="ghost" formaction="{{ url_for('google_ket_noi', mst=c.mst) }}" formnovalidate>Kết nối Drive</button>
+            {% elif c.email %}<span class="muted">Chưa kết nối</span>
             {% else %}<span class="muted">Khai email trước</span>{% endif %}</td>
         <td>{% if c.mst in logged %}<span class="tag thap">Đã đăng nhập</span>{% else %}<span class="tag chua_ro">Cần captcha</span>{% endif %}</td>
-        <td><button class="danger" formaction="{{ url_for('delete_company', mst=c.mst) }}"
-                    onclick='return confirm({{ ("Xóa " ~ c.name ~ "?")|tojson }})'>Xóa</button></td>
+        <td>{% if co_quyen('quan_ly') %}<button class="danger" formaction="{{ url_for('delete_company', mst=c.mst) }}"
+                    onclick='return confirm({{ ("Xóa " ~ c.name ~ "?")|tojson }})'>Xóa</button>{% endif %}</td>
       </tr>
     {% else %}
       <tr><td colspan="7" class="muted">Chưa có doanh nghiệp nào. Thêm ở khung bên dưới.</td></tr>
@@ -43,6 +44,7 @@
   <p class="muted">Hóa đơn điều chỉnh / thay thế nằm chung trong mua vào và bán ra, được tách riêng ở trang Kết quả và trong file Excel.</p>
 </form>
 
+{% if co_quyen('quan_ly') %}
 <form class="card" method="post" action="{{ url_for('add_company') }}">
   <h2>Thêm doanh nghiệp</h2>
   <div class="row">
@@ -54,4 +56,7 @@
   </div>
   <p class="muted">Mật khẩu được mã hóa và chỉ lưu trên máy này (thư mục data). Nhập lại cùng MST để đổi mật khẩu hoặc email. Đổi email sẽ tự ngắt kết nối Google Drive cũ.</p>
 </form>
+{% else %}
+<p class="muted">Thêm, sửa, xóa doanh nghiệp và kết nối Google Drive: liên hệ Admin hoặc Quản trị.</p>
+{% endif %}
 {% endblock %}

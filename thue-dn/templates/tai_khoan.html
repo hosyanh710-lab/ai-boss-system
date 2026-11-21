@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Tài khoản{% endblock %}
+{% block body %}
+<h1>Quản lý tài khoản</h1>
+<div class="card">
+  <h2>Ba cấp tài khoản</h2>
+  <ul>
+    <li><b>Admin</b>: toàn quyền, kể cả tạo, sửa, khóa, xóa tài khoản Admin khác.</li>
+    <li><b>Quản trị</b>: như Admin, nhưng không được sửa, khóa, xóa tài khoản Admin và không tạo được Admin.</li>
+    <li><b>Người sử dụng</b>: chỉ dùng phần mềm (tải hóa đơn, xem, xuất file, phân loại, kiểm tra đối tác); không thêm / xóa doanh nghiệp, không đổi cài đặt, không quản lý tài khoản.</li>
+  </ul>
+  <p class="muted">Luôn phải còn ít nhất một Admin đang hoạt động. Không ai tự sửa vai trò, khóa hoặc xóa tài khoản của chính mình.</p>
+</div>
+
+<div class="card scroll">
+  <h2>Danh sách tài khoản</h2>
+  <table>
+    <thead><tr><th>Email</th><th>Họ tên</th><th>Vai trò</th><th>Trạng thái</th><th>Tạo lúc</th><th></th></tr></thead>
+    <tbody>
+    {% for u in users %}
+      <tr>
+        <td>{{ u.email }}{% if u.id == nguoi_dung.id %} <span class="muted">(anh/chị)</span>{% endif %}</td>
+        {% if sua_duoc(u) %}
+        <td colspan="4">
+          <form method="post" action="{{ url_for('sua_tai_khoan', uid=u.id) }}" class="row" id="sua-{{ u.id }}">
+            <label>Họ tên <input name="ho_ten" value="{{ u.ho_ten or '' }}"></label>
+            <label>Vai trò
+              <select name="vai_tro">{% for k in vai_tro_gan %}<option value="{{ k }}" {{ 'selected' if u.vai_tro==k }}>{{ ten_vai_tro[k] }}</option>{% endfor %}</select></label>
+            <label>Trạng thái
+              <select name="hoat_dong"><option value="1" {{ 'selected' if u.hoat_dong }}>Hoạt động</option><option value="0" {{ 'selected' if not u.hoat_dong }}>Khóa</option></select></label>
+            <label>Đặt lại mật khẩu <input name="mat_khau" type="password" placeholder="để trống nếu không đổi" autocomplete="new-password"></label>
+            <button type="submit" class="ghost">Lưu</button>
+          </form>
+        </td>
+        <td>
+          <form method="post" action="{{ url_for('xoa_tai_khoan', uid=u.id) }}">
+            <button type="submit" class="danger" onclick='return confirm({{ ("Xóa tài khoản " ~ u.email ~ "?")|tojson }})'>Xóa</button>
+          </form>
+        </td>
+        {% else %}
+        <td>{{ u.ho_ten or '' }}</td>
+        <td><span class="tag {{ {'admin':'cao','quan_tri':'trung_binh','nguoi_dung':'chua_ro'}[u.vai_tro] }}">{{ ten_vai_tro[u.vai_tro] }}</span></td>
+        <td>{{ 'Hoạt động' if u.hoat_dong else 'Khóa' }}</td>
+        <td class="muted">{{ u.created_at or '' }}</td>
+        <td class="muted">{% if u.id != nguoi_dung.id %}Chỉ Admin sửa được{% endif %}</td>
+        {% endif %}
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<form class="card" method="post" action="{{ url_for('them_tai_khoan') }}">
+  <h2>Thêm tài khoản</h2>
+  <div class="row">
+    <label>Email <input name="email" type="email" required autocomplete="off"></label>
+    <label>Họ tên <input name="ho_ten"></label>
+    <label>Vai trò
+      <select name="vai_tro">{% for k in vai_tro_gan %}<option value="{{ k }}" {{ 'selected' if k=='nguoi_dung' }}>{{ ten_vai_tro[k] }}</option>{% endfor %}</select></label>
+    <label>Mật khẩu ban đầu <input name="mat_khau" type="password" required autocomplete="new-password"></label>
+    <button type="submit">Tạo tài khoản</button>
+  </div>
+  <p class="muted">Gửi mật khẩu ban đầu cho người dùng và nhắc họ đổi ở mục Đổi mật khẩu sau lần đăng nhập đầu.</p>
+</form>
+{% endblock %}

@@ -102,6 +102,7 @@
   </table>
 </div>
 
+{% if co_quyen('quan_ly') %}
 <form class="card" method="post" action="{{ url_for('nhap_danh_sach') }}" enctype="multipart/form-data">
   <h2>Danh sách rủi ro do cơ quan thuế công bố</h2>
   <p class="muted">Dán hoặc tải lên danh sách MST (mỗi dòng một MST, có thể kèm tên). Khi kiểm tra đối tác, công cụ tự đối chiếu với các danh sách này.</p>
@@ -116,4 +117,5 @@
   <label style="margin-top:12px">Hoặc dán danh sách <textarea name="noi_dung" rows="4" style="font:inherit;padding:8px;border:1px solid var(--line);border-radius:6px"></textarea></label>
   <div class="row" style="margin-top:12px"><button type="submit" class="ghost">Nhập danh sách</button></div>
 </form>
+{% endif %}
 {% endblock %}

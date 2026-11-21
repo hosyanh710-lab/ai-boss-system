@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Đăng nhập{% endblock %}
+{% block body %}
+<form class="card auth-card" method="post">
+  <h1>Đăng nhập</h1>
+  <p class="muted">Dùng tài khoản do Admin hoặc Quản trị cấp.</p>
+  <label>Email <input name="email" type="email" value="{{ email }}" required autofocus autocomplete="username"></label>
+  <label style="margin-top:12px">Mật khẩu <input name="mat_khau" type="password" required autocomplete="current-password"></label>
+  <label class="inline" style="margin-top:12px"><input type="checkbox" name="ghi_nho" checked> Ghi nhớ đăng nhập trên máy này (30 ngày)</label>
+  <div class="row" style="margin-top:16px"><button type="submit" style="flex:1">Đăng nhập</button></div>
+  <p class="muted" style="margin-top:12px">Quên mật khẩu: nhờ Admin hoặc Quản trị đặt lại ở trang Tài khoản.</p>
+</form>
+{% endblock %}

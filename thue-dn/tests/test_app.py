@@ -69,7 +69,24 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setattr(portal.PortalSession, "purchase", lambda self, tu, den: iter(FAKE_PURCHASE))
     monkeypatch.setattr(portal.PortalSession, "sold", lambda self, tu, den: iter(FAKE_SOLD))
     appmod.app.testing = True
-    yield appmod.app.test_client(), appmod
+    c = appmod.app.test_client()
+    # đăng nhập sẵn bằng tài khoản Admin cho các bài kiểm thử chức năng
+    tao_tai_khoan(appmod, "admin@test.vn", "admin")
+    dang_nhap(c, "admin@test.vn")
+    yield c, appmod
+
+
+MAT_KHAU = "MatKhau123"
+
+
+def tao_tai_khoan(appmod, email, vai_tro):
+    from werkzeug.security import generate_password_hash
+    return appmod.store.add_user(email, email.split("@")[0], generate_password_hash(MAT_KHAU), vai_tro, None, "x")
+
+
+def dang_nhap(c, email, mk=MAT_KHAU):
+    c.post("/dang-xuat")
+    return c.post("/dang-nhap", data={"email": email, "mat_khau": mk})
 
 
 def test_luong_day_du(client):
@@ -838,3 +855,125 @@ def test_dinh_dang_so_khong_thua_dau_phan_cach():
         ws["A1"] = v
         dinh_dang_so(ws["A1"])
         assert ws["A1"].number_format == fmt and ws["A1"].value == kq and type(ws["A1"].value) is type(kq)
+
+
+# ---------- 3 cấp tài khoản ----------
+def test_khoi_tao_admin_dau_tien(tmp_path, monkeypatch):
+    monkeypatch.setenv("THUEDN_DATA", str(tmp_path))
+    sys.modules.pop("app", None)
+    import app as appmod
+    c = appmod.app.test_client()
+    assert c.get("/").headers["Location"].endswith("/khoi-tao")          # chưa có tài khoản nào
+    r = c.post("/khoi-tao", data={"ho_ten": "Anh A", "email": "Boss@Cty.vn", "mat_khau": "ngan", "mat_khau2": "ngan"})
+    assert not appmod.store.users()                                       # mật khẩu yếu: không tạo
+    c.post("/khoi-tao", data={"ho_ten": "Anh A", "email": "Boss@Cty.vn", "mat_khau": "Abc12345", "mat_khau2": "Abc12345"})
+    u = appmod.store.user_by_email("boss@cty.vn")
+    assert u["vai_tro"] == "admin" and u["pw_hash"] != "Abc12345"         # mật khẩu lưu dạng băm
+    assert c.get("/").status_code == 200                                  # đã đăng nhập luôn
+    assert c.get("/khoi-tao").headers["Location"].endswith("/dang-nhap")   # không tạo lại được
+
+
+def test_dang_nhap_sai_va_khoa_tam(client):
+    c, appmod = client
+    c.post("/dang-xuat")
+    assert c.get("/results").headers["Location"].startswith("/dang-nhap")
+    assert c.post("/dang-nhap", data={"email": "admin@test.vn", "mat_khau": "sai"}).status_code == 401
+    for _ in range(4):
+        c.post("/dang-nhap", data={"email": "admin@test.vn", "mat_khau": "sai"})
+    # sai 5 lần: khóa tạm, kể cả nhập đúng
+    assert c.post("/dang-nhap", data={"email": "admin@test.vn", "mat_khau": MAT_KHAU}).status_code == 429
+    appmod.lan_sai.clear()
+    r = c.post("/dang-nhap?next=/results", data={"email": "admin@test.vn", "mat_khau": MAT_KHAU})
+    assert r.headers["Location"] == "/results"
+    r = c.post("/dang-nhap?next=//evil.com", data={"email": "admin@test.vn", "mat_khau": MAT_KHAU})
+    assert r.headers["Location"] == "/"                                   # không chuyển hướng ra ngoài
+
+
+def test_quyen_nguoi_su_dung(client):
+    c, appmod = client
+    c.post("/companies", data={"name": "DN A", "mst": "0300000000", "password": "mat-khau", "email": "a@gmail.com"})
+    tao_tai_khoan(appmod, "nv@test.vn", "nguoi_dung")
+    dang_nhap(c, "nv@test.vn")
+    page = c.get("/").get_data(as_text=True)
+    assert "Người sử dụng" in page and "DN A" in page
+    assert "Thêm doanh nghiệp" not in page and "Xóa</button>" not in page and "Kết nối Drive" not in page
+    assert "Cài đặt</a>" not in page and "Tài khoản</a>" not in page
+    # được dùng phần mềm
+    for url in ("/results", "/suppliers", "/phan-loai", "/doi-tac", "/export.xlsx", "/doi-mat-khau"):
+        assert c.get(url).status_code == 200, url
+    # không được thêm / xóa doanh nghiệp, đổi cài đặt, kết nối Drive, nhập danh sách rủi ro, quản lý tài khoản
+    for method, url, data in (("post", "/companies", {"name": "X", "mst": "0399999999", "password": "x"}),
+                              ("post", "/companies/0300000000/delete", {}),
+                              ("get", "/cai-dat", None), ("post", "/cai-dat", {"che_do": "TT200"}),
+                              ("post", "/google/ket-noi/0300000000", {}),
+                              ("post", "/danh-sach-rui-ro", {"loai": "rui_ro_cao", "noi_dung": "0100000001"}),
+                              ("get", "/tai-khoan", None),
+                              ("post", "/tai-khoan/them", {"email": "x@y.vn", "vai_tro": "admin", "mat_khau": "Abc12345"})):
+        r = getattr(c, method)(url, data=data)
+        assert r.status_code == 303 and r.headers["Location"] == "/", url
+    assert [x["mst"] for x in appmod.store.companies()] == ["0300000000"]
+    assert appmod.store.setting("che_do") is None and appmod.store.user_by_email("x@y.vn") is None
+
+
+def test_quan_tri_khong_dung_toi_admin(client):
+    c, appmod = client
+    admin2 = tao_tai_khoan(appmod, "admin2@test.vn", "admin")
+    tao_tai_khoan(appmod, "qt@test.vn", "quan_tri")
+    nv = tao_tai_khoan(appmod, "nv@test.vn", "nguoi_dung")
+    dang_nhap(c, "qt@test.vn")
+    # Quản trị làm được việc quản lý
+    assert c.get("/cai-dat").status_code == 200
+    c.post("/companies", data={"name": "DN B", "mst": "0300000001", "password": "x"})
+    assert appmod.store.company("0300000001") is not None
+    page = c.get("/tai-khoan").get_data(as_text=True)
+    assert f'action="/tai-khoan/{nv}/sua"' in page and f'action="/tai-khoan/{admin2}/sua"' not in page
+    assert '<option value="admin"' not in page                            # không chọn được vai trò Admin
+    # tạo được Người sử dụng / Quản trị, không tạo được Admin
+    c.post("/tai-khoan/them", data={"email": "moi@test.vn", "vai_tro": "nguoi_dung", "mat_khau": "Abc12345"})
+    c.post("/tai-khoan/them", data={"email": "hack@test.vn", "vai_tro": "admin", "mat_khau": "Abc12345"})
+    assert appmod.store.user_by_email("moi@test.vn") and appmod.store.user_by_email("hack@test.vn") is None
+    # không sửa / khóa / xóa được Admin, không nâng ai lên Admin
+    c.post(f"/tai-khoan/{admin2}/xoa")
+    c.post(f"/tai-khoan/{admin2}/sua", data={"vai_tro": "nguoi_dung", "hoat_dong": "0"})
+    c.post(f"/tai-khoan/{nv}/sua", data={"vai_tro": "admin", "hoat_dong": "1"})
+    assert appmod.store.user(admin2)["vai_tro"] == "admin" and appmod.store.user(admin2)["hoat_dong"] == 1
+    assert appmod.store.user(nv)["vai_tro"] == "nguoi_dung"
+    # sửa, khóa, đặt lại mật khẩu, xóa Người sử dụng thì được
+    c.post(f"/tai-khoan/{nv}/sua", data={"vai_tro": "nguoi_dung", "hoat_dong": "0", "mat_khau": "MoiMoi999"})
+    assert appmod.store.user(nv)["hoat_dong"] == 0
+    assert dang_nhap(c, "nv@test.vn", "MoiMoi999").status_code == 403    # tài khoản bị khóa
+    dang_nhap(c, "qt@test.vn")
+    c.post(f"/tai-khoan/{nv}/xoa")
+    assert appmod.store.user(nv) is None
+
+
+def test_admin_toan_quyen_va_giu_it_nhat_mot_admin(client):
+    c, appmod = client
+    me = appmod.store.user_by_email("admin@test.vn")["id"]
+    qt = tao_tai_khoan(appmod, "qt@test.vn", "quan_tri")
+    # không tự hạ quyền / khóa / xóa chính mình
+    c.post(f"/tai-khoan/{me}/sua", data={"vai_tro": "nguoi_dung", "hoat_dong": "1"})
+    c.post(f"/tai-khoan/{me}/xoa")
+    assert appmod.store.user(me)["vai_tro"] == "admin"
+    # Admin nâng Quản trị lên Admin, tạo Admin mới, rồi xóa Admin khác
+    c.post(f"/tai-khoan/{qt}/sua", data={"vai_tro": "admin", "hoat_dong": "1"})
+    assert appmod.store.user(qt)["vai_tro"] == "admin"
+    c.post("/tai-khoan/them", data={"email": "a3@test.vn", "vai_tro": "admin", "mat_khau": "Abc12345"})
+    a3 = appmod.store.user_by_email("a3@test.vn")["id"]
+    c.post(f"/tai-khoan/{a3}/xoa")
+    assert appmod.store.user(a3) is None
+    # Admin cuối cùng: Admin khác không khóa hay xóa được nếu chỉ còn 1
+    c.post(f"/tai-khoan/{qt}/sua", data={"vai_tro": "nguoi_dung", "hoat_dong": "1"})
+    assert appmod.store.so_admin_hoat_dong() == 1
+    dang_nhap(c, "admin@test.vn")
+    assert "Admin" in c.get("/").get_data(as_text=True)
+
+
+def test_quy_tac_quyen():
+    from thuedn.quyen import co_quyen, gan_duoc, kiem_tra_mat_khau, quan_ly_duoc
+    assert co_quyen("nguoi_dung", "su_dung") and not co_quyen("nguoi_dung", "quan_ly")
+    assert co_quyen("quan_tri", "quan_ly") and co_quyen("admin", "tai_khoan")
+    assert quan_ly_duoc("admin", "admin") and not quan_ly_duoc("quan_tri", "admin")
+    assert quan_ly_duoc("quan_tri", "quan_tri") and not quan_ly_duoc("nguoi_dung", "nguoi_dung")
+    assert gan_duoc("admin", "admin") and not gan_duoc("quan_tri", "admin") and not gan_duoc("admin", "vua")
+    assert kiem_tra_mat_khau("abc12345") is None and kiem_tra_mat_khau("abcdefgh") and kiem_tra_mat_khau("a1")

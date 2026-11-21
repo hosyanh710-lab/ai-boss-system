@@ -22,6 +22,24 @@ Giao diện mẫu: https://claude.ai/artifact/G5HVipgaXqbfMmqopAm14q
    ```
 3. Bấm đúp **`run.bat`**. Lần đầu sẽ tự cài thư viện, sau đó trình duyệt mở `http://127.0.0.1:5000`.
 
+## Tài khoản và phân quyền (3 cấp)
+
+Lần đầu chạy, công cụ yêu cầu **tạo tài khoản Admin đầu tiên**. Sau đó mọi người phải **đăng nhập** mới dùng được.
+
+| Chức năng | Admin | Quản trị | Người sử dụng |
+|---|:-:|:-:|:-:|
+| Tải hóa đơn, xem kết quả, xuất Excel / file MISA, đẩy Drive | ✓ | ✓ | ✓ |
+| Kiểm tra đối tác, phân loại hàng hóa, cập nhật trạng thái nhà cung cấp | ✓ | ✓ | ✓ |
+| Thêm / sửa / xóa doanh nghiệp, kết nối Google Drive, Cài đặt, nhập danh sách rủi ro | ✓ | ✓ | ✗ |
+| Tạo / sửa / khóa / đặt lại mật khẩu / xóa tài khoản Quản trị, Người sử dụng | ✓ | ✓ | ✗ |
+| Tạo, sửa, khóa, xóa tài khoản **Admin**; nâng ai đó lên Admin | ✓ | ✗ | ✗ |
+
+- Luôn còn ít nhất một Admin đang hoạt động; không ai tự sửa vai trò, khóa hoặc xóa tài khoản của chính mình.
+- Mật khẩu tối thiểu 8 ký tự, có chữ và số, lưu dạng băm (không lưu mật khẩu gốc).
+- Nhập sai mật khẩu 5 lần: tạm khóa đăng nhập 15 phút.
+- Quên mật khẩu: Admin / Quản trị đặt lại ở trang **Tài khoản**; mỗi người tự đổi ở **Đổi mật khẩu**.
+- Quyền được kiểm tra ở máy chủ cho từng trang, không chỉ ẩn nút.
+
 ## Dùng cho nhiều công ty (ví dụ 10 công ty)
 
 Một ứng dụng quản lý tất cả các công ty, **không cần cài nhiều bản**:
@@ -64,7 +82,7 @@ Chống nhầm công ty:
 
 ## Các bước test lần đầu trên máy anh (làm với 1 công ty trước)
 
-1. Chạy `run.bat`, thêm **1 công ty**.
+1. Chạy `run.bat`, tạo tài khoản Admin đầu tiên, thêm **1 công ty**.
 2. Tải hóa đơn **1 tháng**, tick **Tải kèm XML**. Nếu lỗi ở bước captcha / đăng nhập / tải: chụp màn hình gửi Claude sửa `thuedn/portal.py`.
 3. Mở Excel, kiểm tra:
    - Số hóa đơn mua vào / bán ra khớp với cổng thuế.
@@ -143,6 +161,7 @@ Mỗi hàng là một hóa đơn điều chỉnh hoặc thay thế. Cột chia 3
 | Kiểm tra đối tác, phiếu đánh giá, lịch sử, nhắc tra lại, danh sách rủi ro | Xong, đã kiểm thử |
 | Tổng hợp hạch toán theo loại và mã hàng, trang Phân loại hàng hóa | Xong, đã kiểm thử |
 | File chứng từ hạch toán sẵn để nhập MISA | Xong phần hạch toán, đã kiểm thử. **Tên cột cần khớp với file mẫu nhập khẩu thật của MISA ASP** |
+| Đăng nhập, 3 cấp tài khoản (Admin, Quản trị, Người sử dụng) | Xong, đã kiểm thử |
 | Đẩy file lên Google Drive riêng của từng công ty | Xong, đã kiểm thử với Google giả lập. **Cần thử trên máy anh** với tài khoản Google thật |
 | Chi tiết hàng hóa bán ra / mua vào theo mã hàng (đọc XML) | Xong, đã kiểm thử với XML mẫu. **Cần kiểm tra trên máy anh** với XML thật |
 | Nối HĐ điều chỉnh / thay thế với HĐ gốc (Excel, trang Kết quả, đọc XML) | Xong, đã kiểm thử với dữ liệu giả. **Cần kiểm tra trên máy anh**: tên trường HĐ gốc trong danh sách cổng thuế, và dấu âm / dương của số tiền HĐ điều chỉnh giảm |

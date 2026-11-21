@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Đổi mật khẩu{% endblock %}
+{% block body %}
+<form class="card auth-card" method="post">
+  <h1>Đổi mật khẩu</h1>
+  <label>Mật khẩu hiện tại <input name="mat_khau_cu" type="password" required autocomplete="current-password"></label>
+  <label style="margin-top:12px">Mật khẩu mới <input name="mat_khau_moi" type="password" required autocomplete="new-password"></label>
+  <label style="margin-top:12px">Nhập lại mật khẩu mới <input name="mat_khau_moi2" type="password" required autocomplete="new-password"></label>
+  <p class="muted">Tối thiểu 8 ký tự, có cả chữ và số.</p>
+  <div class="row"><button type="submit" style="flex:1">Đổi mật khẩu</button></div>
+</form>
+{% endblock %}

@@ -35,20 +35,31 @@
   .tag.cao { background:var(--red-bg); color:var(--red); } .tag.trung_binh { background:var(--amber-bg); color:var(--amber); }
   .tag.thap { background:var(--green-bg); color:var(--green); } .tag.chua_ro { background:#eef0f3; color:var(--muted); }
   .muted { color:var(--muted); font-size:13px; }
+  .user-box { margin-left:auto; display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:14px; }
+  .auth-card { max-width:420px; margin:24px auto; }
   tr.cao td { background:var(--red-bg); }
 </style>
 </head>
 <body>
 <header>
   <b>Tải hóa đơn &amp; kiểm tra NCC</b>
+  {% if nguoi_dung %}
   <nav>
     <a href="{{ url_for('index') }}" class="{{ 'on' if request.endpoint=='index' }}">Doanh nghiệp</a>
     <a href="{{ url_for('results') }}" class="{{ 'on' if request.endpoint=='results' }}">Kết quả</a>
     <a href="{{ url_for('suppliers') }}" class="{{ 'on' if request.endpoint=='suppliers' }}">Nhà cung cấp</a>
     <a href="{{ url_for('phan_loai') }}" class="{{ 'on' if request.endpoint=='phan_loai' }}">Phân loại hàng hóa</a>
     <a href="{{ url_for('doi_tac') }}" class="{{ 'on' if request.endpoint in ('doi_tac','phieu_doi_tac') }}">Kiểm tra đối tác</a>
-    <a href="{{ url_for('cai_dat') }}" class="{{ 'on' if request.endpoint=='cai_dat' }}">Cài đặt</a>
+    {% if co_quyen('tai_khoan') %}<a href="{{ url_for('tai_khoan') }}" class="{{ 'on' if request.endpoint=='tai_khoan' }}">Tài khoản</a>{% endif %}
+    {% if co_quyen('quan_ly') %}<a href="{{ url_for('cai_dat') }}" class="{{ 'on' if request.endpoint=='cai_dat' }}">Cài đặt</a>{% endif %}
   </nav>
+  <form method="post" action="{{ url_for('dang_xuat') }}" class="user-box">
+    <span class="muted">{{ nguoi_dung.ho_ten or nguoi_dung.email }}</span>
+    <span class="tag {{ {'admin':'cao','quan_tri':'trung_binh','nguoi_dung':'chua_ro'}[nguoi_dung.vai_tro] }}">{{ ten_vai_tro[nguoi_dung.vai_tro] }}</span>
+    <a href="{{ url_for('doi_mat_khau') }}">Đổi mật khẩu</a>
+    <button type="submit" class="ghost">Đăng xuất</button>
+  </form>
+  {% endif %}
 </header>
 <main>
   {% for cat, msg in get_flashed_messages(with_categories=true) %}

@@ -7,7 +7,8 @@ import io
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from flask import Flask, flash, redirect, render_template, request, send_file, url_for
+from flask import Flask, flash, g, redirect, render_template, request, send_file, session, url_for
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from thuedn import export, gdrive, misa
 from thuedn.portal import PortalError, PortalSession, normalize
@@ -15,14 +16,20 @@ from thuedn.rules import (CHE_DO_KE_TOAN, DS_RUI_RO, KET_LUAN, NGAY_TRA_LAI, PHA
                           bang_phan_loai, danh_gia_doi_tac, muc_rui_ro, parse_danh_sach_mst, tinh_chat, to_date)
 from thuedn.storage import Storage
 from thuedn.xmlhd import doc_zip
+from thuedn.quyen import VAI_TRO, co_quyen, gan_duoc, kiem_tra_mat_khau, quan_ly_duoc
 from thuedn.tonghop import tong_hop_mat_hang
 
 DATA_DIR = Path(os.environ.get("THUEDN_DATA", Path(__file__).parent / "data"))
 VERIFY_SSL = os.environ.get("THUEDN_VERIFY_SSL", "1") != "0"
 
 app = Flask(__name__)
-app.secret_key = os.urandom(24)
 store = Storage(DATA_DIR)
+_key = DATA_DIR / "session.key"                 # khóa ký phiên đăng nhập, giữ qua các lần mở lại
+if not _key.exists():
+    _key.write_bytes(os.urandom(32))
+app.secret_key = _key.read_bytes()
+app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax",
+                  PERMANENT_SESSION_LIFETIME=timedelta(days=30))
 
 sessions: dict[str, PortalSession] = {}   # phiên đăng nhập cổng thuế theo MST, chỉ trong bộ nhớ
 job: dict = {}                             # lượt tải hiện tại
@@ -593,6 +600,201 @@ def drive_day_len():
         except gdrive.DriveError as e:
             flash(f"{name}: KHÔNG đẩy lên Drive — {e}", "error")
     return redirect(url_for("results", mst=msts, tu=tu, den=den))
+
+
+# ---------- 8. Đăng nhập và 3 cấp tài khoản ----------
+# Trang không cần đăng nhập
+CONG_KHAI = {"dang_nhap", "khoi_tao", "static"}
+# Trang chỉ Admin / Quản trị được vào (Người sử dụng không được)
+CAN_QUAN_LY = {"add_company", "delete_company", "google_ket_noi", "google_ngat", "cai_dat", "nhap_danh_sach"}
+CAN_TAI_KHOAN = {"tai_khoan", "them_tai_khoan", "sua_tai_khoan", "xoa_tai_khoan"}
+lan_sai: dict[str, list[float]] = {}     # email → thời điểm đăng nhập sai, chống dò mật khẩu
+SAI_TOI_DA, KHOA_PHUT = 5, 15
+
+
+@app.before_request
+def kiem_tra_dang_nhap():
+    g.user = None
+    uid = session.get("uid")
+    if uid is not None:
+        u = store.user(uid)
+        if u is not None and u["hoat_dong"]:
+            g.user = u
+        else:
+            session.clear()
+    ep = request.endpoint or ""
+    if ep in CONG_KHAI:
+        return None
+    if not store.users():
+        return redirect(url_for("khoi_tao"))
+    if g.user is None:
+        return redirect(url_for("dang_nhap", next=request.full_path if request.method == "GET" else None))
+    vt = g.user["vai_tro"]
+    if (ep in CAN_QUAN_LY and not co_quyen(vt, "quan_ly")) or (ep in CAN_TAI_KHOAN and not co_quyen(vt, "tai_khoan")):
+        flash("Tài khoản của anh/chị không có quyền làm việc này", "error")
+        return redirect(url_for("index")), 303
+    return None
+
+
+@app.context_processor
+def bien_chung():
+    vt = g.user["vai_tro"] if getattr(g, "user", None) else None
+    return {"nguoi_dung": getattr(g, "user", None), "ten_vai_tro": VAI_TRO,
+            "co_quyen": lambda q: co_quyen(vt, q)}
+
+
+def _bay_gio() -> str:
+    return datetime.now().strftime("%Y-%m-%d %H:%M")
+
+
+@app.route("/khoi-tao", methods=["GET", "POST"])
+def khoi_tao():
+    """Lần chạy đầu tiên: tạo tài khoản Admin đầu tiên."""
+    if store.users():
+        return redirect(url_for("dang_nhap"))
+    if request.method == "POST":
+        email, ho_ten = request.form.get("email", "").strip().lower(), request.form.get("ho_ten", "").strip()
+        mk = request.form.get("mat_khau", "")
+        loi = ("Email không hợp lệ" if "@" not in email else
+               kiem_tra_mat_khau(mk) or ("Hai lần nhập mật khẩu không khớp" if mk != request.form.get("mat_khau2") else None))
+        if loi:
+            flash(loi, "error")
+        else:
+            uid = store.add_user(email, ho_ten, generate_password_hash(mk), "admin", None, _bay_gio())
+            session.clear()
+            session["uid"] = uid
+            flash("Đã tạo tài khoản Admin đầu tiên", "ok")
+            return redirect(url_for("index"))
+    return render_template("khoi_tao.html")
+
+
+@app.route("/dang-nhap", methods=["GET", "POST"])
+def dang_nhap():
+    if not store.users():
+        return redirect(url_for("khoi_tao"))
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        now = datetime.now().timestamp()
+        sai = [t for t in lan_sai.get(email, []) if now - t < KHOA_PHUT * 60]
+        if len(sai) >= SAI_TOI_DA:
+            flash(f"Nhập sai quá {SAI_TOI_DA} lần. Thử lại sau {KHOA_PHUT} phút.", "error")
+            return render_template("dang_nhap.html", email=email), 429
+        u = store.user_by_email(email)
+        if u is None or not check_password_hash(u["pw_hash"], request.form.get("mat_khau", "")):
+            lan_sai[email] = sai + [now]
+            flash("Email hoặc mật khẩu không đúng", "error")
+            return render_template("dang_nhap.html", email=email), 401
+        if not u["hoat_dong"]:
+            flash("Tài khoản đã bị khóa. Liên hệ Admin hoặc Quản trị.", "error")
+            return render_template("dang_nhap.html", email=email), 403
+        lan_sai.pop(email, None)
+        session.clear()
+        session["uid"] = u["id"]
+        session.permanent = "ghi_nho" in request.form
+        nxt = request.args.get("next") or ""
+        return redirect(nxt if nxt.startswith("/") and not nxt.startswith("//") else url_for("index"))
+    return render_template("dang_nhap.html", email="")
+
+
+@app.post("/dang-xuat")
+def dang_xuat():
+    session.clear()
+    return redirect(url_for("dang_nhap"))
+
+
+@app.route("/doi-mat-khau", methods=["GET", "POST"])
+def doi_mat_khau():
+    if request.method == "POST":
+        mk = request.form.get("mat_khau_moi", "")
+        if not check_password_hash(g.user["pw_hash"], request.form.get("mat_khau_cu", "")):
+            flash("Mật khẩu hiện tại không đúng", "error")
+        elif loi := kiem_tra_mat_khau(mk):
+            flash(loi, "error")
+        elif mk != request.form.get("mat_khau_moi2"):
+            flash("Hai lần nhập mật khẩu mới không khớp", "error")
+        else:
+            store.update_user(g.user["id"], pw_hash=generate_password_hash(mk))
+            flash("Đã đổi mật khẩu", "ok")
+            return redirect(url_for("index"))
+    return render_template("doi_mat_khau.html")
+
+
+@app.get("/tai-khoan")
+def tai_khoan():
+    vt = g.user["vai_tro"]
+    return render_template("tai_khoan.html", users=store.users(),
+                           sua_duoc=lambda u: u["id"] != g.user["id"] and quan_ly_duoc(vt, u["vai_tro"]),
+                           vai_tro_gan=[k for k in VAI_TRO if gan_duoc(vt, k)])
+
+
+@app.post("/tai-khoan/them")
+def them_tai_khoan():
+    f = request.form
+    email, vai_tro, mk = f.get("email", "").strip().lower(), f.get("vai_tro", ""), f.get("mat_khau", "")
+    if not gan_duoc(g.user["vai_tro"], vai_tro):
+        flash("Anh/chị không được tạo tài khoản với vai trò này", "error")
+    elif "@" not in email:
+        flash("Email không hợp lệ", "error")
+    elif store.user_by_email(email):
+        flash("Email này đã có tài khoản", "error")
+    elif loi := kiem_tra_mat_khau(mk):
+        flash(loi, "error")
+    else:
+        store.add_user(email, f.get("ho_ten", ""), generate_password_hash(mk), vai_tro, g.user["email"], _bay_gio())
+        flash(f"Đã tạo tài khoản {email} ({VAI_TRO[vai_tro]})", "ok")
+    return redirect(url_for("tai_khoan"))
+
+
+def _doi_tuong(uid: int):
+    """Tài khoản cần sửa / xóa, sau khi kiểm tra người đang làm có quyền với nó."""
+    u = store.user(uid)
+    if u is None:
+        flash("Không tìm thấy tài khoản", "error")
+    elif u["id"] == g.user["id"]:
+        flash("Không tự sửa vai trò, khóa hoặc xóa tài khoản của chính mình. Đổi mật khẩu ở mục Đổi mật khẩu.", "error")
+    elif not quan_ly_duoc(g.user["vai_tro"], u["vai_tro"]):
+        flash("Quản trị không được sửa, khóa hoặc xóa tài khoản Admin", "error")
+    else:
+        return u
+    return None
+
+
+@app.post("/tai-khoan/<int:uid>/sua")
+def sua_tai_khoan(uid):
+    u = _doi_tuong(uid)
+    if u is None:
+        return redirect(url_for("tai_khoan"))
+    f = request.form
+    vai_tro = f.get("vai_tro", u["vai_tro"])
+    hoat_dong = 1 if f.get("hoat_dong") == "1" else 0
+    if not gan_duoc(g.user["vai_tro"], vai_tro):
+        flash("Anh/chị không được đổi sang vai trò này", "error")
+        return redirect(url_for("tai_khoan"))
+    bo_admin = u["vai_tro"] == "admin" and u["hoat_dong"] and (vai_tro != "admin" or not hoat_dong)
+    if bo_admin and store.so_admin_hoat_dong() <= 1:
+        flash("Phải còn ít nhất một Admin đang hoạt động", "error")
+        return redirect(url_for("tai_khoan"))
+    thay = {"vai_tro": vai_tro, "hoat_dong": hoat_dong, "ho_ten": f.get("ho_ten", u["ho_ten"] or "").strip()}
+    if f.get("mat_khau"):
+        if loi := kiem_tra_mat_khau(f["mat_khau"]):
+            flash(loi, "error")
+            return redirect(url_for("tai_khoan"))
+        thay["pw_hash"] = generate_password_hash(f["mat_khau"])
+    store.update_user(uid, **thay)
+    flash(f"Đã cập nhật tài khoản {u['email']}", "ok")
+    return redirect(url_for("tai_khoan"))
+
+
+@app.post("/tai-khoan/<int:uid>/xoa")
+def xoa_tai_khoan(uid):
+    u = _doi_tuong(uid)
+    if u is not None:
+        if u["vai_tro"] == "admin" and u["hoat_dong"] and store.so_admin_hoat_dong() <= 1:
+            flash("Phải còn ít nhất một Admin đang hoạt động", "error")
+        else:
+            store.delete_user(uid)
+            flash(f"Đã xóa tài khoản {u['email']}", "ok")
+    return redirect(url_for("tai_khoan"))
 
 
 if __name__ == "__main__":

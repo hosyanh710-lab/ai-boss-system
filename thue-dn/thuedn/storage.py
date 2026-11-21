@@ -76,6 +76,16 @@ CREATE TABLE IF NOT EXISTS invoice_items (
     thue_suat TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_invoice_items ON invoice_items(invoice_id, stt);
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE,
+    ho_ten TEXT,
+    pw_hash TEXT NOT NULL,
+    vai_tro TEXT NOT NULL,             -- 'admin' | 'quan_tri' | 'nguoi_dung'
+    hoat_dong INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT,
+    created_by TEXT
+);
 CREATE TABLE IF NOT EXISTS settings (
     k TEXT PRIMARY KEY,
     v BLOB
@@ -183,6 +193,39 @@ class Storage:
         self.db.execute("UPDATE companies SET google_token=NULL, google_email=NULL, google_at=NULL WHERE mst=?",
                         (mst,))
         self.db.commit()
+
+    # ---- tài khoản người dùng ----
+    def users(self) -> list[sqlite3.Row]:
+        return self.db.execute(
+            "SELECT * FROM users ORDER BY CASE vai_tro WHEN 'admin' THEN 0 WHEN 'quan_tri' THEN 1 ELSE 2 END, email"
+        ).fetchall()
+
+    def user(self, uid: int) -> sqlite3.Row | None:
+        return self.db.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
+
+    def user_by_email(self, email: str) -> sqlite3.Row | None:
+        return self.db.execute("SELECT * FROM users WHERE email=?", (email.strip().lower(),)).fetchone()
+
+    def add_user(self, email: str, ho_ten: str, pw_hash: str, vai_tro: str, by: str | None, at: str) -> int:
+        cur = self.db.execute(
+            "INSERT INTO users(email, ho_ten, pw_hash, vai_tro, created_at, created_by) VALUES(?,?,?,?,?,?)",
+            (email.strip().lower(), ho_ten.strip(), pw_hash, vai_tro, at, by))
+        self.db.commit()
+        return cur.lastrowid
+
+    def update_user(self, uid: int, **fields) -> None:
+        cols = [k for k in fields if k in ("ho_ten", "pw_hash", "vai_tro", "hoat_dong")]
+        if cols:
+            self.db.execute(f"UPDATE users SET {', '.join(c + '=?' for c in cols)} WHERE id=?",
+                            [fields[c] for c in cols] + [uid])
+            self.db.commit()
+
+    def delete_user(self, uid: int) -> None:
+        self.db.execute("DELETE FROM users WHERE id=?", (uid,))
+        self.db.commit()
+
+    def so_admin_hoat_dong(self) -> int:
+        return self.db.execute("SELECT COUNT(*) FROM users WHERE vai_tro='admin' AND hoat_dong=1").fetchone()[0]
 
     def setting(self, k: str, secret: bool = False) -> str | None:
         row = self.db.execute("SELECT v FROM settings WHERE k=?", (k,)).fetchone()

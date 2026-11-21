@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Tạo tài khoản Admin{% endblock %}
+{% block body %}
+<form class="card auth-card" method="post">
+  <h1>Tạo tài khoản Admin đầu tiên</h1>
+  <p class="muted">Lần đầu chạy công cụ. Tài khoản này có toàn quyền; sau đó Admin tạo thêm tài khoản Quản trị và Người sử dụng ở trang Tài khoản.</p>
+  <label>Họ và tên <input name="ho_ten" required></label>
+  <label style="margin-top:12px">Email <input name="email" type="email" required autocomplete="username"></label>
+  <label style="margin-top:12px">Mật khẩu <input name="mat_khau" type="password" required autocomplete="new-password"></label>
+  <label style="margin-top:12px">Nhập lại mật khẩu <input name="mat_khau2" type="password" required autocomplete="new-password"></label>
+  <p class="muted">Tối thiểu 8 ký tự, có cả chữ và số.</p>
+  <div class="row"><button type="submit" style="flex:1">Tạo tài khoản Admin</button></div>
+</form>
+{% endblock %}
