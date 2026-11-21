@@ -44,8 +44,12 @@ Nhà cung cấp có hóa đơn mua vào mà chưa tra, hoặc tra quá 30 ngày,
 
 ### Sheet "Bán ra"
 
-Ngoài các cột hóa đơn, mỗi dòng có thêm 4 cột hóa đơn liên quan, xem ngay không cần mở sheet khác:
-**Điều chỉnh / thay thế cho HĐ** (dòng HĐ điều chỉnh / thay thế ghi HĐ gốc) · **Bị điều chỉnh / thay thế bởi HĐ** (dòng HĐ gốc ghi các HĐ điều chỉnh / thay thế) · **Tổng sau điều chỉnh (tạm tính)** · **Ghi chú HĐ liên quan** (tô vàng khi thiếu HĐ gốc hoặc thiếu HĐ điều chỉnh).
+Mỗi hàng là một hóa đơn bán ra. Hóa đơn bị điều chỉnh / bị thay thế có **hóa đơn điều chỉnh / thay thế nằm cùng hàng** (các cột nền xanh): ký hiệu, số, ngày, nội dung điều chỉnh, tiền chưa thuế, tiền thuế, tổng thanh toán. Sau đó là **Tổng sau điều chỉnh (tạm tính)**, cột **Đánh giá** ở cuối cùng.
+
+- Hóa đơn bị điều chỉnh nhiều lần: mỗi lần một hàng, từ hàng thứ 2 để trống số tiền hóa đơn gốc để cộng cột không bị trùng.
+- Hóa đơn điều chỉnh / thay thế không lặp lại thành hàng riêng.
+- Nội dung điều chỉnh: loại (điều chỉnh tăng / giảm / thay thế) + ghi chú lý do hoặc tên hàng hóa đọc từ XML (tick **Tải kèm XML**).
+- Đánh giá: Bình thường · Đã điều chỉnh (lần 1, 2…) · Đã thay thế · Hóa đơn đã hủy · các cảnh báo (tô vàng): chưa có HĐ điều chỉnh, HĐ gốc chưa tải, chưa có thông tin HĐ gốc; ghi chú thêm khi HĐ gốc hoặc HĐ điều chỉnh thuộc kỳ khác.
 
 ### Sheet "Điều chỉnh - thay thế"
 

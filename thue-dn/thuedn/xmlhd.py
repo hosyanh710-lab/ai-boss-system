@@ -6,6 +6,8 @@ Hóa đơn điều chỉnh / thay thế có khối TTChung/TTHDLQuan:
   KHHDCLQuan    ký hiệu HĐ
   SHDCLQuan     số HĐ
   NLHDCLQuan    ngày lập HĐ
+  GChu          ghi chú (lý do điều chỉnh / thay thế, nếu người bán ghi)
+Nội dung điều chỉnh lấy từ GChu; nếu trống thì lấy tên hàng hóa, dịch vụ (THHDVu) trên hóa đơn.
 """
 from __future__ import annotations
 
@@ -26,6 +28,7 @@ def hd_lien_quan_tu_xml(xml_bytes: bytes) -> dict | None:
             if not f.get("SHDCLQuan"):
                 return None
             return {
+                "noi_dung": f.get("GChu") or _ten_hang(root),
                 "tinh_chat": {"1": "thay_the", "2": "dieu_chinh"}.get(f.get("TCHDon", "")),
                 "goc_khmshdon": f.get("KHMSHDCLQuan") or None,
                 "goc_khhdon": f.get("KHHDCLQuan") or None,
@@ -33,6 +36,13 @@ def hd_lien_quan_tu_xml(xml_bytes: bytes) -> dict | None:
                 "goc_tdlap": (f.get("NLHDCLQuan") or "")[:10] or None,
             }
     return None
+
+
+def _ten_hang(root) -> str | None:
+    ten = [(e.text or "").strip() for e in root.iter() if _local(e.tag) == "THHDVu" and (e.text or "").strip()]
+    if not ten:
+        return None
+    return "; ".join(ten[:3]) + (f" (+{len(ten) - 3} dòng)" if len(ten) > 3 else "")
 
 
 def hd_lien_quan_tu_zip(zip_bytes: bytes) -> dict | None:

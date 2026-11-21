@@ -188,11 +188,14 @@ XML_DIEU_CHINH = """<?xml version="1.0" encoding="UTF-8"?>
 <HDon><DLHDon><TTChung><PBan>2.1.0</PBan><KHMSHDon>1</KHMSHDon><KHHDon>C26TAA</KHHDon><SHDon>30</SHDon>
 <TTHDLQuan><TCHDon>2</TCHDon><LHDCLQuan>1</LHDCLQuan><KHMSHDCLQuan>1</KHMSHDCLQuan>
 <KHHDCLQuan>C26TAA</KHHDCLQuan><SHDCLQuan>00000011</SHDCLQuan><NLHDCLQuan>2026-06-10</NLHDCLQuan>
-</TTHDLQuan></TTChung></DLHDon></HDon>""".encode()
+<GChu>Điều chỉnh giảm đơn giá theo biên bản 05/BB</GChu>
+</TTHDLQuan></TTChung><NDHDon><DSHHDVu><HHDVu><THHDVu>Thép cuộn</THHDVu></HHDVu></DSHHDVu></NDHDon>
+</DLHDon></HDon>""".encode()
 
 
 def test_doc_xml_hd_lien_quan():
     assert hd_lien_quan_tu_xml(XML_DIEU_CHINH) == {
+        "noi_dung": "Điều chỉnh giảm đơn giá theo biên bản 05/BB",
         "tinh_chat": "dieu_chinh", "goc_khmshdon": "1", "goc_khhdon": "C26TAA",
         "goc_shdon": "11", "goc_tdlap": "2026-06-10"}
     buf = io.BytesIO()
@@ -201,6 +204,9 @@ def test_doc_xml_hd_lien_quan():
         z.writestr("hd.xml", XML_DIEU_CHINH)
     assert hd_lien_quan_tu_zip(buf.getvalue())["goc_shdon"] == "11"
     assert hd_lien_quan_tu_xml(b"<HDon><TTChung><SHDon>1</SHDon></TTChung></HDon>") is None
+    # không có ghi chú → lấy tên hàng hóa
+    no_gchu = XML_DIEU_CHINH.replace("<GChu>Điều chỉnh giảm đơn giá theo biên bản 05/BB</GChu>".encode(), b"")
+    assert hd_lien_quan_tu_xml(no_gchu)["noi_dung"] == "Thép cuộn"
 
 
 def _hd(nb, kh, so, ngay, tien, tthai, goc=None):
@@ -261,7 +267,7 @@ def test_excel_noi_hd_goc(client):
     assert abs(order.index(30) - order.index(41)) == 1
 
 
-def test_ban_ra_co_hd_lien_quan(client):
+def test_ban_ra_hd_dieu_chinh_cung_hang(client):
     c, appmod = client
     from thuedn.portal import normalize
 
@@ -271,24 +277,39 @@ def test_ban_ra_co_hd_lien_quan(client):
         return r
 
     for r in [
-        ra("C26TMA", 201, "2026-09-08", 45_000_000, 5),
-        ra("C26TMA", 209, "2026-10-15", -5_000_000, 3, ("C26TMA", 201, "2026-09-08")),
-        ra("C26TMA", 230, "2026-10-20", 3_000_000, 4),
+        ra("C26TMA", 201, "2026-10-08", 45_000_000, 5),                                   # bị ĐC 2 lần
+        ra("C26TMA", 205, "2026-10-09", 10_000_000, 1),                                   # bình thường
+        ra("C26TMA", 209, "2026-10-15", -5_000_000, 3, ("C26TMA", 201, "2026-10-08")),
+        ra("C26TMA", 226, "2026-10-18", -1_000_000, 3, ("C26TMA", 201, "2026-10-08")),
+        ra("C26TMA", 230, "2026-10-20", 3_000_000, 4),                                    # bị thay thế
         ra("C26TMA", 231, "2026-10-21", 2_800_000, 2, ("C26TMA", 230, "2026-10-20")),
-        ra("C26TMA", 240, "2026-10-25", 1_000_000, 5),
+        ra("C26TMA", 240, "2026-10-25", 1_000_000, 5),                                    # thiếu HĐ ĐC
+        ra("C26TMA", 150, "2026-09-10", 7_000_000, 5),                                    # gốc tháng 9
+        ra("C26TMA", 250, "2026-10-28", 700_000, 3, ("C26TMA", 150, "2026-09-10")),        # ĐC tháng 10
+        ra("C26TMA", 260, "2026-10-29", -200_000, 3, ("C26TMA", 99, "2026-03-01")),        # gốc chưa tải
     ]:
         appmod.store.save_invoice("0300000000", "ra", normalize(r))
 
-    x = c.get("/export.xlsx?mst=0300000000&tu=2026-09-01&den=2026-10-31")
+    x = c.get("/export.xlsx?mst=0300000000&tu=2026-10-01&den=2026-10-31")
     ws = load_workbook(io.BytesIO(x.data))["Bán ra"]
     head = [h.value for h in ws[1]]
-    rows = {r[head.index("Số HĐ")]: dict(zip(head, r)) for r in ws.iter_rows(min_row=2, values_only=True)}
+    assert head[-1] == "Đánh giá"
+    assert head.index("Số HĐ ĐC/TT") > head.index("Tính chất")
+    rows = [dict(zip(head, r)) for r in ws.iter_rows(min_row=2, values_only=True)]
+    so = lambda r: (r["Số HĐ"], r["Số HĐ ĐC/TT"])
+    assert [so(r) for r in rows] == [
+        (201, 209), (201, 226), (205, None), (230, 231), (240, None), (150, 250), (99, 260)]
 
-    assert rows["201"]["Bị điều chỉnh / thay thế bởi HĐ"] == "1C26TMA số 209 ngày 15/10/2026"
-    assert rows["201"]["Tổng sau điều chỉnh (tạm tính)"] == 49_500_000 - 5_500_000
-    assert rows["209"]["Điều chỉnh / thay thế cho HĐ"] == "1C26TMA số 201 ngày 08/09/2026"
-    assert rows["230"]["Bị điều chỉnh / thay thế bởi HĐ"] == "1C26TMA số 231 ngày 21/10/2026"
-    assert rows["230"]["Tổng sau điều chỉnh (tạm tính)"] == 3_080_000
-    assert rows["231"]["Điều chỉnh / thay thế cho HĐ"] == "1C26TMA số 230 ngày 20/10/2026"
-    assert "Chưa có HĐ điều chỉnh" in rows["240"]["Ghi chú HĐ liên quan"]
-    assert rows["201"]["Ghi chú HĐ liên quan"] is None
+    r1, r2 = rows[0], rows[1]
+    assert r1["Tổng thanh toán"] == 49_500_000 and r2["Tổng thanh toán"] is None   # không cộng trùng
+    assert r1["Ngày HĐ ĐC/TT"] == "2026-10-15" and r1["Tổng thanh toán ĐC/TT"] == -5_500_000
+    assert r1["Nội dung điều chỉnh"] == "Điều chỉnh giảm"
+    assert r2["Tổng sau điều chỉnh (tạm tính)"] == 49_500_000 - 5_500_000 - 1_100_000
+    assert r1["Đánh giá"] == "Đã điều chỉnh lần 1" and r2["Đánh giá"] == "Đã điều chỉnh lần 2"
+    assert rows[2]["Đánh giá"] == "Bình thường"
+    assert rows[3]["Nội dung điều chỉnh"] == "Thay thế" and rows[3]["Tổng sau điều chỉnh (tạm tính)"] == 3_080_000
+    assert "chưa có HĐ ĐC/TT" in rows[4]["Đánh giá"]
+    assert "HĐ gốc thuộc kỳ khác" in rows[5]["Đánh giá"] and rows[5]["Nội dung điều chỉnh"] == "Điều chỉnh tăng"
+    assert "HĐ gốc chưa có trong dữ liệu" in rows[6]["Đánh giá"] and rows[6]["Tổng thanh toán"] is None
+    # mỗi HĐ ĐC/TT chỉ xuất hiện một lần, không thành hàng riêng
+    assert sum(1 for r in rows if r["Số HĐ"] in (209, 226, 231, 250, 260)) == 0

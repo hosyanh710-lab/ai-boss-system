@@ -89,7 +89,7 @@ class Storage:
     def _migrate(self) -> None:
         """Thêm cột thông tin hóa đơn gốc (HĐ bị điều chỉnh / bị thay thế) cho dữ liệu cũ."""
         cols = {r["name"] for r in self.db.execute("PRAGMA table_info(invoices)")}
-        for col in GOC_COLS:
+        for col in GOC_COLS + ("noi_dung",):
             if col not in cols:
                 self.db.execute(f"ALTER TABLE invoices ADD COLUMN {col} TEXT")
         self.db.commit()
@@ -157,6 +157,8 @@ class Storage:
         self.db.execute(
             "UPDATE invoices SET goc_khmshdon=?, goc_khhdon=?, goc_shdon=?, goc_tdlap=? WHERE id=?",
             (*(_s(goc.get(c)) for c in GOC_COLS), invoice_id))
+        if goc.get("noi_dung"):
+            self.db.execute("UPDATE invoices SET noi_dung=? WHERE id=?", (goc["noi_dung"], invoice_id))
         self.db.commit()
 
     def find_invoice(self, company_mst: str, direction: str, nbmst: str,
