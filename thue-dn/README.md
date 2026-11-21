@@ -56,6 +56,10 @@ Hai sheet cùng cách xếp. Mỗi hàng là một hóa đơn. Hóa đơn bị �
 
 Mỗi hàng là **một dòng hàng hóa / dịch vụ của một hóa đơn**: thông tin hóa đơn (ngày, ký hiệu, số, đối tác, tính chất, HĐ gốc nếu là HĐ điều chỉnh / thay thế) rồi STT dòng, **mã hàng**, tên hàng, ĐVT, số lượng, đơn giá, chiết khấu, thành tiền, thuế suất, tiền thuế (tính theo thuế suất), tính chất dòng (hàng hóa / khuyến mại / chiết khấu / ghi chú). Có sẵn bộ lọc trên dòng tiêu đề.
 
+- Hóa đơn nhiều mặt hàng: mỗi mặt hàng một hàng, thông tin hóa đơn lặp lại trên từng hàng, cột STT dòng giữ thứ tự trên hóa đơn.
+- Dòng của HĐ điều chỉnh / thay thế nằm **ngay dưới** dòng của HĐ gốc (HĐ gốc thuộc kỳ khác vẫn được hiện để đối chiếu).
+- Cột **Tính vào tổng**: "Không" (tô xám) cho HĐ bị thay thế, bị hủy, HĐ thuộc kỳ khác; lọc "Có" rồi cộng là ra số đúng của kỳ.
+- Cột **SL / Thành tiền sau điều chỉnh** trên dòng HĐ gốc: ghép dòng HĐ điều chỉnh với dòng HĐ gốc theo mã hàng (không có mã thì theo tên). Dòng không ghép được, hoặc mặt hàng có nhiều dòng trên HĐ gốc, tô vàng để ghép tay.
 - Chi tiết đọc từ file XML hóa đơn (khối `DSHHDVu`), nên cần tick **Tải kèm XML** (mặc định đã tick).
 - Hóa đơn chưa có XML vẫn có một hàng, tô vàng, ghi "Chưa có chi tiết hàng hóa".
 - XML không ghi tiền thuế theo từng dòng, nên tiền thuế dòng = thành tiền × thuế suất (có thể lệch vài đồng do làm tròn so với tổng thuế trên hóa đơn).

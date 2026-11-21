@@ -475,3 +475,64 @@ def test_tong_hop_hach_toan(client):
     vals = [r for r in ws.iter_rows(values_only=True)]
     vc = next(r for r in vals if r[7] == "Phí vận chuyển")
     assert vc[2] == "Chi phí bán hàng" and vc[3] == "6417" and vc[-1] == "Đã xác nhận"
+
+
+def test_chi_tiet_dieu_chinh_thay_the(client):
+    c, appmod = client
+    from thuedn.portal import normalize
+    st = appmod.store
+
+    def them(so, ngay, tthai, lines, goc=None):
+        r = _hd("0300000000", "C26TMA", so, ngay, 1, tthai, goc)
+        r.update({"nmmst": "0400000000", "nmten": "Khách X"})
+        st.save_invoice("0300000000", "ra", normalize(r))
+        iid = [i for i in st.invoices(direction="ra") if i["shdon"] == str(so)][0]["id"]
+        if lines:
+            appmod.luu_xml(iid, f"{so}.zip", _xml_zip(lines))
+
+    # gốc tháng 9, bị điều chỉnh 2 lần trong tháng 10
+    them(150, "2026-09-10", 5, [(1, "SP-1", "Thép cuộn", "kg", 2000, 18500, 37_000_000, "10%"),
+                                (1, "SP-2", "Dây buộc", "cuộn", 50, 40000, 2_000_000, "10%")])
+    them(210, "2026-10-05", 3, [(1, "SP-1", "Thép cuộn", "kg", -100, 18500, -1_850_000, "10%")],
+         ("C26TMA", 150, "2026-09-10"))
+    them(220, "2026-10-12", 3, [(1, "SP-1", "Thép cuộn", "kg", 0, -500, -950_000, "10%"),
+                                (1, "SP-9", "Hàng lạ", "cái", 1, 100, 100, "10%")],
+         ("C26TMA", 150, "2026-09-10"))
+    # bị thay thế và thay thế trong tháng 10
+    them(230, "2026-10-20", 4, [(1, "SP-3", "Ống thép", "cây", 10, 90000, 900_000, "10%")])
+    them(231, "2026-10-21", 2, [(1, "SP-3", "Ống thép", "cây", 10, 85000, 850_000, "10%")],
+         ("C26TMA", 230, "2026-10-20"))
+    # hóa đơn thường nhiều mặt hàng
+    them(240, "2026-10-25", 1, [(1, "SP-1", "Thép cuộn", "kg", 300, 18500, 5_550_000, "10%"),
+                                (1, "SP-2", "Dây buộc", "cuộn", 5, 40000, 200_000, "10%")])
+
+    x = c.get("/export.xlsx?mst=0300000000&tu=2026-10-01&den=2026-10-31")
+    ws = load_workbook(io.BytesIO(x.data))["Chi tiết bán ra"]
+    head = [h.value for h in ws[1]]
+    rows = [dict(zip(head, r)) for r in ws.iter_rows(min_row=2, values_only=True)]
+    assert [(r["Số HĐ"], r["STT dòng"]) for r in rows] == [
+        (150, 1), (150, 2), (210, 1), (220, 1), (220, 2),     # gốc rồi ngay dưới là 2 HĐ điều chỉnh
+        (230, 1), (231, 1),                                   # bị thay thế rồi HĐ thay thế
+        (240, 1), (240, 2)]                                   # nhiều mặt hàng: mỗi mặt hàng một hàng
+    by = {(r["Số HĐ"], r["STT dòng"]): r for r in rows}
+
+    # điểm 2: tính vào tổng
+    assert by[(150, 1)]["Tính vào tổng"] == "Không" and "kỳ khác" in by[(150, 1)]["Ghi chú"]
+    assert by[(230, 1)]["Tính vào tổng"] == "Không" and "bị thay thế" in by[(230, 1)]["Ghi chú"]
+    assert all(by[k]["Tính vào tổng"] == "Có" for k in [(210, 1), (220, 1), (231, 1), (240, 1)])
+    tong = sum(r["Thành tiền chưa thuế"] for r in rows if r["Tính vào tổng"] == "Có")
+    assert tong == -1_850_000 - 950_000 + 100 + 850_000 + 5_550_000 + 200_000
+
+    # điểm 3: sau điều chỉnh, ghép theo mã hàng
+    assert by[(150, 1)]["SL sau điều chỉnh"] == 1900
+    assert by[(150, 1)]["Thành tiền sau điều chỉnh"] == 37_000_000 - 1_850_000 - 950_000
+    assert "C26TMA số 210" in by[(150, 1)]["Ghi chú"] and "C26TMA số 220" in by[(150, 1)]["Ghi chú"]
+    assert by[(150, 2)]["SL sau điều chỉnh"] is None                # dòng không bị điều chỉnh
+    assert by[(210, 1)]["Ghi chú"] == "Ghép với dòng 1 của HĐ gốc"
+    assert "Không ghép được" in by[(220, 2)]["Ghi chú"]
+    assert by[(231, 1)]["Ghi chú"] == "Thay thế toàn bộ HĐ gốc"
+    assert by[(240, 1)]["Số HĐ"] == by[(240, 2)]["Số HĐ"] and by[(240, 2)]["Tên đối tác"] == "Khách X"
+
+    # tô màu: xám cho dòng không tính, vàng cho dòng không ghép được
+    fill = {(r[5].value, r[10].value): r[0].fill.fgColor.rgb for r in ws.iter_rows(min_row=2)}
+    assert fill[(230, 1)].endswith("E7E9ED") and fill[(220, 2)].endswith("FFF3CD")

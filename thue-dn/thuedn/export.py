@@ -43,7 +43,7 @@ def _fit(ws) -> None:
 
 def bang_ke_excel(invoices, suppliers: dict, company_names: dict[str, str],
                   find_goc=None, find_adjusting=None, items: dict | None = None,
-                  tong_hop: list[dict] | None = None) -> bytes:
+                  tong_hop: list[dict] | None = None, items_for=None) -> bytes:
     """find_goc(inv) → HĐ gốc của một HĐ điều chỉnh / thay thế (tìm trong toàn bộ dữ liệu đã tải);
     find_adjusting(goc) → các HĐ điều chỉnh / thay thế trỏ tới HĐ gốc đó."""
     invoices = list(invoices)
@@ -57,7 +57,8 @@ def bang_ke_excel(invoices, suppliers: dict, company_names: dict[str, str],
     _sheet_lien_ket(wb, invoices, company_names, find_goc, find_adjusting)
     items = items or {}
     for title, d in (("Chi tiết bán ra", "ra"), ("Chi tiết mua vào", "vao")):
-        _sheet_chi_tiet(wb, title, [i for i in invoices if i["direction"] == d], items, company_names)
+        _sheet_chi_tiet(wb, title, [i for i in invoices if i["direction"] == d], items, company_names,
+                        find_goc, find_adjusting, items_for)
     if tong_hop is not None:
         _sheet_tong_hop(wb, tong_hop, invoices, items, company_names)
 
@@ -329,7 +330,9 @@ HEADERS_CT = ["Doanh nghiệp", "MST DN", "Ngày lập", "Ký hiệu mẫu", "K�
               "MST đối tác", "Tên đối tác", "Tính chất HĐ", "HĐ gốc (nếu là HĐ ĐC/TT)",
               "STT dòng", "Mã hàng", "Tên hàng hóa, dịch vụ", "ĐVT", "Số lượng", "Đơn giá",
               "Tỷ lệ CK (%)", "Tiền chiết khấu", "Thành tiền chưa thuế", "Thuế suất",
-              "Tiền thuế (tính theo thuế suất)", "Tính chất dòng", "Ghi chú"]
+              "Tiền thuế (tính theo thuế suất)", "Tính chất dòng",
+              "SL sau điều chỉnh", "Thành tiền sau điều chỉnh", "Tính vào tổng", "Ghi chú"]
+GREY_ROW = PatternFill("solid", fgColor="E7E9ED")
 
 
 def _tien_thue(thanh_tien, thue_suat):
@@ -343,11 +346,58 @@ def _tien_thue(thanh_tien, thue_suat):
         return 0 if thue_suat.upper() in ("KCT", "KKKNT") else None
 
 
-def _sheet_chi_tiet(wb: Workbook, title: str, invoices, items: dict, names) -> None:
+def _sau_dieu_chinh(goc_lines, adj_groups) -> tuple[dict, dict]:
+    """Ghép dòng của HĐ điều chỉnh với dòng HĐ gốc theo mã hàng (không có mã thì theo tên).
+
+    Trả về: {stt dòng gốc: (SL sau ĐC, thành tiền sau ĐC, ghi chú)} và
+            {(id HĐ điều chỉnh, stt dòng): ghi chú (bắt đầu bằng '!' nếu cần xem tay)}."""
+    from .rules import ma_key
+
+    theo_key: dict = {}
+    for d in goc_lines:
+        theo_key.setdefault(ma_key(d["ma_hang"], d["ten_hang"]), []).append(d)
+    sau = {d["stt"]: [d["so_luong"] or 0, d["thanh_tien"] or 0, []] for d in goc_lines}
+    ghep: dict = {}
+    for adj, lines in adj_groups:
+        for d in lines:
+            if d["tinh_chat"] == "Ghi chú, diễn giải" or (d["thanh_tien"] in (None, 0) and not d["so_luong"]):
+                ghep[(adj["id"], d["stt"])] = "Dòng ghi chú / điều chỉnh thông tin, không có số tiền"
+                continue
+            khop = theo_key.get(ma_key(d["ma_hang"], d["ten_hang"]), [])
+            if len(khop) != 1:
+                ghep[(adj["id"], d["stt"])] = ("!Không ghép được với dòng nào của HĐ gốc (mã / tên hàng khác)"
+                                              if not khop else
+                                              "!Mặt hàng có nhiều dòng trên HĐ gốc, cần ghép tay")
+                continue
+            g = khop[0]
+            sau[g["stt"]][0] += d["so_luong"] or 0
+            sau[g["stt"]][1] += d["thanh_tien"] or 0
+            sau[g["stt"]][2].append(f"HĐ {adj['khhdon']} số {_int(adj['shdon'])}")
+            ghep[(adj["id"], d["stt"])] = f"Ghép với dòng {g['stt']} của HĐ gốc"
+    ket_qua = {stt: (v[0], v[1], "Đã điều chỉnh bởi " + ", ".join(v[2])) for stt, v in sau.items() if v[2]}
+    return ket_qua, ghep
+
+
+def _sheet_chi_tiet(wb: Workbook, title: str, invoices, items: dict, names,
+                    find_goc=None, find_adjusting=None, items_for=None) -> None:
+    """Mỗi hàng một dòng hàng hóa. Dòng của HĐ điều chỉnh / thay thế nằm ngay dưới dòng HĐ gốc.
+
+    Tính vào tổng = Không: HĐ bị thay thế, bị hủy, hoặc HĐ thuộc kỳ khác (chỉ hiện để đối chiếu)."""
+    find_goc = find_goc or (lambda i: None)
+    find_adjusting = find_adjusting or (lambda g: [])
+    items = dict(items)
     ws = _sheet(wb, title, HEADERS_CT)
     so_cot = {HEADERS_CT.index(h) + 1 for h in ("Số HĐ", "STT dòng")}
-    for inv in sorted(invoices, key=lambda i: (i["company_mst"], i["tdlap"] or "", i["khhdon"] or "",
-                                                _int(i["shdon"]) if str(i["shdon"]).isdigit() else 0)):
+    in_ky = {i["id"] for i in invoices}
+    da_ghi: set = set()
+
+    def dong_cua(inv):
+        if inv["id"] not in items and items_for is not None:
+            items.update(items_for([inv["id"]]))
+        return items.get(inv["id"], [])
+
+    def ghi_hd(inv, sau=None, ghep=None, ghi_chu_hd=None):
+        da_ghi.add(inv["id"])
         vao = inv["direction"] == "vao"
         goc = (_ten_hd(inv["goc_khmshdon"], inv["goc_khhdon"], inv["goc_shdon"], inv["goc_tdlap"])
                if inv["goc_shdon"] else None)
@@ -355,16 +405,67 @@ def _sheet_chi_tiet(wb: Workbook, title: str, invoices, items: dict, names) -> N
                inv["khmshdon"], inv["khhdon"], _int(inv["shdon"]),
                inv["nbmst"] if vao else inv["nmmst"], inv["nbten"] if vao else inv["nmten"],
                tinh_chat(inv["tthai"]), goc]
-        dong = items.get(inv["id"], [])
+        if inv["id"] not in in_ky:
+            tinh, ly_do = "Không", "HĐ thuộc kỳ khác, chỉ hiện để đối chiếu"
+        elif inv["tthai"] == 4:
+            tinh, ly_do = "Không", "HĐ đã bị thay thế"
+        elif inv["tthai"] == 6:
+            tinh, ly_do = "Không", "HĐ đã bị hủy"
+        else:
+            tinh, ly_do = "Có", None
+        dong = dong_cua(inv)
         if not dong:
-            ws.append(dau + [None] * 12 + ["Chưa có chi tiết hàng hóa (tải kèm XML để lấy)"])
+            ws.append(dau + [None] * 14 + [tinh, "; ".join(x for x in (
+                ly_do, ghi_chu_hd, "Chưa có chi tiết hàng hóa (tải kèm XML để lấy)") if x)])
             for c in ws[ws.max_row]:
                 c.fill = YELLOW
-            continue
+            return
         for d in dong:
+            sl_sau = tt_sau = None
+            notes = [ly_do, ghi_chu_hd]
+            if sau and d["stt"] in sau:
+                sl_sau, tt_sau, n = sau[d["stt"]]
+                notes.append(n)
+            canh_bao = False
+            if ghep and (inv["id"], d["stt"]) in ghep:
+                n = ghep[(inv["id"], d["stt"])]
+                canh_bao = n.startswith("!")
+                notes.append(n.lstrip("!"))
             ws.append(dau + [d["stt"], d["ma_hang"], d["ten_hang"], d["dvt"], d["so_luong"], d["don_gia"],
                              d["tl_ck"], d["tien_ck"], d["thanh_tien"], d["thue_suat"],
-                             _tien_thue(d["thanh_tien"], d["thue_suat"]), d["tinh_chat"], None])
+                             _tien_thue(d["thanh_tien"], d["thue_suat"]), d["tinh_chat"],
+                             sl_sau, tt_sau, tinh, "; ".join(x for x in notes if x) or None])
+            fill = YELLOW if canh_bao else GREY_ROW if tinh == "Không" else None
+            if fill:
+                for c in ws[ws.max_row]:
+                    c.fill = fill
+
+    def nhom(goc, ghi_chu_goc=None):
+        """HĐ gốc, rồi ngay dưới là các HĐ điều chỉnh / thay thế của nó."""
+        adjs = find_adjusting(goc)
+        dc = [(a, dong_cua(a)) for a in adjs if a["tthai"] == 3]
+        sau, ghep = _sau_dieu_chinh(dong_cua(goc), dc) if dc else ({}, {})
+        ghi_hd(goc, sau=sau, ghi_chu_hd=ghi_chu_goc)
+        for a in adjs:
+            if a["id"] in da_ghi:
+                continue
+            ghi_hd(a, ghep=ghep, ghi_chu_hd="Thay thế toàn bộ HĐ gốc" if a["tthai"] == 2 else None)
+
+    thu_tu = sorted(invoices, key=lambda i: (i["company_mst"], i["tdlap"] or "", i["khhdon"] or "",
+                                             _int(i["shdon"]) if str(i["shdon"]).isdigit() else 0))
+    for inv in thu_tu:
+        if inv["id"] in da_ghi:
+            continue
+        if inv["tthai"] not in (2, 3):
+            nhom(inv)
+            continue
+        # HĐ điều chỉnh / thay thế mà HĐ gốc thuộc kỳ khác (hiện cả nhóm tại vị trí này) hoặc chưa tải
+        goc = find_goc(inv) if inv["goc_shdon"] else None
+        if goc is not None and goc["id"] not in da_ghi:
+            nhom(goc)
+        if inv["id"] not in da_ghi:
+            ghi_hd(inv, ghi_chu_hd=("HĐ gốc chưa có trong dữ liệu đã tải" if inv["goc_shdon"]
+                                    else "Chưa có thông tin HĐ gốc"))
     for row in ws.iter_rows(min_row=2):
         for c in row:
             if isinstance(c.value, (int, float)) and c.column not in so_cot:

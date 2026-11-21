@@ -215,6 +215,7 @@ def export_excel():
     data = export.bang_ke_excel(
         rows, store.supplier_map(), names,
         items=store.items_by_invoice([r["id"] for r in rows]),
+        items_for=store.items_by_invoice,
         tong_hop=tong_hop_mat_hang(store.item_lines(msts, tu, den), store.categories()),
         find_goc=lambda i: store.find_invoice(i["company_mst"], i["direction"], i["nbmst"],
                                               i["goc_khmshdon"], i["goc_khhdon"], i["goc_shdon"]),
