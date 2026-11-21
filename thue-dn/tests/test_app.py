@@ -103,7 +103,9 @@ def test_luong_day_du(client):
     assert wb.sheetnames == ["Mua vào", "Bán ra", "Điều chỉnh - thay thế"]
     assert wb["Mua vào"].max_row == 3 and wb["Bán ra"].max_row == 2
     assert wb["Điều chỉnh - thay thế"].max_row == 3   # 2 hàng tiêu đề + 1 HĐ điều chỉnh
-    cao = [r for r in wb["Mua vào"].iter_rows(values_only=True) if r[-1] == "CAO"]
+    head_vao = [h.value for h in wb["Mua vào"][1]]
+    assert head_vao[-1] == "Đánh giá" and head_vao[-2] == "Mức rủi ro"
+    cao = [r for r in wb["Mua vào"].iter_rows(values_only=True) if r[head_vao.index("Mức rủi ro")] == "CAO"]
     assert len(cao) == 1 and cao[0][6] == "0100000002"
 
     # tải lại không bị trùng hóa đơn
@@ -313,3 +315,33 @@ def test_ban_ra_hd_dieu_chinh_cung_hang(client):
     assert "HĐ gốc chưa có trong dữ liệu" in rows[6]["Đánh giá"] and rows[6]["Tổng thanh toán"] is None
     # mỗi HĐ ĐC/TT chỉ xuất hiện một lần, không thành hàng riêng
     assert sum(1 for r in rows if r["Số HĐ"] in (209, 226, 231, 250, 260)) == 0
+
+
+def test_mua_vao_hd_dieu_chinh_cung_hang(client):
+    c, appmod = client
+    from thuedn.portal import normalize
+    for r in [
+        _hd("0100000001", "C26TAA", 11, "2026-06-05", 10_000_000, 5),
+        _hd("0100000001", "C26TAA", 30, "2026-06-12", -2_000_000, 3, ("C26TAA", 11, "2026-06-05")),
+        _hd("0100000002", "C26TBB", 7, "2026-06-03", 5_000_000, 4),
+        _hd("0100000002", "C26TBB", 9, "2026-06-20", 4_500_000, 2, ("C26TBB", 7, "2026-06-03")),
+        _hd("0100000003", "C26TCC", 2, "2026-06-08", 3_000_000, 1),
+    ]:
+        appmod.store.save_invoice("0300000000", "vao", normalize(r))
+    appmod.store.ensure_suppliers_from_invoices()
+    # người bán 2 chấm dứt 15/6: HĐ gốc lập trước, HĐ thay thế lập sau → rủi ro CAO
+    appmod.store.update_supplier("0100000002", "cham_dut", "2026-06-15", "cqt", "2026-11-21 08:00")
+
+    x = c.get("/export.xlsx?mst=0300000000&tu=2026-06-01&den=2026-06-30")
+    ws = load_workbook(io.BytesIO(x.data))["Mua vào"]
+    head = [h.value for h in ws[1]]
+    assert head[6:8] == ["MST người bán", "Tên người bán"]
+    assert head[-4:] == ["Tổng sau điều chỉnh (tạm tính)", "Trạng thái người bán", "Mức rủi ro", "Đánh giá"]
+    rows = [dict(zip(head, r)) for r in ws.iter_rows(min_row=2, values_only=True)]
+    assert [(r["Số HĐ"], r["Số HĐ ĐC/TT"]) for r in rows] == [(7, 9), (11, 30), (2, None)]
+    tt, dc, bt = rows
+    assert tt["Mức rủi ro"] == "CAO" and tt["Đánh giá"] == "Đã thay thế"
+    assert dc["Nội dung điều chỉnh"] == "Điều chỉnh giảm" and dc["Tổng sau điều chỉnh (tạm tính)"] == 8_800_000
+    assert dc["Mức rủi ro"] == "Chưa rõ" and bt["Đánh giá"] == "Bình thường"
+    so_hd = [c for c in ws[1] if c.value in ("Số HĐ", "Số HĐ ĐC/TT")]
+    assert all(ws.cell(2, c.column).number_format == "General" for c in so_hd)

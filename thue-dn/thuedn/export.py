@@ -13,11 +13,12 @@ from .rules import TRANG_THAI_NCC, muc_rui_ro, tinh_chat
 
 HEADERS_VAO = ["Doanh nghiệp", "MST DN", "Ngày lập", "Ký hiệu mẫu", "Ký hiệu HĐ", "Số HĐ",
                "MST người bán", "Tên người bán", "Tiền chưa thuế", "Tiền thuế", "Tổng thanh toán",
-               "Tính chất", "Trạng thái người bán", "Mức rủi ro"]
+               "Tính chất"]
+HEADERS_VAO_RUI_RO = ["Trạng thái người bán", "Mức rủi ro"]
 HEADERS_RA = ["Doanh nghiệp", "MST DN", "Ngày lập", "Ký hiệu mẫu", "Ký hiệu HĐ", "Số HĐ",
               "MST người mua", "Tên người mua", "Tiền chưa thuế", "Tiền thuế", "Tổng thanh toán",
               "Tính chất"]
-# Sheet Bán ra: hóa đơn điều chỉnh / thay thế nằm CÙNG HÀNG với hóa đơn bị điều chỉnh / thay thế
+# Sheet Mua vào, Bán ra: hóa đơn điều chỉnh / thay thế nằm CÙNG HÀNG với hóa đơn bị điều chỉnh / thay thế
 HEADERS_RA_DC = ["Ký hiệu HĐ ĐC/TT", "Số HĐ ĐC/TT", "Ngày HĐ ĐC/TT", "Nội dung điều chỉnh",
                  "Tiền chưa thuế ĐC/TT", "Tiền thuế ĐC/TT", "Tổng thanh toán ĐC/TT"]
 HEADERS_RA_END = ["Tổng sau điều chỉnh (tạm tính)", "Đánh giá"]
@@ -47,33 +48,24 @@ def bang_ke_excel(invoices, suppliers: dict, company_names: dict[str, str],
     invoices = list(invoices)
     wb = Workbook()
     wb.remove(wb.active)
-    ws_vao = _sheet(wb, "Mua vào", HEADERS_VAO)
+    ws_vao = _sheet(wb, "Mua vào", HEADERS_VAO + HEADERS_RA_DC + HEADERS_RA_END[:1] + HEADERS_VAO_RUI_RO
+                    + HEADERS_RA_END[1:])
     ws_ra = _sheet(wb, "Bán ra", HEADERS_RA + HEADERS_RA_DC + HEADERS_RA_END)
     find_goc = find_goc or (lambda i: None)
     find_adjusting = find_adjusting or (lambda g: [])
     _sheet_lien_ket(wb, invoices, company_names, find_goc, find_adjusting)
 
-    for inv in invoices:
-        dn = company_names.get(inv["company_mst"], inv["company_mst"])
-        common = [dn, inv["company_mst"], inv["tdlap"], inv["khmshdon"], inv["khhdon"], inv["shdon"]]
-        money = [inv["tgtcthue"], inv["tgtthue"], inv["tgtttbso"]]
-        tc = tinh_chat(inv["tthai"])
-        if inv["direction"] == "vao":
-            s = suppliers.get(inv["nbmst"])
-            status = s["status"] if s else None
-            muc = muc_rui_ro(status, s["ngay_ngung"] if s else None, inv["tdlap"])
-            ws_vao.append(common + [inv["nbmst"], inv["nbten"]] + money +
-                          [tc, TRANG_THAI_NCC.get(status or "chua_tra"), MUC_RUI_RO[muc]])
-            if muc == "cao":
-                for c in ws_vao[ws_vao.max_row]:
-                    c.fill = RED
-
-    _ban_ra(ws_ra, [i for i in invoices if i["direction"] == "ra"], company_names, find_goc, find_adjusting)
+    _sheet_hd(ws_vao, [i for i in invoices if i["direction"] == "vao"], company_names, find_goc,
+              find_adjusting, suppliers)
+    _sheet_hd(ws_ra, [i for i in invoices if i["direction"] == "ra"], company_names, find_goc,
+              find_adjusting, None)
 
     for ws in (ws_vao, ws_ra):
+        # chỉ cột số tiền có dấu phân cách hàng nghìn; số hóa đơn giữ nguyên (1021, không phải 1.021)
+        cot_so_hd = {c.column for c in ws[1] if str(c.value).startswith("Số HĐ")}
         for row in ws.iter_rows(min_row=2):
             for c in row:
-                if isinstance(c.value, (int, float)):
+                if isinstance(c.value, (int, float)) and c.column not in cot_so_hd:
                     c.number_format = "#,##0"
         _fit(ws)
     buf = io.BytesIO()
@@ -109,11 +101,17 @@ def _noi_dung(adj) -> str:
     return f"{loai}: {nd}" if nd else loai
 
 
-def _ban_ra(ws, invoices, names, find_goc, find_adjusting) -> None:
-    """Mỗi hàng: một hóa đơn bán ra; nếu bị điều chỉnh / thay thế thì cùng hàng ghi HĐ điều chỉnh /
+_THU_TU_RUI_RO = {"cao": 3, "trung_binh": 2, "thap": 1, "chua_ro": 0}
+
+
+def _sheet_hd(ws, invoices, names, find_goc, find_adjusting, suppliers) -> None:
+    """Sheet Mua vào (suppliers != None, thêm cột rủi ro người bán) hoặc Bán ra.
+
+    Mỗi hàng: một hóa đơn; nếu bị điều chỉnh / thay thế thì cùng hàng ghi HĐ điều chỉnh /
     thay thế. Một HĐ bị điều chỉnh nhiều lần: mỗi lần một hàng, từ hàng thứ 2 để trống số tiền HĐ
     gốc để cộng cột không bị trùng. HĐ điều chỉnh / thay thế không lặp lại thành hàng riêng."""
-    n_goc = len(HEADERS_RA)
+    mua_vao = suppliers is not None
+    n_goc = len(HEADERS_VAO if mua_vao else HEADERS_RA)
     in_ky = {i["id"] for i in invoices}
     da_ghi: set = set()
 
@@ -122,24 +120,39 @@ def _ban_ra(ws, invoices, names, find_goc, find_adjusting) -> None:
         g = goc if goc is not None else goc_tam
         dn = names.get(base["company_mst"], base["company_mst"])
         if g is not None:
-            row = [dn, base["company_mst"], g["tdlap"], g["khmshdon"], g["khhdon"], _int(g["shdon"]),
-                   base["nmmst"], base["nmten"]]
+            row = [dn, base["company_mst"], g["tdlap"], g["khmshdon"], g["khhdon"], _int(g["shdon"])]
+            row += [base["nbmst"], base["nbten"]] if mua_vao else [base["nmmst"], base["nmten"]]
             row += [None] * 3 if an_tien_goc or goc is None else [goc["tgtcthue"], goc["tgtthue"], goc["tgtttbso"]]
             row.append(tinh_chat(goc["tthai"]) if goc is not None else None)
         else:
-            row = [dn, base["company_mst"]] + [None] * (n_goc - 2)
+            # chưa biết HĐ gốc: vẫn ghi đối tác để lọc theo người bán / người mua
+            doi_tac = [base["nbmst"], base["nbten"]] if mua_vao else [base["nmmst"], base["nmten"]]
+            row = [dn, base["company_mst"], None, None, None, None] + doi_tac + [None] * (n_goc - 8)
         if adj is not None:
             row += [adj["khhdon"], _int(adj["shdon"]), adj["tdlap"], _noi_dung(adj),
                     adj["tgtcthue"], adj["tgtthue"], adj["tgtttbso"]]
         else:
             row += [None] * len(HEADERS_RA_DC)
-        row += [tong_sau, danh_gia]
+        row.append(tong_sau)
+        muc = None
+        if mua_vao:
+            s = suppliers.get(base["nbmst"])
+            status = s["status"] if s else None
+            # HĐ gốc hoặc HĐ điều chỉnh lập sau ngày người bán ngừng hoạt động đều là rủi ro
+            ngay = [h["tdlap"] for h in (goc, adj) if h is not None]
+            muc = max((muc_rui_ro(status, s["ngay_ngung"] if s else None, d) for d in ngay),
+                      key=_THU_TU_RUI_RO.get)
+            row += [TRANG_THAI_NCC.get(status or "chua_tra"), MUC_RUI_RO[muc]]
+        row.append(danh_gia)
         ws.append(row)
         for c in ws[ws.max_row][n_goc:n_goc + len(HEADERS_RA_DC)]:
             c.fill = BLUE
         if canh_bao:
             for c in ws[ws.max_row]:
                 c.fill = YELLOW
+        if muc == "cao":
+            for c in ws[ws.max_row]:
+                c.fill = RED
 
     def nhom(goc, adjs, goc_ngoai_ky=False):
         """Ghi HĐ gốc cùng các HĐ điều chỉnh / thay thế của nó."""
