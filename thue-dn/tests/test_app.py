@@ -536,3 +536,34 @@ def test_chi_tiet_dieu_chinh_thay_the(client):
     # tô màu: xám cho dòng không tính, vàng cho dòng không ghép được
     fill = {(r[5].value, r[10].value): r[0].fill.fgColor.rgb for r in ws.iter_rows(min_row=2)}
     assert fill[(230, 1)].endswith("E7E9ED") and fill[(220, 2)].endswith("FFF3CD")
+
+
+def test_nhieu_doanh_nghiep(client):
+    """10 công ty dùng chung một ứng dụng; xuất Excel riêng từng công ty."""
+    c, appmod = client
+    import zipfile
+    from thuedn.portal import normalize
+    for k in range(10):
+        mst = f"03000000{k:02d}"
+        c.post("/companies", data={"name": f"Công ty số {k}/ABC", "mst": mst, "password": "mat-khau"})
+        appmod.store.save_invoice(mst, "vao", normalize(_hd("0100000001", "C26TAA", 100 + k, "2026-06-10", 1_000_000, 1)))
+    assert len(appmod.store.companies()) == 10
+
+    page = c.get("/results?tu=2026-06-01&den=2026-06-30").get_data(as_text=True)
+    assert "Tất cả (10)" in page and "Excel từng DN (.zip)" in page
+
+    # lọc một công ty
+    page = c.get("/results?mst=0300000003&tu=2026-06-01&den=2026-06-30").get_data(as_text=True)
+    assert "1 hóa đơn" in page
+
+    r = c.get("/export-tung-dn.zip?tu=2026-06-01&den=2026-06-30")
+    z = zipfile.ZipFile(io.BytesIO(r.data))
+    names = sorted(z.namelist())
+    assert len(names) == 10
+    assert names[3] == "0300000003 Công ty số 3 ABC 2026-06-01_2026-06-30.xlsx"
+    ws = load_workbook(io.BytesIO(z.read(names[3])))["Mua vào"]
+    rows = list(ws.iter_rows(min_row=2, values_only=True))
+    assert len(rows) == 1 and rows[0][1] == "0300000003" and rows[0][5] == 103
+
+    x = c.get("/export.xlsx?mst=0300000003&tu=2026-06-01&den=2026-06-30")
+    assert "bang-ke_0300000003_" in x.headers["Content-Disposition"]

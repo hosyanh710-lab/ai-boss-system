@@ -187,7 +187,7 @@ def luu_xml(invoice_id: int, rel: str, content: bytes) -> None:
 
 # ---------- 3. Kết quả ----------
 def _filtered():
-    msts = request.args.getlist("mst") or job.get("msts") or [c["mst"] for c in store.companies()]
+    msts = [m for m in request.args.getlist("mst") if m] or job.get("msts") or [c["mst"] for c in store.companies()]
     tu = request.args.get("tu") or (job["tu"].isoformat() if job else None)
     den = request.args.get("den") or (job["den"].isoformat() if job else None)
     return msts, tu, den, store.invoices(msts, tu, den, request.args.get("chieu") or None)
@@ -205,14 +205,23 @@ def results():
         view.append((r, s, muc))
     names = {c["mst"]: c["name"] for c in store.companies()}
     return render_template("results.html", rows=view, names=names, log=job.get("log", []),
-                           msts=msts, tu=tu, den=den, chieu=request.args.get("chieu", ""))
+                           msts=msts, tu=tu, den=den, chieu=request.args.get("chieu", ""),
+                           companies=store.companies())
 
 
 @app.get("/export.xlsx")
 def export_excel():
     msts, tu, den, rows = _filtered()
+    data = _excel(msts, tu, den, rows)
+    ten = f"{msts[0]}_" if len(msts) == 1 else ""
+    return send_file(io.BytesIO(data), as_attachment=True,
+                     download_name=f"bang-ke_{ten}{tu}_{den}.xlsx",
+                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+def _excel(msts: list[str], tu, den, rows) -> bytes:
     names = {c["mst"]: c["name"] for c in store.companies()}
-    data = export.bang_ke_excel(
+    return export.bang_ke_excel(
         rows, store.supplier_map(), names,
         items=store.items_by_invoice([r["id"] for r in rows]),
         items_for=store.items_by_invoice,
@@ -220,9 +229,27 @@ def export_excel():
         find_goc=lambda i: store.find_invoice(i["company_mst"], i["direction"], i["nbmst"],
                                               i["goc_khmshdon"], i["goc_khhdon"], i["goc_shdon"]),
         find_adjusting=store.find_adjusting)
-    return send_file(io.BytesIO(data), as_attachment=True,
-                     download_name=f"bang-ke_{tu}_{den}.xlsx",
-                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+def _ten_file(s: str) -> str:
+    """Tên công ty → tên file an toàn trên Windows (giữ tiếng Việt, bỏ ký tự cấm)."""
+    import re
+    s = re.sub(r'[\\/:*?"<>|]+', " ", s)
+    return re.sub(r"\s+", " ", s).strip()[:60] or "DN"
+
+
+@app.get("/export-tung-dn.zip")
+def export_tung_dn():
+    """Mỗi doanh nghiệp một file Excel riêng, gom trong một file .zip."""
+    msts, tu, den, _ = _filtered()
+    names = {c["mst"]: c["name"] for c in store.companies()}
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for mst in msts:
+            rows = store.invoices([mst], tu, den, request.args.get("chieu") or None)
+            z.writestr(f"{mst} {_ten_file(names.get(mst, mst))} {tu}_{den}.xlsx", _excel([mst], tu, den, rows))
+    return send_file(io.BytesIO(buf.getvalue()), as_attachment=True,
+                     download_name=f"bang-ke-tung-dn_{tu}_{den}.zip", mimetype="application/zip")
 
 
 @app.get("/export-xml.zip")

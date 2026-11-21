@@ -7,7 +7,11 @@
 {% endif %}
 
 <form class="card row" method="get">
-  {% for m in msts %}<input type="hidden" name="mst" value="{{ m }}">{% endfor %}
+  <label>Doanh nghiệp
+    <select name="mst">
+      <option value="">Tất cả ({{ companies|length }})</option>
+      {% for c in companies %}<option value="{{ c.mst }}" {{ 'selected' if msts|length == 1 and msts[0] == c.mst }}>{{ c.name }}</option>{% endfor %}
+    </select></label>
   <label>Từ ngày <input type="date" name="tu" value="{{ tu or '' }}"></label>
   <label>Đến ngày <input type="date" name="den" value="{{ den or '' }}"></label>
   <label>Chiều
@@ -18,6 +22,7 @@
     </select></label>
   <button type="submit" class="ghost">Lọc</button>
   <a class="btn" href="{{ url_for('export_excel', mst=msts, tu=tu, den=den, chieu=chieu) }}">Xuất Excel</a>
+  {% if msts|length > 1 %}<a class="btn ghost" href="{{ url_for('export_tung_dn', mst=msts, tu=tu, den=den, chieu=chieu) }}">Excel từng DN (.zip)</a>{% endif %}
   <a class="btn ghost" href="{{ url_for('export_xml', mst=msts, tu=tu, den=den, chieu=chieu) }}">Tải XML (.zip)</a>
 </form>
 

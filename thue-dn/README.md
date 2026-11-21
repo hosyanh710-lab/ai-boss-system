@@ -22,6 +22,28 @@ Giao diện mẫu: https://claude.ai/artifact/G5HVipgaXqbfMmqopAm14q
    ```
 3. Bấm đúp **`run.bat`**. Lần đầu sẽ tự cài thư viện, sau đó trình duyệt mở `http://127.0.0.1:5000`.
 
+## Dùng cho nhiều công ty (ví dụ 10 công ty)
+
+Một ứng dụng quản lý tất cả các công ty, **không cần cài nhiều bản**:
+
+1. Trang **Doanh nghiệp**: thêm từng công ty (tên, MST, mật khẩu cổng thuế).
+2. Tick **chọn tất cả** → chọn khoảng ngày → **Tải hóa đơn** → nhập captcha lần lượt cho từng công ty (mỗi công ty một lần trong phiên).
+3. Trang **Kết quả**: chọn ô **Doanh nghiệp** để xem từng công ty hoặc tất cả.
+   - **Xuất Excel**: một file gộp các công ty đang chọn (mỗi sheet có cột Doanh nghiệp).
+   - **Excel từng DN (.zip)**: mỗi công ty một file Excel riêng, tên file theo MST và tên công ty.
+4. Phân loại hàng hóa, kiểm tra đối tác, danh sách rủi ro dùng chung cho tất cả các công ty.
+
+## Các bước test lần đầu trên máy anh (làm với 1 công ty trước)
+
+1. Chạy `run.bat`, thêm **1 công ty**.
+2. Tải hóa đơn **1 tháng**, tick **Tải kèm XML**. Nếu lỗi ở bước captcha / đăng nhập / tải: chụp màn hình gửi Claude sửa `thuedn/portal.py`.
+3. Mở Excel, kiểm tra:
+   - Số hóa đơn mua vào / bán ra khớp với cổng thuế.
+   - Một hóa đơn **điều chỉnh giảm** thật: số tiền trong XML là **âm hay dương** (ảnh hưởng cột "sau điều chỉnh" và "Điều chỉnh tăng / giảm").
+   - Hóa đơn điều chỉnh có ghép đúng hóa đơn gốc không.
+   - Sheet chi tiết hàng hóa có đủ mã hàng, số lượng, đơn giá.
+4. Ổn rồi mới thêm 9 công ty còn lại.
+
 ## Cách dùng
 
 1. **Doanh nghiệp**: thêm tên, MST, mật khẩu cổng thuế (mật khẩu mã hóa, chỉ lưu trong thư mục `data/` trên máy).
