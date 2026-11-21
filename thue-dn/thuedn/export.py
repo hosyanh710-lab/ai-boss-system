@@ -17,6 +17,9 @@ HEADERS_VAO = ["Doanh nghiệp", "MST DN", "Ngày lập", "Ký hiệu mẫu", "K
 HEADERS_RA = ["Doanh nghiệp", "MST DN", "Ngày lập", "Ký hiệu mẫu", "Ký hiệu HĐ", "Số HĐ",
               "MST người mua", "Tên người mua", "Tiền chưa thuế", "Tiền thuế", "Tổng thanh toán",
               "Tính chất"]
+# Thêm vào sheet Bán ra: hóa đơn liên quan, để không phải mở sheet Điều chỉnh - thay thế
+HEADERS_RA_LQ = ["Điều chỉnh / thay thế cho HĐ", "Bị điều chỉnh / thay thế bởi HĐ",
+                 "Tổng sau điều chỉnh (tạm tính)", "Ghi chú HĐ liên quan"]
 MUC_RUI_RO = {"cao": "CAO", "trung_binh": "Trung bình", "thap": "Thấp", "chua_ro": "Chưa rõ"}
 RED = PatternFill("solid", fgColor="F8D7DA")
 
@@ -44,9 +47,10 @@ def bang_ke_excel(invoices, suppliers: dict, company_names: dict[str, str],
     wb = Workbook()
     wb.remove(wb.active)
     ws_vao = _sheet(wb, "Mua vào", HEADERS_VAO)
-    ws_ra = _sheet(wb, "Bán ra", HEADERS_RA)
-    _sheet_lien_ket(wb, invoices, company_names, find_goc or (lambda i: None),
-                    find_adjusting or (lambda g: []))
+    ws_ra = _sheet(wb, "Bán ra", HEADERS_RA + HEADERS_RA_LQ)
+    find_goc = find_goc or (lambda i: None)
+    find_adjusting = find_adjusting or (lambda g: [])
+    _sheet_lien_ket(wb, invoices, company_names, find_goc, find_adjusting)
 
     for inv in invoices:
         dn = company_names.get(inv["company_mst"], inv["company_mst"])
@@ -63,9 +67,17 @@ def bang_ke_excel(invoices, suppliers: dict, company_names: dict[str, str],
                 for c in ws_vao[ws_vao.max_row]:
                     c.fill = RED
         else:
-            ws_ra.append(common + [inv["nmmst"], inv["nmten"]] + money + [tc])
+            lq, note = _lien_quan(inv, find_goc, find_adjusting)
+            ws_ra.append(common + [inv["nmmst"], inv["nmten"]] + money + [tc] + lq)
+            if note:
+                for c in ws_ra[ws_ra.max_row]:
+                    c.fill = YELLOW
 
     for ws in (ws_vao, ws_ra):
+        for row in ws.iter_rows(min_row=2):
+            for c in row:
+                if isinstance(c.value, (int, float)):
+                    c.number_format = "#,##0"
         _fit(ws)
     buf = io.BytesIO()
     wb.save(buf)
@@ -82,6 +94,36 @@ YELLOW = PatternFill("solid", fgColor="FFF3CD")
 GREY = PatternFill("solid", fgColor="EEF0F3")
 BLUE = PatternFill("solid", fgColor="DCE8F7")
 ORANGE = PatternFill("solid", fgColor="FBE3D0")
+
+
+def _ten_hd(khmshdon, khhdon, shdon, tdlap) -> str:
+    ngay = f" ngày {'/'.join(reversed(str(tdlap)[:10].split('-')))}" if tdlap else ""
+    return f"{khmshdon or ''}{khhdon or ''} số {_int(shdon)}{ngay}"
+
+
+def _lien_quan(inv, find_goc, find_adjusting) -> tuple[list, bool]:
+    """4 cột HĐ liên quan cho một dòng hóa đơn, và có cần tô vàng không."""
+    cho = bi = tong = None
+    notes = []
+    if inv["tthai"] in (2, 3):
+        if not inv["goc_shdon"]:
+            notes.append("Chưa có thông tin HĐ gốc (tải kèm XML để lấy)")
+        else:
+            goc = find_goc(inv)
+            cho = _ten_hd(inv["goc_khmshdon"], inv["goc_khhdon"], inv["goc_shdon"], inv["goc_tdlap"])
+            if goc is None:
+                notes.append("HĐ gốc chưa có trong dữ liệu đã tải")
+    if inv["tthai"] in (4, 5):
+        adjs = find_adjusting(inv)
+        if adjs:
+            bi = "; ".join(_ten_hd(a["khmshdon"], a["khhdon"], a["shdon"], a["tdlap"]) for a in adjs)
+            if inv["tthai"] == 5:
+                tong = (inv["tgtttbso"] or 0) + sum(a["tgtttbso"] or 0 for a in adjs if a["tthai"] == 3)
+            else:
+                tong = adjs[-1]["tgtttbso"]
+        else:
+            notes.append("Chưa có HĐ điều chỉnh / thay thế trong dữ liệu đã tải")
+    return [cho, bi, tong, "; ".join(notes) or None], bool(notes)
 
 
 def _hd_cols(inv) -> list:

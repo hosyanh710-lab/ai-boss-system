@@ -42,6 +42,11 @@ Giao diện mẫu: https://claude.ai/artifact/G5HVipgaXqbfMmqopAm14q
 
 Nhà cung cấp có hóa đơn mua vào mà chưa tra, hoặc tra quá 30 ngày, được liệt kê để tra lại. Các mốc 12 tháng và 30 ngày sửa trong `thuedn/rules.py`.
 
+### Sheet "Bán ra"
+
+Ngoài các cột hóa đơn, mỗi dòng có thêm 4 cột hóa đơn liên quan, xem ngay không cần mở sheet khác:
+**Điều chỉnh / thay thế cho HĐ** (dòng HĐ điều chỉnh / thay thế ghi HĐ gốc) · **Bị điều chỉnh / thay thế bởi HĐ** (dòng HĐ gốc ghi các HĐ điều chỉnh / thay thế) · **Tổng sau điều chỉnh (tạm tính)** · **Ghi chú HĐ liên quan** (tô vàng khi thiếu HĐ gốc hoặc thiếu HĐ điều chỉnh).
+
 ### Sheet "Điều chỉnh - thay thế"
 
 Mỗi hàng là một hóa đơn điều chỉnh hoặc thay thế. Cột chia 3 nhóm, từ trái sang phải: thông tin chung (DN, đối tác, loại, lần điều chỉnh) · hóa đơn gốc (bị điều chỉnh / bị thay thế) · hóa đơn điều chỉnh / thay thế, cuối cùng là tổng sau điều chỉnh (tạm tính) và ghi chú.

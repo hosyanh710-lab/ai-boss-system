@@ -259,3 +259,36 @@ def test_excel_noi_hd_goc(client):
     # các HĐ điều chỉnh của cùng một HĐ gốc nằm liền nhau
     order = [r[adj_so] for r in data]
     assert abs(order.index(30) - order.index(41)) == 1
+
+
+def test_ban_ra_co_hd_lien_quan(client):
+    c, appmod = client
+    from thuedn.portal import normalize
+
+    def ra(kh, so, ngay, tien, tthai, goc=None):
+        r = _hd("0300000000", kh, so, ngay, tien, tthai, goc)
+        r.update({"nmmst": "0400000000", "nmten": "Khách X"})
+        return r
+
+    for r in [
+        ra("C26TMA", 201, "2026-09-08", 45_000_000, 5),
+        ra("C26TMA", 209, "2026-10-15", -5_000_000, 3, ("C26TMA", 201, "2026-09-08")),
+        ra("C26TMA", 230, "2026-10-20", 3_000_000, 4),
+        ra("C26TMA", 231, "2026-10-21", 2_800_000, 2, ("C26TMA", 230, "2026-10-20")),
+        ra("C26TMA", 240, "2026-10-25", 1_000_000, 5),
+    ]:
+        appmod.store.save_invoice("0300000000", "ra", normalize(r))
+
+    x = c.get("/export.xlsx?mst=0300000000&tu=2026-09-01&den=2026-10-31")
+    ws = load_workbook(io.BytesIO(x.data))["Bán ra"]
+    head = [h.value for h in ws[1]]
+    rows = {r[head.index("Số HĐ")]: dict(zip(head, r)) for r in ws.iter_rows(min_row=2, values_only=True)}
+
+    assert rows["201"]["Bị điều chỉnh / thay thế bởi HĐ"] == "1C26TMA số 209 ngày 15/10/2026"
+    assert rows["201"]["Tổng sau điều chỉnh (tạm tính)"] == 49_500_000 - 5_500_000
+    assert rows["209"]["Điều chỉnh / thay thế cho HĐ"] == "1C26TMA số 201 ngày 08/09/2026"
+    assert rows["230"]["Bị điều chỉnh / thay thế bởi HĐ"] == "1C26TMA số 231 ngày 21/10/2026"
+    assert rows["230"]["Tổng sau điều chỉnh (tạm tính)"] == 3_080_000
+    assert rows["231"]["Điều chỉnh / thay thế cho HĐ"] == "1C26TMA số 230 ngày 20/10/2026"
+    assert "Chưa có HĐ điều chỉnh" in rows["240"]["Ghi chú HĐ liên quan"]
+    assert rows["201"]["Ghi chú HĐ liên quan"] is None
