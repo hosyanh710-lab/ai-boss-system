@@ -47,6 +47,7 @@
     <a href="{{ url_for('suppliers') }}" class="{{ 'on' if request.endpoint=='suppliers' }}">Nhà cung cấp</a>
     <a href="{{ url_for('phan_loai') }}" class="{{ 'on' if request.endpoint=='phan_loai' }}">Phân loại hàng hóa</a>
     <a href="{{ url_for('doi_tac') }}" class="{{ 'on' if request.endpoint in ('doi_tac','phieu_doi_tac') }}">Kiểm tra đối tác</a>
+    <a href="{{ url_for('cai_dat') }}" class="{{ 'on' if request.endpoint=='cai_dat' }}">Cài đặt</a>
   </nav>
 </header>
 <main>

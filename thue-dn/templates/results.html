@@ -26,6 +26,14 @@
   <a class="btn ghost" href="{{ url_for('export_xml', mst=msts, tu=tu, den=den, chieu=chieu) }}">Tải XML (.zip)</a>
 </form>
 
+<form class="card row" method="post" action="{{ url_for('drive_day_len') }}">
+  {% for m in msts %}<input type="hidden" name="mst" value="{{ m }}">{% endfor %}
+  <input type="hidden" name="tu" value="{{ tu or '' }}"><input type="hidden" name="den" value="{{ den or '' }}">
+  <span class="muted" style="flex:1 1 300px">Đẩy bảng kê Excel và XML của {{ 'từng công ty' if msts|length > 1 else 'công ty' }} đang chọn
+    lên Google Drive của <b>đúng email công ty đó</b>, thư mục "Hóa đơn &lt;MST&gt; - &lt;Tên&gt;/&lt;kỳ&gt;".</span>
+  <button type="submit" class="ghost">Đẩy lên Google Drive</button>
+</form>
+
 <div class="card scroll">
   <p class="muted">{{ rows|length }} hóa đơn</p>
   <table>

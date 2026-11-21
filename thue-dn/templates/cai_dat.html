@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Cài đặt{% endblock %}
+{% block body %}
+<h1>Cài đặt Google Drive</h1>
+<div class="card">
+  <h2>Làm một lần: tạo "OAuth client" trên Google Cloud</h2>
+  <ol>
+    <li>Đăng nhập <a href="https://console.cloud.google.com" target="_blank" rel="noopener">console.cloud.google.com</a> bằng một email của anh (email quản lý, không cần là email công ty), tạo một Project mới, ví dụ "thue-dn".</li>
+    <li>Vào <b>APIs &amp; Services → Library</b>, tìm <b>Google Drive API</b> và bấm <b>Enable</b>.</li>
+    <li>Vào <b>OAuth consent screen</b>: chọn <b>External</b>, điền tên ứng dụng và email liên hệ. Ở phần Scopes thêm <code>.../auth/drive.file</code>. Sau đó bấm <b>Publish app</b> (chuyển sang "In production") để quyền không bị hết hạn sau 7 ngày.</li>
+    <li>Vào <b>Credentials → Create credentials → OAuth client ID</b>, loại <b>Web application</b>. Ở <b>Authorized redirect URIs</b> thêm đúng địa chỉ:
+      <pre style="background:#f3f4f6;padding:8px;border-radius:6px;user-select:all">{{ redirect_uri }}</pre></li>
+    <li>Copy <b>Client ID</b> và <b>Client secret</b> dán vào ô bên dưới.</li>
+  </ol>
+  <p class="muted">Công cụ chỉ xin quyền <b>drive.file</b>: chỉ thấy và sửa file do chính nó tạo, không đọc được file khác trên Drive của các công ty.
+    Khi kết nối, Google có thể báo "ứng dụng chưa được xác minh" vì đây là ứng dụng riêng của anh; bấm <i>Nâng cao → Tiếp tục</i>.</p>
+</div>
+<form class="card" method="post">
+  <h2>Thông tin OAuth client</h2>
+  <div class="row">
+    <label style="flex:2 1 320px">Client ID <input name="client_id" value="{{ client_id }}" autocomplete="off"></label>
+    <label style="flex:1 1 240px">Client secret <input name="client_secret" type="password" autocomplete="off"
+      placeholder="{{ 'Đã lưu (để trống nếu không đổi)' if co_secret else '' }}"></label>
+    <button type="submit">Lưu</button>
+  </div>
+  <p class="muted">Client secret được mã hóa, chỉ lưu trên máy này.</p>
+</form>
+{% endblock %}

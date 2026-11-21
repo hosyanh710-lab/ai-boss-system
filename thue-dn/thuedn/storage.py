@@ -76,6 +76,10 @@ CREATE TABLE IF NOT EXISTS invoice_items (
     thue_suat TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_invoice_items ON invoice_items(invoice_id, stt);
+CREATE TABLE IF NOT EXISTS settings (
+    k TEXT PRIMARY KEY,
+    v BLOB
+);
 -- Phân loại hạch toán anh đã xác nhận cho từng mặt hàng.
 -- key_mst: MST người bán (mua vào, vì mã hàng là mã của người bán) hoặc MST DN của anh (bán ra)
 CREATE TABLE IF NOT EXISTS item_categories (
@@ -119,6 +123,12 @@ class Storage:
         for col in GOC_COLS + ("noi_dung",):
             if col not in cols:
                 self.db.execute(f"ALTER TABLE invoices ADD COLUMN {col} TEXT")
+        # mỗi công ty một email Google riêng; token Google lưu mã hóa
+        cols = {r["name"] for r in self.db.execute("PRAGMA table_info(companies)")}
+        for col, kieu in (("email", "TEXT"), ("google_token", "BLOB"), ("google_email", "TEXT"),
+                          ("google_at", "TEXT")):
+            if col not in cols:
+                self.db.execute(f"ALTER TABLE companies ADD COLUMN {col} {kieu}")
         self.db.commit()
 
     def _load_key(self) -> bytes:
@@ -128,13 +138,19 @@ class Storage:
         return key_file.read_bytes()
 
     # ---- doanh nghiệp ----
-    def add_company(self, mst: str, name: str, password: str) -> None:
+    def add_company(self, mst: str, name: str, password: str, email: str | None = None) -> None:
         enc = self.fernet.encrypt(password.encode("utf-8"))
+        email = (email or "").strip().lower() or None
+        old = self.company(mst.strip())
         self.db.execute(
-            "INSERT INTO companies(mst, name, enc_password) VALUES(?,?,?) "
-            "ON CONFLICT(mst) DO UPDATE SET name=excluded.name, enc_password=excluded.enc_password",
-            (mst.strip(), name.strip(), enc),
+            "INSERT INTO companies(mst, name, enc_password, email) VALUES(?,?,?,?) "
+            "ON CONFLICT(mst) DO UPDATE SET name=excluded.name, enc_password=excluded.enc_password, "
+            "email=excluded.email",
+            (mst.strip(), name.strip(), enc, email),
         )
+        if old is not None and (old["email"] or None) != email:
+            # đổi email: ngắt kết nối Drive cũ để không đẩy nhầm tài khoản
+            self.clear_google(mst.strip())
         self.db.commit()
 
     def delete_company(self, mst: str) -> None:
@@ -142,7 +158,39 @@ class Storage:
         self.db.commit()
 
     def companies(self) -> list[sqlite3.Row]:
-        return self.db.execute("SELECT mst, name FROM companies ORDER BY name").fetchall()
+        return self.db.execute(
+            "SELECT mst, name, email, google_email, google_at FROM companies ORDER BY name").fetchall()
+
+    def company(self, mst: str) -> sqlite3.Row | None:
+        return self.db.execute(
+            "SELECT mst, name, email, google_email, google_at FROM companies WHERE mst=?", (mst,)).fetchone()
+
+    # ---- Google Drive ----
+    def set_google(self, mst: str, refresh_token: str, email: str, at: str) -> None:
+        self.db.execute("UPDATE companies SET google_token=?, google_email=?, google_at=? WHERE mst=?",
+                        (self.fernet.encrypt(refresh_token.encode()), email, at, mst))
+        self.db.commit()
+
+    def google_token(self, mst: str) -> str | None:
+        row = self.db.execute("SELECT google_token FROM companies WHERE mst=?", (mst,)).fetchone()
+        return self.fernet.decrypt(row["google_token"]).decode() if row and row["google_token"] else None
+
+    def clear_google(self, mst: str) -> None:
+        self.db.execute("UPDATE companies SET google_token=NULL, google_email=NULL, google_at=NULL WHERE mst=?",
+                        (mst,))
+        self.db.commit()
+
+    def setting(self, k: str, secret: bool = False) -> str | None:
+        row = self.db.execute("SELECT v FROM settings WHERE k=?", (k,)).fetchone()
+        if not row or row["v"] is None:
+            return None
+        return self.fernet.decrypt(row["v"]).decode() if secret else row["v"].decode()
+
+    def set_setting(self, k: str, v: str, secret: bool = False) -> None:
+        data = self.fernet.encrypt(v.encode()) if secret else v.encode()
+        self.db.execute("INSERT INTO settings(k, v) VALUES(?, ?) ON CONFLICT(k) DO UPDATE SET v=excluded.v",
+                        (k, data))
+        self.db.commit()
 
     def company_name(self, mst: str) -> str:
         row = self.db.execute("SELECT name FROM companies WHERE mst=?", (mst,)).fetchone()

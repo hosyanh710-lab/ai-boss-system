@@ -33,6 +33,23 @@ Một ứng dụng quản lý tất cả các công ty, **không cần cài nhi�
    - **Excel từng DN (.zip)**: mỗi công ty một file Excel riêng, tên file theo MST và tên công ty.
 4. Phân loại hàng hóa, kiểm tra đối tác, danh sách rủi ro dùng chung cho tất cả các công ty.
 
+## Google Drive riêng cho từng công ty
+
+Mỗi công ty khai một **email Google riêng**; file của công ty nào chỉ đẩy vào Drive của email công ty đó:
+`Hóa đơn <MST> - <Tên công ty>/<kỳ>/Bảng kê <MST> <kỳ>.xlsx` (và `XML <MST> <kỳ>.zip`). Kỳ là `2026-10` nếu tải trọn tháng.
+
+1. **Làm một lần**: trang **Cài đặt** có hướng dẫn tạo OAuth client trên Google Cloud (bật Google Drive API, loại *Web application*, redirect URI `http://127.0.0.1:5000/google/callback`, bấm *Publish app*), rồi dán Client ID / Client secret.
+2. Trang **Doanh nghiệp**: nhập email Google cho từng công ty → bấm **Kết nối Drive** → đăng nhập **đúng email đó**.
+3. Khi tải hóa đơn, để tick **Đẩy lên Google Drive của từng công ty**; hoặc bấm **Đẩy lên Google Drive** ở trang Kết quả.
+
+Chống nhầm công ty:
+- Kết nối mà đăng nhập email khác email đã khai → **từ chối, không lưu**, thu hồi quyền vừa cấp.
+- Mỗi lần đẩy file đều hỏi lại Google đang là email nào; khác email đã khai → không đẩy.
+- Đổi email của công ty → tự ngắt kết nối Drive cũ.
+- File chỉ chứa hóa đơn của đúng MST đó (kiểm tra lần cuối trước khi đẩy).
+- Quyền xin là `drive.file`: công cụ chỉ thấy file do chính nó tạo, không đọc được file khác trên Drive.
+- Token Google và Client secret lưu mã hóa trong thư mục `data/`.
+
 ## Các bước test lần đầu trên máy anh (làm với 1 công ty trước)
 
 1. Chạy `run.bat`, thêm **1 công ty**.
@@ -113,6 +130,7 @@ Mỗi hàng là một hóa đơn điều chỉnh hoặc thay thế. Cột chia 3
 | Kết nối cổng hoadondientu (captcha, đăng nhập, tra cứu, XML) | **Đã viết, chưa chạy với cổng thật** — cần thử trên máy anh |
 | Kiểm tra đối tác, phiếu đánh giá, lịch sử, nhắc tra lại, danh sách rủi ro | Xong, đã kiểm thử |
 | Tổng hợp hạch toán theo loại và mã hàng, trang Phân loại hàng hóa | Xong, đã kiểm thử |
+| Đẩy file lên Google Drive riêng của từng công ty | Xong, đã kiểm thử với Google giả lập. **Cần thử trên máy anh** với tài khoản Google thật |
 | Chi tiết hàng hóa bán ra / mua vào theo mã hàng (đọc XML) | Xong, đã kiểm thử với XML mẫu. **Cần kiểm tra trên máy anh** với XML thật |
 | Nối HĐ điều chỉnh / thay thế với HĐ gốc (Excel, trang Kết quả, đọc XML) | Xong, đã kiểm thử với dữ liệu giả. **Cần kiểm tra trên máy anh**: tên trường HĐ gốc trong danh sách cổng thuế, và dấu âm / dương của số tiền HĐ điều chỉnh giảm |
 | Tự động lấy thông tin từ trang cơ quan thuế / cổng đăng ký DN | Chưa làm — hiện mở link tra rồi điền bằng tay; cần thử trên máy anh vì các trang này có captcha |

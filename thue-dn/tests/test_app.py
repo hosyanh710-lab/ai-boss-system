@@ -567,3 +567,168 @@ def test_nhieu_doanh_nghiep(client):
 
     x = c.get("/export.xlsx?mst=0300000003&tu=2026-06-01&den=2026-06-30")
     assert "bang-ke_0300000003_" in x.headers["Content-Disposition"]
+
+
+# ---------- Google Drive: mỗi công ty một email ----------
+class _Resp:
+    def __init__(self, data, status=200):
+        self._d, self.status_code, self.text = data, status, str(data)
+
+    def json(self):
+        return self._d
+
+
+class FakeGoogle:
+    """Mô phỏng Google: đăng nhập theo email, mỗi email một Drive riêng."""
+    def __init__(self):
+        self.drives: dict[str, list[dict]] = {}
+        self.revoked: list[str] = []
+        self.n = 0
+
+    def _email(self, headers):
+        return headers["Authorization"].split("at:", 1)[1]
+
+    def post(self, url, data=None, json=None, params=None, headers=None, timeout=None):
+        from thuedn import gdrive
+        if url == gdrive.TOKEN_URL:
+            if data["grant_type"] == "authorization_code":
+                e = data["code"].split("code:", 1)[1]
+                return _Resp({"access_token": f"at:{e}", "refresh_token": f"rt:{e}"})
+            return _Resp({"access_token": "at:" + data["refresh_token"].split("rt:", 1)[1]})
+        if url == gdrive.REVOKE_URL:
+            self.revoked.append(data["token"])
+            return _Resp({})
+        e = self._email(headers)
+        if url == gdrive.FILES_URL:                                   # tạo thư mục
+            return _Resp({"id": self._add(e, json["name"], json["mimeType"], json.get("parents"), None)})
+        if url == gdrive.UPLOAD_URL:
+            meta, content = self._parse(data, headers)
+            return _Resp({"id": self._add(e, meta["name"], "file", meta["parents"], content)})
+        raise AssertionError(url)
+
+    def patch(self, url, data=None, params=None, headers=None, timeout=None):
+        e = self._email(headers)
+        fid = url.rsplit("/", 1)[1]
+        _, content = self._parse(data, headers)
+        next(f for f in self.drives[e] if f["id"] == fid)["content"] = content
+        return _Resp({"id": fid})
+
+    def get(self, url, params=None, headers=None, timeout=None):
+        from thuedn import gdrive
+        import re
+        e = self._email(headers)
+        if url == gdrive.USERINFO_URL:
+            return _Resp({"email": e})
+        q = params["q"]
+        name = re.search(r"name = '((?:[^'\\]|\\.)*)'", q).group(1).replace("\\'", "'")
+        parent = re.search(r"'([^']+)' in parents", q).group(1)
+        folder = "mimeType = " in q
+        found = [f for f in self.drives.get(e, []) if f["name"] == name
+                 and (f["parents"] or ["root"])[0] == parent and (f["mime"] == gdrive.FOLDER_MIME) == folder]
+        return _Resp({"files": [{"id": f["id"], "name": f["name"]} for f in found]})
+
+    def _add(self, e, name, mime, parents, content):
+        self.n += 1
+        self.drives.setdefault(e, []).append({"id": f"f{self.n}", "name": name, "mime": mime,
+                                              "parents": parents, "content": content})
+        return f"f{self.n}"
+
+    def _parse(self, body, headers):
+        import json
+        b = headers["Content-Type"].split("boundary=")[1].encode()
+        parts = body.split(b"--" + b)
+        meta = json.loads(parts[1].split(b"\r\n\r\n", 1)[1].rsplit(b"\r\n", 1)[0])
+        content = parts[2].split(b"\r\n\r\n", 1)[1].rsplit(b"\r\n", 1)[0]
+        return meta, content
+
+    def path(self, e, f):
+        """Đường dẫn đầy đủ của một file trong Drive của email e."""
+        by = {x["id"]: x for x in self.drives[e]}
+        p = [f["name"]]
+        while f["parents"]:
+            f = by[f["parents"][0]]
+            p.insert(0, f["name"])
+        return "/".join(p)
+
+
+@pytest.fixture()
+def google(client, monkeypatch):
+    from thuedn import gdrive
+    fake = FakeGoogle()
+    monkeypatch.setattr(gdrive, "http", fake)
+    c, appmod = client
+    c.post("/cai-dat", data={"client_id": "cid.apps.googleusercontent.com", "client_secret": "bi-mat"})
+    return fake
+
+
+def _ket_noi(c, mst, dang_nhap_email):
+    from urllib.parse import parse_qs, urlparse
+    r = c.post(f"/google/ket-noi/{mst}")
+    q = parse_qs(urlparse(r.headers["Location"]).query)
+    assert "drive.file" in q["scope"][0]
+    return c.get(f"/google/callback?state={q['state'][0]}&code=code:{dang_nhap_email}"), q
+
+
+def test_google_drive_moi_cong_ty_mot_email(client, google):
+    c, appmod = client
+    st = appmod.store
+    from thuedn.portal import normalize
+    c.post("/companies", data={"name": "Công ty A", "mst": "0300000001", "password": "x", "email": "KeToan.A@gmail.com"})
+    c.post("/companies", data={"name": "Công ty B", "mst": "0300000002", "password": "x", "email": "ketoan.b@gmail.com"})
+    assert st.company("0300000001")["email"] == "ketoan.a@gmail.com"
+    assert b"bi-mat" not in st.db.execute("SELECT v FROM settings WHERE k='google_client_secret'").fetchone()[0]
+
+    # đăng nhập nhầm email B khi kết nối công ty A → từ chối, không lưu, thu hồi quyền
+    r, q = _ket_noi(c, "0300000001", "ketoan.b@gmail.com")
+    assert q["login_hint"] == ["ketoan.a@gmail.com"]
+    assert st.google_token("0300000001") is None and google.revoked == ["rt:ketoan.b@gmail.com"]
+    assert "Không lưu kết nối" in c.get("/").get_data(as_text=True)
+
+    # đăng nhập đúng email
+    _ket_noi(c, "0300000001", "ketoan.a@gmail.com")
+    _ket_noi(c, "0300000002", "ketoan.b@gmail.com")
+    assert st.google_token("0300000001") == "rt:ketoan.a@gmail.com"
+    raw = st.db.execute("SELECT google_token FROM companies WHERE mst='0300000001'").fetchone()[0]
+    assert b"rt:ketoan" not in raw                                      # token lưu mã hóa
+    assert "Đã kết nối" in c.get("/").get_data(as_text=True)
+
+    for mst, so in (("0300000001", 11), ("0300000002", 22)):
+        st.save_invoice(mst, "vao", normalize(_hd("0100000001", "C26TAA", so, "2026-06-10", 1_000_000, 1)))
+
+    r = c.post("/drive/day-len", data={"mst": ["0300000001", "0300000002"], "tu": "2026-06-01", "den": "2026-06-30"})
+    assert r.status_code == 302
+    for email, mst, so in (("ketoan.a@gmail.com", "0300000001", 11), ("ketoan.b@gmail.com", "0300000002", 22)):
+        files = [f for f in google.drives[email] if f["content"] is not None]
+        assert [google.path(email, f) for f in files] == [
+            f"Hóa đơn {mst} - Công ty {'A' if mst.endswith('1') else 'B'}/2026-06/Bảng kê {mst} 2026-06.xlsx"]
+        ws = load_workbook(io.BytesIO(files[0]["content"]))["Mua vào"]
+        rows = list(ws.iter_rows(min_row=2, values_only=True))
+        assert [(r[1], r[5]) for r in rows] == [(mst, so)]               # chỉ dữ liệu của đúng công ty
+
+    # đẩy lại cùng kỳ: ghi đè, không tạo file trùng
+    c.post("/drive/day-len", data={"mst": "0300000001", "tu": "2026-06-01", "den": "2026-06-30"})
+    assert len([f for f in google.drives["ketoan.a@gmail.com"] if f["content"] is not None]) == 1
+
+    # đổi email công ty A → tự ngắt kết nối cũ, không đẩy được nữa
+    c.post("/companies", data={"name": "Công ty A", "mst": "0300000001", "password": "x", "email": "moi.a@gmail.com"})
+    assert st.google_token("0300000001") is None
+    c.post("/drive/day-len", data={"mst": "0300000001", "tu": "2026-06-01", "den": "2026-06-30"})
+    assert "moi.a@gmail.com" not in google.drives
+
+
+def test_tai_hoa_don_xong_tu_day_len_drive(client, google):
+    c, appmod = client
+    c.post("/companies", data={"name": "DN A", "mst": "0300000000", "password": "mat-khau", "email": "a@gmail.com"})
+    c.post("/companies", data={"name": "DN chưa kết nối", "mst": "0300000009", "password": "mat-khau"})
+    _ket_noi(c, "0300000000", "a@gmail.com")
+    c.post("/download", data={"mst": ["0300000000", "0300000009"], "loai": ["vao", "ra"],
+                              "tu": "2026-06-01", "den": "2026-06-30", "drive": "on"})
+    c.get("/captcha")
+    c.post("/captcha", data={"cvalue": "abc12"})
+    c.get("/captcha")
+    c.post("/captcha", data={"cvalue": "abc12"})
+    c.get("/captcha")
+    log = " | ".join(appmod.job["log"])
+    assert "DN A: đã đẩy 1 file lên Drive a@gmail.com" in log
+    assert "DN chưa kết nối: chưa kết nối Google Drive" in log
+    assert list(google.drives) == ["a@gmail.com"]

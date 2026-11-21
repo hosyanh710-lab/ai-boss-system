@@ -9,7 +9,7 @@ from pathlib import Path
 
 from flask import Flask, flash, redirect, render_template, request, send_file, url_for
 
-from thuedn import export
+from thuedn import export, gdrive
 from thuedn.portal import PortalError, PortalSession, normalize
 from thuedn.rules import (DS_RUI_RO, KET_LUAN, NGAY_TRA_LAI, PHAN_LOAI, TRANG_THAI_NCC, chia_thang,
                           danh_gia_doi_tac, muc_rui_ro, parse_danh_sach_mst, tinh_chat, to_date)
@@ -56,11 +56,13 @@ def index():
 
 @app.post("/companies")
 def add_company():
-    mst, name, pw = (request.form.get(k, "").strip() for k in ("mst", "name", "password"))
+    mst, name, pw, email = (request.form.get(k, "").strip() for k in ("mst", "name", "password", "email"))
     if not (mst and name and pw):
         flash("Cần nhập đủ tên, MST và mật khẩu", "error")
+    elif email and "@" not in email:
+        flash("Email không hợp lệ", "error")
     else:
-        store.add_company(mst, name, pw)
+        store.add_company(mst, name, pw, email)
         flash(f"Đã lưu {name}", "ok")
     return redirect(url_for("index"))
 
@@ -87,7 +89,7 @@ def start_download():
         flash(f"Khoảng ngày không hợp lệ: {e}", "error")
         return redirect(url_for("index"))
     job.clear()
-    job.update(msts=msts, loai=loai, tu=tu, den=den, xml="xml" in request.form,
+    job.update(msts=msts, loai=loai, tu=tu, den=den, xml="xml" in request.form, drive="drive" in request.form,
                pending=[m for m in msts if not session_for(m).logged_in], log=[])
     return redirect(url_for("captcha"))
 
@@ -154,6 +156,19 @@ def run_downloads() -> None:
         except PortalError as e:
             job["log"].append(f"{name}: lỗi — {e}")
     store.ensure_suppliers_from_invoices()
+    if job.get("drive"):
+        for mst in job["msts"]:
+            s = sessions.get(mst)
+            if not s or not s.logged_in:
+                continue
+            name = store.company_name(mst)
+            if not store.google_token(mst):
+                job["log"].append(f"{name}: chưa kết nối Google Drive, không đẩy file")
+                continue
+            try:
+                job["log"].append(f"{name}: {day_len_drive(mst, job['tu'].isoformat(), job['den'].isoformat())}")
+            except gdrive.DriveError as e:
+                job["log"].append(f"{name}: KHÔNG đẩy lên Drive — {e}")
 
 
 def _save_xml(s: PortalSession, mst: str, direction: str, inv: dict, xml_dir: Path) -> None:
@@ -406,6 +421,146 @@ def luu_phan_loai():
         n += 1
     flash(f"Đã lưu phân loại {n} mặt hàng", "ok")
     return redirect(url_for("phan_loai", chieu=chieu, chua_xn=request.form.get("chua_xn") or None))
+
+
+# ---------- 7. Google Drive: mỗi công ty một tài khoản Google riêng ----------
+REDIRECT_URI = "http://127.0.0.1:5000/google/callback"
+oauth_states: dict[str, str] = {}      # state → MST đang kết nối
+
+
+def ten_ky(tu: str, den: str) -> str:
+    """'2026-10' nếu đúng trọn một tháng, ngược lại '2026-10-01_2026-10-15'."""
+    a, b = to_date(tu), to_date(den)
+    if a.day == 1 and a.year == b.year and a.month == b.month and (b + timedelta(days=1)).day == 1:
+        return f"{a:%Y-%m}"
+    return f"{tu}_{den}"
+
+
+def _google_client() -> tuple[str, str]:
+    cid, sec = store.setting("google_client_id"), store.setting("google_client_secret", secret=True)
+    if not (cid and sec):
+        raise gdrive.DriveError("Chưa cài đặt Google (vào trang Cài đặt)")
+    return cid, sec
+
+
+def day_len_drive(mst: str, tu: str, den: str) -> str:
+    """Đẩy bảng kê Excel và XML của ĐÚNG MỘT công ty lên Drive của email công ty đó."""
+    c = store.company(mst)
+    if c is None or not c["email"]:
+        raise gdrive.DriveError("chưa khai email Google cho công ty này")
+    refresh = store.google_token(mst)
+    if not refresh:
+        raise gdrive.DriveError("chưa kết nối Google Drive")
+    cid, sec = _google_client()
+    token = gdrive.access_token(cid, sec, refresh)
+    email = gdrive.email_of(token)
+    if email != c["email"] or email != (c["google_email"] or ""):
+        raise gdrive.DriveError(f"tài khoản Google đang kết nối là {email}, khác email đã khai {c['email']}. "
+                                "Không đẩy để tránh nhầm công ty; hãy kết nối lại.")
+    rows = store.invoices([mst], tu, den)
+    if any(r["company_mst"] != mst for r in rows):           # chốt chặn cuối: không lẫn dữ liệu công ty khác
+        raise gdrive.DriveError("dữ liệu lẫn công ty khác, dừng lại")
+    if not rows:
+        return f"không có hóa đơn trong kỳ, không đẩy lên Drive {email}"
+    ky = ten_ky(tu, den)
+    goc = gdrive.ensure_folder(token, f"Hóa đơn {mst} - {_ten_file(c['name'])}")
+    thu_muc = gdrive.ensure_folder(token, ky, goc)
+    files = [(f"Bảng kê {mst} {ky}.xlsx", _excel([mst], tu, den, rows),
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")]
+    if any(r["xml_path"] for r in rows):
+        files.append((f"XML {mst} {ky}.zip", export.zip_xml(rows, DATA_DIR / "xml"), "application/zip"))
+    for name, content, mime in files:
+        gdrive.upload(token, name, thu_muc, content, mime)
+    return f"đã đẩy {len(files)} file lên Drive {email}, thư mục \"Hóa đơn {mst}…/{ky}\""
+
+
+@app.route("/cai-dat", methods=["GET", "POST"])
+def cai_dat():
+    if request.method == "POST":
+        cid = request.form.get("client_id", "").strip()
+        sec = request.form.get("client_secret", "").strip()
+        if cid:
+            store.set_setting("google_client_id", cid)
+        if sec:
+            store.set_setting("google_client_secret", sec, secret=True)
+        flash("Đã lưu cài đặt Google", "ok")
+        return redirect(url_for("cai_dat"))
+    return render_template("cai_dat.html", client_id=store.setting("google_client_id") or "",
+                           co_secret=bool(store.setting("google_client_secret", secret=True)),
+                           redirect_uri=REDIRECT_URI)
+
+
+@app.post("/google/ket-noi/<mst>")
+def google_ket_noi(mst):
+    c = store.company(mst)
+    if c is None or not c["email"]:
+        flash("Khai email Google cho công ty trước (nhập lại công ty với ô Email)", "error")
+        return redirect(url_for("index"))
+    try:
+        cid, _ = _google_client()
+    except gdrive.DriveError as e:
+        flash(str(e), "error")
+        return redirect(url_for("cai_dat"))
+    state = os.urandom(16).hex()
+    oauth_states[state] = mst
+    return redirect(gdrive.auth_url(cid, REDIRECT_URI, state, c["email"]))
+
+
+@app.get("/google/callback")
+def google_callback():
+    mst = oauth_states.pop(request.args.get("state", ""), None)
+    if mst is None:
+        flash("Phiên kết nối Google không hợp lệ hoặc đã hết hạn, bấm Kết nối lại", "error")
+        return redirect(url_for("index"))
+    c = store.company(mst)
+    if request.args.get("error") or not request.args.get("code"):
+        flash(f"{c['name']}: chưa cấp quyền Google Drive", "error")
+        return redirect(url_for("index"))
+    try:
+        cid, sec = _google_client()
+        tok = gdrive.exchange_code(cid, sec, REDIRECT_URI, request.args["code"])
+        email = gdrive.email_of(tok["access_token"])
+    except gdrive.DriveError as e:
+        flash(f"{c['name']}: {e}", "error")
+        return redirect(url_for("index"))
+    if email != (c["email"] or "").lower():
+        if tok.get("refresh_token"):
+            gdrive.revoke(tok["refresh_token"])
+        flash(f"{c['name']} (MST {mst}): anh đăng nhập {email}, nhưng email đã khai là {c['email']}. "
+              "Không lưu kết nối để tránh nhầm Drive. Bấm Kết nối lại và chọn đúng email.", "error")
+        return redirect(url_for("index"))
+    if not tok.get("refresh_token"):
+        flash(f"{c['name']}: Google không cấp quyền lâu dài, bấm Kết nối lại", "error")
+        return redirect(url_for("index"))
+    store.set_google(mst, tok["refresh_token"], email, datetime.now().strftime("%Y-%m-%d %H:%M"))
+    flash(f"{c['name']}: đã kết nối Google Drive {email}", "ok")
+    return redirect(url_for("index"))
+
+
+@app.post("/google/ngat/<mst>")
+def google_ngat(mst):
+    tok = store.google_token(mst)
+    if tok:
+        gdrive.revoke(tok)
+    store.clear_google(mst)
+    flash("Đã ngắt kết nối Google Drive", "ok")
+    return redirect(url_for("index"))
+
+
+@app.post("/drive/day-len")
+def drive_day_len():
+    msts = [m for m in request.form.getlist("mst") if m]
+    tu, den = request.form.get("tu"), request.form.get("den")
+    if not (msts and tu and den):
+        flash("Chọn doanh nghiệp và khoảng ngày", "error")
+        return redirect(url_for("results"))
+    for mst in msts:
+        name = store.company_name(mst)
+        try:
+            flash(f"{name}: {day_len_drive(mst, tu, den)}", "ok")
+        except gdrive.DriveError as e:
+            flash(f"{name}: KHÔNG đẩy lên Drive — {e}", "error")
+    return redirect(url_for("results", mst=msts, tu=tu, den=den))
 
 
 if __name__ == "__main__":
