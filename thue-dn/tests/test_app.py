@@ -828,3 +828,13 @@ def test_file_nhap_misa(client):
     z = zipfile.ZipFile(io.BytesIO(c.get("/export-misa?tu=2026-10-01&den=2026-10-31").data))
     assert sorted(z.namelist()) == ["Nhap MISA 0300000000 DN A 2026-10-01_2026-10-31.xlsx",
                                     "Nhap MISA 0300000005 DN B 2026-10-01_2026-10-31.xlsx"]
+
+
+def test_dinh_dang_so_khong_thua_dau_phan_cach():
+    from openpyxl import Workbook
+    from thuedn.export import dinh_dang_so
+    ws = Workbook().active
+    for v, fmt, kq in ((2000.0, "#,##0", 2000), (12.5, "#,##0.###", 12.5), (42000000, "#,##0", 42000000)):
+        ws["A1"] = v
+        dinh_dang_so(ws["A1"])
+        assert ws["A1"].number_format == fmt and ws["A1"].value == kq and type(ws["A1"].value) is type(kq)

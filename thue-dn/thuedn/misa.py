@@ -14,6 +14,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 
+from .export import dinh_dang_so
 from .rules import bang_phan_loai, goi_y_phan_loai, ma_key, tinh_chat
 
 # (tên cột trong file nhập MISA, khóa dữ liệu)
@@ -151,7 +152,7 @@ def file_misa(invoices, items_for, categories: dict, che_do: str = "TT133") -> b
             for c in row:
                 if isinstance(c.value, (int, float)) and cot[c.column - 1][1] in ("so_luong", "don_gia",
                                                                                   "thanh_tien", "tien_thue"):
-                    c.number_format = "#,##0.##" if isinstance(c.value, float) else "#,##0"
+                    dinh_dang_so(c)
         for i, (h, _) in enumerate(cot, start=1):
             ws.column_dimensions[get_column_letter(i)].width = max(12, min(40, len(h) + 4))
         ws.freeze_panes = "A2"

@@ -26,6 +26,13 @@ MUC_RUI_RO = {"cao": "CAO", "trung_binh": "Trung bình", "thap": "Thấp", "chua
 RED = PatternFill("solid", fgColor="F8D7DA")
 
 
+def dinh_dang_so(c) -> None:
+    """Số nguyên (kể cả 2000.0 đọc từ CSDL): 2.000; số lẻ: 12,5. Tránh dấu phân cách thừa ở cuối."""
+    if isinstance(c.value, float) and c.value.is_integer():
+        c.value = int(c.value)
+    c.number_format = "#,##0" if isinstance(c.value, int) else "#,##0.###"
+
+
 def _sheet(wb: Workbook, title: str, headers: list[str]):
     ws = wb.create_sheet(title)
     ws.append(headers)
@@ -469,7 +476,7 @@ def _sheet_chi_tiet(wb: Workbook, title: str, invoices, items: dict, names,
     for row in ws.iter_rows(min_row=2):
         for c in row:
             if isinstance(c.value, (int, float)) and c.column not in so_cot:
-                c.number_format = "#,##0.##" if isinstance(c.value, float) else "#,##0"
+                dinh_dang_so(c)
     _fit(ws)
     ws.auto_filter.ref = ws.dimensions
 
@@ -532,7 +539,7 @@ def _sheet_tong_hop(wb: Workbook, tong_hop: list[dict], invoices, items: dict, n
     for row in ws.iter_rows(min_row=4):
         for c in row:
             if isinstance(c.value, (int, float)):
-                c.number_format = "#,##0.##" if isinstance(c.value, float) else "#,##0"
+                dinh_dang_so(c)
     for i, w in enumerate([28, 10, 30, 9, 13, 28, 12, 34, 9, 8, 12, 14, 18, 14, 16, 20], start=1):
         ws.column_dimensions[get_column_letter(i)].width = w
 
