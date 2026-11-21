@@ -11,10 +11,11 @@ from flask import Flask, flash, redirect, render_template, request, send_file, u
 
 from thuedn import export
 from thuedn.portal import PortalError, PortalSession, normalize
-from thuedn.rules import (DS_RUI_RO, KET_LUAN, NGAY_TRA_LAI, TRANG_THAI_NCC, chia_thang,
+from thuedn.rules import (DS_RUI_RO, KET_LUAN, NGAY_TRA_LAI, PHAN_LOAI, TRANG_THAI_NCC, chia_thang,
                           danh_gia_doi_tac, muc_rui_ro, parse_danh_sach_mst, tinh_chat, to_date)
 from thuedn.storage import Storage
 from thuedn.xmlhd import doc_zip
+from thuedn.tonghop import tong_hop_mat_hang
 
 DATA_DIR = Path(os.environ.get("THUEDN_DATA", Path(__file__).parent / "data"))
 VERIFY_SSL = os.environ.get("THUEDN_VERIFY_SSL", "1") != "0"
@@ -209,11 +210,12 @@ def results():
 
 @app.get("/export.xlsx")
 def export_excel():
-    _, tu, den, rows = _filtered()
+    msts, tu, den, rows = _filtered()
     names = {c["mst"]: c["name"] for c in store.companies()}
     data = export.bang_ke_excel(
         rows, store.supplier_map(), names,
         items=store.items_by_invoice([r["id"] for r in rows]),
+        tong_hop=tong_hop_mat_hang(store.item_lines(msts, tu, den), store.categories()),
         find_goc=lambda i: store.find_invoice(i["company_mst"], i["direction"], i["nbmst"],
                                               i["goc_khmshdon"], i["goc_khhdon"], i["goc_shdon"]),
         find_adjusting=store.find_adjusting)
@@ -342,6 +344,40 @@ def nhap_danh_sach():
                                datetime.now().strftime("%Y-%m-%d %H:%M"))
     flash(f"Đã nhập {n} MST vào danh sách {DS_RUI_RO[loai]}", "ok")
     return redirect(url_for("doi_tac"))
+
+
+
+# ---------- 6. Phân loại hàng hóa để hạch toán ----------
+@app.get("/phan-loai")
+def phan_loai():
+    chieu = request.args.get("chieu", "vao")
+    if chieu not in PHAN_LOAI:
+        chieu = "vao"
+    chua_xn = request.args.get("chua_xn") == "1"
+    rows = [r for r in tong_hop_mat_hang(store.item_lines(), store.categories(), theo_dn=False)
+            if r["chieu"] == chieu and (not chua_xn or not r["da_xac_nhan"])]
+    return render_template("phan_loai.html", rows=rows, chieu=chieu, chua_xn=chua_xn,
+                           loai=PHAN_LOAI[chieu])
+
+
+@app.post("/phan-loai")
+def luu_phan_loai():
+    chieu = request.form.get("chieu", "vao")
+    at = datetime.now().strftime("%Y-%m-%d %H:%M")
+    n = 0
+    for k in request.form:
+        if not k.startswith("pl_"):
+            continue
+        i = k[3:]
+        key = request.form.get(f"k_{i}", "")
+        parts = key.split("|", 2)
+        pl = request.form[k]
+        if len(parts) != 3 or parts[0] not in PHAN_LOAI or pl not in PHAN_LOAI[parts[0]]:
+            continue
+        store.set_category(parts[0], parts[1], parts[2], pl, request.form.get(f"tk_{i}", "").strip(), at)
+        n += 1
+    flash(f"Đã lưu phân loại {n} mặt hàng", "ok")
+    return redirect(url_for("phan_loai", chieu=chieu, chua_xn=request.form.get("chua_xn") or None))
 
 
 if __name__ == "__main__":

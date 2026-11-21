@@ -45,6 +45,7 @@
     <a href="{{ url_for('index') }}" class="{{ 'on' if request.endpoint=='index' }}">Doanh nghiệp</a>
     <a href="{{ url_for('results') }}" class="{{ 'on' if request.endpoint=='results' }}">Kết quả</a>
     <a href="{{ url_for('suppliers') }}" class="{{ 'on' if request.endpoint=='suppliers' }}">Nhà cung cấp</a>
+    <a href="{{ url_for('phan_loai') }}" class="{{ 'on' if request.endpoint=='phan_loai' }}">Phân loại hàng hóa</a>
     <a href="{{ url_for('doi_tac') }}" class="{{ 'on' if request.endpoint in ('doi_tac','phieu_doi_tac') }}">Kiểm tra đối tác</a>
   </nav>
 </header>

@@ -132,3 +132,55 @@ def parse_danh_sach_mst(text: str) -> list[tuple[str, str]]:
         if m:
             out[m.group(1)] = m.group(2).strip().strip('"')
     return list(out.items())
+
+
+# ---- Phân loại hàng hóa / dịch vụ để hạch toán ----
+# (mã, tên, tài khoản gợi ý). Tài khoản chỉ là gợi ý, anh sửa được trên trang Phân loại hàng hóa.
+PHAN_LOAI = {
+    "vao": {
+        "hang_hoa": ("Hàng hóa", "156"),
+        "nvl": ("Nguyên vật liệu", "152"),
+        "ccdc": ("Công cụ, dụng cụ", "153"),
+        "tscd": ("Tài sản cố định", "211"),
+        "cp_qldn": ("Chi phí quản lý doanh nghiệp", "642"),
+        "cp_bh": ("Chi phí bán hàng", "641"),
+        "cp_sx": ("Chi phí sản xuất chung", "627"),
+        "chiet_khau": ("Chiết khấu, giảm giá được hưởng", ""),
+        "khong_tinh": ("Không tính (ghi chú, diễn giải)", ""),
+    },
+    "ra": {
+        "dt_hang": ("Doanh thu bán hàng hóa", "5111"),
+        "dt_tp": ("Doanh thu bán thành phẩm", "5112"),
+        "dt_dv": ("Doanh thu cung cấp dịch vụ", "5113"),
+        "chiet_khau": ("Chiết khấu thương mại, giảm giá", "5211"),
+        "khong_tinh": ("Không tính (ghi chú, diễn giải)", ""),
+    },
+}
+
+_TU_DICH_VU = ("phí", "dịch vụ", "vận chuyển", "vận tải", "cước", "thuê", "sửa chữa", "bảo trì", "bảo dưỡng",
+               "tư vấn", "tiền điện", "điện năng", "tiền nước", "nước sạch", "internet", "viễn thông",
+               "quảng cáo", "phần mềm", "bản quyền", "bảo hiểm", "hoa hồng", "đào tạo", "kiểm toán",
+               "lắp đặt", "vệ sinh", "bảo vệ", "chuyển phát", "giao hàng", "khách sạn", "phòng nghỉ",
+               "ăn uống", "suất ăn", "vé máy bay", "taxi", "xăng", "dầu diesel", "nhiên liệu", "thiết kế",
+               "gia hạn", "hosting", "tên miền", "thù lao", "công tác phí")
+_DVT_DICH_VU = ("tháng", "lần", "chuyến", "gói", "giờ", "ngày", "đêm", "kỳ", "năm", "km", "lượt", "suất")
+
+
+def ma_key(ma_hang: str | None, ten_hang: str | None) -> str:
+    """Khóa nhận diện một mặt hàng: mã hàng; không có mã thì theo tên."""
+    if ma_hang and ma_hang.strip():
+        return ma_hang.strip()
+    return "TEN:" + " ".join((ten_hang or "").lower().split())
+
+
+def goi_y_phan_loai(chieu: str, ten_hang: str | None, dvt: str | None, tinh_chat_dong: str | None) -> str:
+    ten = " ".join((ten_hang or "").lower().split())
+    dv = (dvt or "").strip().lower()
+    if tinh_chat_dong == "Ghi chú, diễn giải":
+        return "khong_tinh"
+    if tinh_chat_dong == "Chiết khấu thương mại" or "chiết khấu" in ten or "giảm giá" in ten:
+        return "chiet_khau"
+    dich_vu = any(t in ten for t in _TU_DICH_VU) or dv in _DVT_DICH_VU
+    if chieu == "ra":
+        return "dt_dv" if dich_vu else "dt_hang"
+    return "cp_qldn" if dich_vu else "hang_hoa"

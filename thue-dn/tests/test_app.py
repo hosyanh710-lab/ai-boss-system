@@ -100,7 +100,8 @@ def test_luong_day_du(client):
 
     x = c.get("/export.xlsx?mst=0300000000&tu=2026-06-01&den=2026-06-30")
     wb = load_workbook(io.BytesIO(x.data))
-    assert wb.sheetnames == ["Mua vào", "Bán ra", "Điều chỉnh - thay thế", "Chi tiết bán ra", "Chi tiết mua vào"]
+    assert wb.sheetnames == ["Mua vào", "Bán ra", "Điều chỉnh - thay thế", "Chi tiết bán ra", "Chi tiết mua vào",
+                             "Tổng hợp hạch toán"]
     assert wb["Mua vào"].max_row == 3 and wb["Bán ra"].max_row == 2
     assert wb["Điều chỉnh - thay thế"].max_row == 3   # 2 hàng tiêu đề + 1 HĐ điều chỉnh
     head_vao = [h.value for h in wb["Mua vào"][1]]
@@ -396,3 +397,81 @@ def test_sheet_chi_tiet(client, tmp_path):
 
     mv = [dict(zip(head, r)) for r in wb["Chi tiết mua vào"].iter_rows(min_row=2, values_only=True)]
     assert len(mv) == 1 and mv[0]["Mã hàng"] is None and "Chưa có chi tiết" in mv[0]["Ghi chú"]
+
+
+# ---------- Tổng hợp hạch toán, phân loại hàng hóa ----------
+from thuedn.rules import goi_y_phan_loai  # noqa: E402
+
+
+def test_goi_y_phan_loai():
+    assert goi_y_phan_loai("vao", "Thép cuộn CB240", "kg", "Hàng hóa, dịch vụ") == "hang_hoa"
+    assert goi_y_phan_loai("vao", "Phí vận chuyển", "chuyến", None) == "cp_qldn"
+    assert goi_y_phan_loai("vao", "Cước internet tháng 10", None, None) == "cp_qldn"
+    assert goi_y_phan_loai("vao", "Bàn làm việc", "tháng", None) == "cp_qldn"       # ĐVT dịch vụ
+    assert goi_y_phan_loai("vao", "Chiết khấu thương mại", None, "Chiết khấu thương mại") == "chiet_khau"
+    assert goi_y_phan_loai("ra", "Thép cuộn", "kg", None) == "dt_hang"
+    assert goi_y_phan_loai("ra", "Dịch vụ lắp đặt", "lần", None) == "dt_dv"
+
+
+def _xml_zip(lines):
+    import zipfile
+    x = "<HDon><DLHDon><NDHDon><DSHHDVu>" + "".join(
+        f"<HHDVu><TChat>{t}</TChat><STT>{i + 1}</STT><MHHDVu>{m}</MHHDVu><THHDVu>{n}</THHDVu><DVTinh>{d}</DVTinh>"
+        f"<SLuong>{q}</SLuong><DGia>{p}</DGia><ThTien>{tt}</ThTien><TSuat>{ts}</TSuat></HHDVu>"
+        for i, (t, m, n, d, q, p, tt, ts) in enumerate(lines)) + "</DSHHDVu></NDHDon></DLHDon></HDon>"
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("hd.xml", x.encode())
+    return buf.getvalue()
+
+
+def test_tong_hop_hach_toan(client):
+    c, appmod = client
+    from thuedn.portal import normalize
+    st = appmod.store
+
+    def them(direction, nb, so, tthai, lines):
+        r = _hd(nb, "C26TAA", so, "2026-06-10", 1, tthai)
+        st.save_invoice("0300000000", direction, normalize(r))
+        iid = [i for i in st.invoices(direction=direction) if i["shdon"] == str(so) and i["nbmst"] == nb][0]["id"]
+        appmod.luu_xml(iid, f"{so}.zip", _xml_zip(lines))
+
+    them("vao", "0100000001", 1, 1, [(1, "SP-1", "Thép cuộn", "kg", 1000, 18000, 18_000_000, "10%"),
+                                     (1, "VC", "Phí vận chuyển", "chuyến", 1, 500_000, 500_000, "8%")])
+    them("vao", "0100000001", 2, 1, [(1, "SP-1", "Thép cuộn", "kg", 500, 19000, 9_500_000, "10%")])
+    them("vao", "0100000002", 3, 1, [(1, "SP-1", "Giấy A4", "ram", 10, 60000, 600_000, "10%")])  # trùng mã, khác NB
+    them("vao", "0100000001", 4, 4, [(1, "SP-1", "Thép cuộn", "kg", 999, 1, 999, "10%")])        # bị thay thế: bỏ
+    st.save_invoice("0300000000", "vao", normalize(_hd("0100000009", "C26TZZ", 9, "2026-06-11", 2_000_000, 1)))
+
+    x = c.get("/export.xlsx?mst=0300000000&tu=2026-06-01&den=2026-06-30")
+    ws = load_workbook(io.BytesIO(x.data))["Tổng hợp hạch toán"]
+    vals = [r for r in ws.iter_rows(values_only=True)]
+    i_ma = next(i for i, r in enumerate(vals) if r[0] == "CHI TIẾT THEO MÃ HÀNG")
+    loai = {r[2]: r for r in vals[4:i_ma] if r[1] in ("Mua vào", "Bán ra")}
+    assert loai["Hàng hóa"][5] == 28_100_000 and loai["Hàng hóa"][4] == 2      # thép + giấy, 2 mặt hàng
+    assert loai["Chi phí quản lý doanh nghiệp"][5] == 500_000
+    assert loai["Chi phí quản lý doanh nghiệp"][6] == 40_000
+    assert any("1 hóa đơn chưa có chi tiết" in str(r[2]) for r in vals[4:i_ma])
+
+    head = vals[i_ma + 1]
+    ma = [dict(zip(head, r)) for r in vals[i_ma + 2:]]
+    thep = next(r for r in ma if r["Tên hàng hóa, dịch vụ"] == "Thép cuộn")
+    assert thep["Số HĐ"] == 2 and thep["Số lượng"] == 1500 and thep["Thành tiền chưa thuế"] == 27_500_000
+    assert thep["Đơn giá bình quân"] == 18333 and thep["TK gợi ý"] == "156"
+    assert thep["Xác nhận phân loại"] == "Tự gợi ý, cần xem"
+    assert len([r for r in ma if r["Mã hàng"] == "SP-1"]) == 2                    # tách theo người bán
+
+    # trang phân loại: đổi Phí vận chuyển sang Chi phí bán hàng, TK 641
+    page = c.get("/phan-loai?chieu=vao").get_data(as_text=True)
+    assert "Phí vận chuyển" in page and "Gợi ý" in page
+    import re
+    idx = re.search(r'name="k_(\d+)" value="vao\|0100000001\|VC"', page).group(1)
+    form = {"chieu": "vao", f"k_{idx}": "vao|0100000001|VC", f"pl_{idx}": "cp_bh", f"tk_{idx}": "6417"}
+    assert c.post("/phan-loai", data=form).status_code == 302
+    assert "Phí vận chuyển" not in c.get("/phan-loai?chieu=vao&chua_xn=1").get_data(as_text=True)
+
+    ws = load_workbook(io.BytesIO(c.get("/export.xlsx?mst=0300000000&tu=2026-06-01&den=2026-06-30").data))[
+        "Tổng hợp hạch toán"]
+    vals = [r for r in ws.iter_rows(values_only=True)]
+    vc = next(r for r in vals if r[7] == "Phí vận chuyển")
+    assert vc[2] == "Chi phí bán hàng" and vc[3] == "6417" and vc[-1] == "Đã xác nhận"

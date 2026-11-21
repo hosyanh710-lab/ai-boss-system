@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Phân loại hàng hóa{% endblock %}
+{% block body %}
+<h1>Phân loại hàng hóa để hạch toán</h1>
+<p class="muted">Mỗi dòng là một mặt hàng lấy từ chi tiết hóa đơn (cần tải kèm XML). Công cụ tự gợi ý theo tên hàng và đơn vị tính;
+  anh chọn lại nếu chưa đúng rồi bấm Lưu. Lựa chọn được ghi nhớ cho các kỳ sau và dùng trong sheet "Tổng hợp hạch toán".
+  Mua vào nhận diện theo người bán + mã hàng (mã hàng là mã của người bán).</p>
+
+<form class="card row" method="get">
+  <label>Chiều
+    <select name="chieu" onchange="this.form.submit()">
+      <option value="vao" {{ 'selected' if chieu=='vao' }}>Mua vào</option>
+      <option value="ra" {{ 'selected' if chieu=='ra' }}>Bán ra</option>
+    </select></label>
+  <label class="inline"><input type="checkbox" name="chua_xn" value="1" {{ 'checked' if chua_xn }} onchange="this.form.submit()"> Chỉ hiện mục chưa xác nhận</label>
+</form>
+
+<form class="card scroll" method="post">
+  <input type="hidden" name="chieu" value="{{ chieu }}">
+  <input type="hidden" name="chua_xn" value="{{ '1' if chua_xn }}">
+  <p class="muted">{{ rows|length }} mặt hàng{% if rows %} · bấm Lưu để xác nhận toàn bộ phân loại đang hiển thị{% endif %}</p>
+  <table>
+    <thead><tr>{% if chieu=='vao' %}<th>Người bán</th>{% endif %}<th>Mã hàng</th><th>Tên hàng hóa, dịch vụ</th><th>ĐVT</th>
+      <th class="num">Số HĐ</th><th class="num">Thành tiền</th><th>Phân loại</th><th>TK</th><th></th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        {% if chieu=='vao' %}<td>{{ r.nguoi_ban or '' }}<br><span class="muted">{{ r.key_mst }}</span></td>{% endif %}
+        <td>{{ r.ma_hang or '' }}</td><td style="min-width:220px">{{ r.ten_hang or '' }}</td><td>{{ r.dvt or '' }}</td>
+        <td class="num">{{ r.so_hd }}</td><td class="num">{{ '{:,.0f}'.format(r.thanh_tien) }}</td>
+        <td>
+          <input type="hidden" name="k_{{ loop.index }}" value="{{ r.chieu }}|{{ r.key_mst }}|{{ r.ma_key }}">
+          <select name="pl_{{ loop.index }}" data-tk="tk_{{ loop.index }}" aria-label="Phân loại {{ r.ten_hang }}">
+            {% for k, v in loai.items() %}<option value="{{ k }}" data-tk="{{ v[1] }}" {{ 'selected' if r.phan_loai==k }}>{{ v[0] }}</option>{% endfor %}
+          </select></td>
+        <td><input name="tk_{{ loop.index }}" id="tk_{{ loop.index }}" value="{{ r.tai_khoan }}" size="6" aria-label="Tài khoản"></td>
+        <td>{% if r.da_xac_nhan %}<span class="tag thap">Đã xác nhận</span>{% else %}<span class="tag trung_binh">Gợi ý</span>{% endif %}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="9" class="muted">Chưa có chi tiết hàng hóa. Tải hóa đơn với ô "Tải kèm XML" được tick.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% if rows %}<div class="row" style="margin-top:16px"><button type="submit">Lưu phân loại</button></div>{% endif %}
+</form>
+<script>
+  // đổi phân loại thì điền sẵn tài khoản gợi ý của loại đó
+  document.querySelectorAll('select[data-tk]').forEach(function (sel) {
+    sel.addEventListener('change', function () {
+      var tk = document.getElementById(sel.dataset.tk);
+      tk.value = sel.options[sel.selectedIndex].dataset.tk;
+    });
+  });
+</script>
+{% endblock %}

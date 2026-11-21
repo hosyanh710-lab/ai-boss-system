@@ -76,6 +76,17 @@ CREATE TABLE IF NOT EXISTS invoice_items (
     thue_suat TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_invoice_items ON invoice_items(invoice_id, stt);
+-- Phân loại hạch toán anh đã xác nhận cho từng mặt hàng.
+-- key_mst: MST người bán (mua vào, vì mã hàng là mã của người bán) hoặc MST DN của anh (bán ra)
+CREATE TABLE IF NOT EXISTS item_categories (
+    chieu TEXT NOT NULL,
+    key_mst TEXT NOT NULL,
+    ma_key TEXT NOT NULL,
+    phan_loai TEXT NOT NULL,
+    tai_khoan TEXT,
+    updated_at TEXT,
+    PRIMARY KEY (chieu, key_mst, ma_key)
+);
 -- Danh sách cơ quan thuế công bố: DN rủi ro cao, DN bị công khai nợ thuế
 CREATE TABLE IF NOT EXISTS watchlist (
     mst TEXT NOT NULL,
@@ -217,6 +228,37 @@ class Storage:
                     "ORDER BY invoice_id, stt", part):
                 out.setdefault(r["invoice_id"], []).append(r)
         return out
+
+    def categories(self) -> dict[tuple[str, str, str], sqlite3.Row]:
+        return {(r["chieu"], r["key_mst"], r["ma_key"]): r
+                for r in self.db.execute("SELECT * FROM item_categories")}
+
+    def set_category(self, chieu: str, key_mst: str, ma_key: str, phan_loai: str,
+                     tai_khoan: str, at: str) -> None:
+        self.db.execute(
+            """INSERT INTO item_categories(chieu, key_mst, ma_key, phan_loai, tai_khoan, updated_at)
+               VALUES(?,?,?,?,?,?) ON CONFLICT(chieu, key_mst, ma_key) DO UPDATE SET
+                   phan_loai=excluded.phan_loai, tai_khoan=excluded.tai_khoan, updated_at=excluded.updated_at""",
+            (chieu, key_mst, ma_key, phan_loai, tai_khoan, at))
+        self.db.commit()
+
+    def item_lines(self, msts: list[str] | None = None, date_from: str | None = None,
+                   date_to: str | None = None) -> list[sqlite3.Row]:
+        """Dòng hàng hóa kèm thông tin hóa đơn, bỏ HĐ bị thay thế (4) và bị hủy (6) để không tính trùng."""
+        sql = """SELECT it.*, i.company_mst, i.direction, i.nbmst, i.nbten, i.tdlap, i.tthai, i.id AS hd_id
+                 FROM invoice_items it JOIN invoices i ON i.id = it.invoice_id
+                 WHERE COALESCE(i.tthai, 1) NOT IN (4, 6)"""
+        args: list = []
+        if msts:
+            sql += f" AND i.company_mst IN ({','.join('?' * len(msts))})"
+            args += msts
+        if date_from:
+            sql += " AND i.tdlap >= ?"
+            args.append(date_from)
+        if date_to:
+            sql += " AND i.tdlap <= ?"
+            args.append(date_to)
+        return self.db.execute(sql + " ORDER BY i.company_mst, i.direction, i.tdlap, it.stt", args).fetchall()
 
     def set_xml_path(self, invoice_id: int, path: str) -> None:
         self.db.execute("UPDATE invoices SET xml_path=? WHERE id=?", (path, invoice_id))

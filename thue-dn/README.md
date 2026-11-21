@@ -5,7 +5,7 @@ Công cụ chạy trên máy Windows (giai đoạn 1) để:
 - Tải hóa đơn **mua vào**, **bán ra** từ cổng hoadondientu.gdt.gov.vn cho nhiều doanh nghiệp; tự tách hóa đơn **điều chỉnh / thay thế / bị hủy**.
 - **Kiểm tra người bán** trên hóa đơn đầu vào; cảnh báo **rủi ro CAO** khi hóa đơn lập sau ngày người bán ngừng / chấm dứt hoạt động.
 - **Kiểm tra đối tác trước khi ký hợp đồng** (chỉ cần MST): kết luận *Có thể giao dịch / Cần xem thêm / Không nên giao dịch*, lưu lịch sử làm bằng chứng, nhắc tra lại nhà cung cấp đang giao dịch.
-- Xuất **bảng kê Excel** (5 sheet: Mua vào, Bán ra, Điều chỉnh - thay thế, Chi tiết bán ra, Chi tiết mua vào) và **XML** dạng .zip. Sheet *Điều chỉnh - thay thế* ghi mỗi hóa đơn điều chỉnh / thay thế trên một hàng, **cùng hàng với hóa đơn gốc** mà nó điều chỉnh.
+- Xuất **bảng kê Excel** (6 sheet: Mua vào, Bán ra, Điều chỉnh - thay thế, Chi tiết bán ra, Chi tiết mua vào, Tổng hợp hạch toán) và **XML** dạng .zip. Sheet *Điều chỉnh - thay thế* ghi mỗi hóa đơn điều chỉnh / thay thế trên một hàng, **cùng hàng với hóa đơn gốc** mà nó điều chỉnh.
 
 Kế hoạch: https://claude.ai/artifact/EXTBVqygPxvgwozX54Ze9e
 Giao diện mẫu: https://claude.ai/artifact/G5HVipgaXqbfMmqopAm14q
@@ -60,6 +60,14 @@ Mỗi hàng là **một dòng hàng hóa / dịch vụ của một hóa đơn**:
 - Hóa đơn chưa có XML vẫn có một hàng, tô vàng, ghi "Chưa có chi tiết hàng hóa".
 - XML không ghi tiền thuế theo từng dòng, nên tiền thuế dòng = thành tiền × thuế suất (có thể lệch vài đồng do làm tròn so với tổng thuế trên hóa đơn).
 
+### Sheet "Tổng hợp hạch toán" và trang Phân loại hàng hóa
+
+- **Phần 1 – Tổng hợp theo loại**: mỗi doanh nghiệp × chiều × loại (Hàng hóa 156, Nguyên vật liệu 152, Công cụ dụng cụ 153, Tài sản cố định 211, Chi phí QLDN 642, Chi phí bán hàng 641, Chi phí SXC 627, Doanh thu bán hàng 5111 / thành phẩm 5112 / dịch vụ 5113, Chiết khấu…): số mặt hàng, thành tiền, tiền thuế, tổng. Có dòng báo số hóa đơn chưa có chi tiết hàng hóa để đối chiếu tổng.
+- **Phần 2 – Chi tiết theo mã hàng**: mỗi mặt hàng một dòng: phân loại, TK, người bán, mã hàng, tên, ĐVT, số HĐ, tổng số lượng, đơn giá bình quân, thành tiền, tiền thuế, và đã xác nhận phân loại hay mới là gợi ý (tô vàng).
+- Không tính hóa đơn bị thay thế, bị hủy; hóa đơn điều chỉnh cộng theo số tiền ghi trên hóa đơn.
+- Phân loại tự gợi ý theo tên hàng và ĐVT (phí, cước, thuê, dịch vụ, tháng, chuyến… → chi phí / doanh thu dịch vụ). Vào trang **Phân loại hàng hóa** để chọn lại và sửa tài khoản; lựa chọn được ghi nhớ cho các kỳ sau. Mua vào nhận diện theo người bán + mã hàng.
+- Tài khoản theo hệ thống TT200 / TT133 phổ biến, **chỉ là gợi ý**; kế toán quyết định cuối cùng.
+
 ### Sheet "Điều chỉnh - thay thế"
 
 Mỗi hàng là một hóa đơn điều chỉnh hoặc thay thế. Cột chia 3 nhóm, từ trái sang phải: thông tin chung (DN, đối tác, loại, lần điều chỉnh) · hóa đơn gốc (bị điều chỉnh / bị thay thế) · hóa đơn điều chỉnh / thay thế, cuối cùng là tổng sau điều chỉnh (tạm tính) và ghi chú.
@@ -78,6 +86,7 @@ Mỗi hàng là một hóa đơn điều chỉnh hoặc thay thế. Cột chia 3
 | Xuất Excel, gộp nhiều DN, tô đỏ rủi ro cao | Xong, đã kiểm thử |
 | Kết nối cổng hoadondientu (captcha, đăng nhập, tra cứu, XML) | **Đã viết, chưa chạy với cổng thật** — cần thử trên máy anh |
 | Kiểm tra đối tác, phiếu đánh giá, lịch sử, nhắc tra lại, danh sách rủi ro | Xong, đã kiểm thử |
+| Tổng hợp hạch toán theo loại và mã hàng, trang Phân loại hàng hóa | Xong, đã kiểm thử |
 | Chi tiết hàng hóa bán ra / mua vào theo mã hàng (đọc XML) | Xong, đã kiểm thử với XML mẫu. **Cần kiểm tra trên máy anh** với XML thật |
 | Nối HĐ điều chỉnh / thay thế với HĐ gốc (Excel, trang Kết quả, đọc XML) | Xong, đã kiểm thử với dữ liệu giả. **Cần kiểm tra trên máy anh**: tên trường HĐ gốc trong danh sách cổng thuế, và dấu âm / dương của số tiền HĐ điều chỉnh giảm |
 | Tự động lấy thông tin từ trang cơ quan thuế / cổng đăng ký DN | Chưa làm — hiện mở link tra rồi điền bằng tay; cần thử trên máy anh vì các trang này có captcha |

@@ -42,7 +42,8 @@ def _fit(ws) -> None:
 
 
 def bang_ke_excel(invoices, suppliers: dict, company_names: dict[str, str],
-                  find_goc=None, find_adjusting=None, items: dict | None = None) -> bytes:
+                  find_goc=None, find_adjusting=None, items: dict | None = None,
+                  tong_hop: list[dict] | None = None) -> bytes:
     """find_goc(inv) → HĐ gốc của một HĐ điều chỉnh / thay thế (tìm trong toàn bộ dữ liệu đã tải);
     find_adjusting(goc) → các HĐ điều chỉnh / thay thế trỏ tới HĐ gốc đó."""
     invoices = list(invoices)
@@ -57,6 +58,8 @@ def bang_ke_excel(invoices, suppliers: dict, company_names: dict[str, str],
     items = items or {}
     for title, d in (("Chi tiết bán ra", "ra"), ("Chi tiết mua vào", "vao")):
         _sheet_chi_tiet(wb, title, [i for i in invoices if i["direction"] == d], items, company_names)
+    if tong_hop is not None:
+        _sheet_tong_hop(wb, tong_hop, invoices, items, company_names)
 
     _sheet_hd(ws_vao, [i for i in invoices if i["direction"] == "vao"], company_names, find_goc,
               find_adjusting, suppliers)
@@ -368,6 +371,69 @@ def _sheet_chi_tiet(wb: Workbook, title: str, invoices, items: dict, names) -> N
                 c.number_format = "#,##0.##" if isinstance(c.value, float) else "#,##0"
     _fit(ws)
     ws.auto_filter.ref = ws.dimensions
+
+
+# ---- Sheet tổng hợp để hạch toán: phần 1 theo loại, phần 2 theo mã hàng ----
+HEADERS_TH_LOAI = ["Doanh nghiệp", "Chiều", "Phân loại", "TK gợi ý", "Số mặt hàng",
+                   "Thành tiền chưa thuế", "Tiền thuế", "Tổng cộng"]
+HEADERS_TH_MA = ["Doanh nghiệp", "Chiều", "Phân loại", "TK gợi ý", "MST người bán", "Tên người bán",
+                 "Mã hàng", "Tên hàng hóa, dịch vụ", "ĐVT", "Số HĐ", "Số lượng", "Đơn giá bình quân",
+                 "Thành tiền chưa thuế", "Tiền thuế", "Tổng cộng", "Phân loại"]
+
+
+def _sheet_tong_hop(wb: Workbook, tong_hop: list[dict], invoices, items: dict, names) -> None:
+    ws = wb.create_sheet("Tổng hợp hạch toán")
+    bold = Font(bold=True)
+    ws.append(["TỔNG HỢP THEO LOẠI ĐỂ HẠCH TOÁN"])
+    ws["A1"].font = Font(bold=True, size=13)
+    ws.append(["Không tính hóa đơn bị thay thế và bị hủy. Hóa đơn điều chỉnh được cộng theo số tiền ghi trên "
+               "hóa đơn. Tài khoản chỉ là gợi ý; sửa phân loại ở trang Phân loại hàng hóa."])
+    ws.append([])
+    ws.append(HEADERS_TH_LOAI)
+    for c in ws[ws.max_row]:
+        c.font, c.fill = bold, GREY
+    loai: dict = {}
+    for r in tong_hop:
+        k = (r["company_mst"], r["chieu"], r["ten_phan_loai"], r["tai_khoan"])
+        v = loai.setdefault(k, [0, 0, 0])
+        v[0] += 1
+        v[1] += r["thanh_tien"]
+        v[2] += r["tien_thue"]
+    for (dn, chieu, ten, tk), (n, tt, thue) in loai.items():
+        ws.append([names.get(dn, dn), "Mua vào" if chieu == "vao" else "Bán ra", ten, tk, n, tt, thue, tt + thue])
+
+    # hóa đơn chưa có chi tiết hàng hóa: báo riêng để đối chiếu tổng
+    thieu = [i for i in invoices if not items.get(i["id"]) and (i["tthai"] or 1) not in (4, 6)]
+    if thieu:
+        tien = sum(i["tgtcthue"] or 0 for i in thieu)
+        ws.append([None, None, f"{len(thieu)} hóa đơn chưa có chi tiết hàng hóa (chưa tính ở trên)", None, None,
+                   tien, None, None])
+        for c in ws[ws.max_row]:
+            c.fill = YELLOW
+
+    ws.append([])
+    ws.append(["CHI TIẾT THEO MÃ HÀNG"])
+    ws.cell(ws.max_row, 1).font = Font(bold=True, size=13)
+    ws.append(HEADERS_TH_MA[:-1] + ["Xác nhận phân loại"])
+    dau = ws.max_row
+    for c in ws[dau]:
+        c.font, c.fill = bold, GREY
+    for r in tong_hop:
+        vao = r["chieu"] == "vao"
+        ws.append([names.get(r["company_mst"], r["company_mst"]), "Mua vào" if vao else "Bán ra",
+                   r["ten_phan_loai"], r["tai_khoan"], r["key_mst"] if vao else None, r["nguoi_ban"],
+                   r["ma_hang"], r["ten_hang"], r["dvt"], r["so_hd"], r["so_luong"], r["don_gia_bq"],
+                   r["thanh_tien"], r["tien_thue"], r["thanh_tien"] + r["tien_thue"],
+                   "Đã xác nhận" if r["da_xac_nhan"] else "Tự gợi ý, cần xem"])
+        if not r["da_xac_nhan"]:
+            ws.cell(ws.max_row, len(HEADERS_TH_MA)).fill = YELLOW
+    ws.auto_filter.ref = f"A{dau}:{get_column_letter(len(HEADERS_TH_MA))}{max(ws.max_row, dau)}"
+    for row in ws.iter_rows(min_row=4):
+        for c in row:
+            if isinstance(c.value, (int, float)):
+                c.number_format = "#,##0.##" if isinstance(c.value, float) else "#,##0"
+    for i, w in enumerate([28, 10, 30, 9, 13, 28, 12, 34, 9, 8, 12, 14, 18, 14, 16, 20], start=1):
+        ws.column_dimensions[get_column_letter(i)].width = w
 
 
 def zip_xml(invoices, base_dir: Path) -> bytes:
