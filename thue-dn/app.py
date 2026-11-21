@@ -9,7 +9,7 @@ from pathlib import Path
 
 from flask import Flask, flash, redirect, render_template, request, send_file, url_for
 
-from thuedn import export, gdrive
+from thuedn import export, gdrive, misa
 from thuedn.portal import PortalError, PortalSession, normalize
 from thuedn.rules import (CHE_DO_KE_TOAN, DS_RUI_RO, KET_LUAN, NGAY_TRA_LAI, PHAN_LOAI, TRANG_THAI_NCC, chia_thang,
                           bang_phan_loai, danh_gia_doi_tac, muc_rui_ro, parse_danh_sach_mst, tinh_chat, to_date)
@@ -253,6 +253,28 @@ def _ten_file(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip()[:60] or "DN"
 
 
+def _misa(mst: str, tu, den) -> bytes:
+    rows = store.invoices([mst], tu, den)
+    return misa.file_misa(rows, lambda i: store.items_by_invoice([i]).get(i, []), store.categories(), che_do())
+
+
+@app.get("/export-misa")
+def export_misa():
+    """File chứng từ hạch toán sẵn để nhập khẩu vào MISA: mỗi công ty một file (MISA nhập theo từng công ty)."""
+    msts, tu, den, _ = _filtered()
+    names = {c["mst"]: c["name"] for c in store.companies()}
+    if len(msts) == 1:
+        return send_file(io.BytesIO(_misa(msts[0], tu, den)), as_attachment=True,
+                         download_name=f"Nhap MISA {msts[0]} {tu}_{den}.xlsx",
+                         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for mst in msts:
+            z.writestr(f"Nhap MISA {mst} {_ten_file(names.get(mst, mst))} {tu}_{den}.xlsx", _misa(mst, tu, den))
+    return send_file(io.BytesIO(buf.getvalue()), as_attachment=True,
+                     download_name=f"nhap-misa-tung-dn_{tu}_{den}.zip", mimetype="application/zip")
+
+
 @app.get("/export-tung-dn.zip")
 def export_tung_dn():
     """Mỗi doanh nghiệp một file Excel riêng, gom trong một file .zip."""
@@ -417,7 +439,8 @@ def luu_phan_loai():
         pl = request.form[k]
         if len(parts) != 3 or parts[0] not in PHAN_LOAI or pl not in PHAN_LOAI[parts[0]]:
             continue
-        store.set_category(parts[0], parts[1], parts[2], pl, request.form.get(f"tk_{i}", "").strip(), at)
+        store.set_category(parts[0], parts[1], parts[2], pl, request.form.get(f"tk_{i}", "").strip(), at,
+                           request.form.get(f"ma_{i}", "").strip(), request.form.get(f"kho_{i}", "").strip())
         n += 1
     flash(f"Đã lưu phân loại {n} mặt hàng", "ok")
     return redirect(url_for("phan_loai", chieu=chieu, chua_xn=request.form.get("chua_xn") or None))
@@ -471,8 +494,9 @@ def day_len_drive(mst: str, tu: str, den: str) -> str:
     ky = ten_ky(tu, den)
     goc = gdrive.ensure_folder(token, f"Hóa đơn {mst} - {_ten_file(c['name'])}")
     thu_muc = gdrive.ensure_folder(token, ky, goc)
-    files = [(f"Bảng kê {mst} {ky}.xlsx", _excel([mst], tu, den, rows),
-              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")]
+    xlsx = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    files = [(f"Bảng kê {mst} {ky}.xlsx", _excel([mst], tu, den, rows), xlsx),
+             (f"Nhập MISA {mst} {ky}.xlsx", _misa(mst, tu, den), xlsx)]
     if any(r["xml_path"] for r in rows):
         files.append((f"XML {mst} {ky}.zip", export.zip_xml(rows, DATA_DIR / "xml"), "application/zip"))
     for name, content, mime in files:

@@ -61,6 +61,8 @@ def tong_hop_mat_hang(lines, categories: dict, theo_dn: bool = True, che_do: str
             "thanh_tien": g["thanh_tien"], "tien_thue": g["tien_thue"],
             "phan_loai": pl, "ten_phan_loai": bang[g["chieu"]][pl][0], "tai_khoan": tk or "",
             "da_xac_nhan": xn,
+            "ma_misa": (da_chon["ma_misa"] if da_chon is not None else None) or "",
+            "kho": (da_chon["kho"] if da_chon is not None else None) or "",
         })
     thu_tu = {c: i for chieu in PHAN_LOAI for i, c in enumerate(PHAN_LOAI[chieu])}
     out.sort(key=lambda r: (r["company_mst"], r["chieu"] != "vao", thu_tu[r["phan_loai"]],

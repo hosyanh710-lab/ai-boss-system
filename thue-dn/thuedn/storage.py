@@ -124,6 +124,10 @@ class Storage:
             if col not in cols:
                 self.db.execute(f"ALTER TABLE invoices ADD COLUMN {col} TEXT")
         # mỗi công ty một email Google riêng; token Google lưu mã hóa
+        cols = {r["name"] for r in self.db.execute("PRAGMA table_info(item_categories)")}
+        for col in ("ma_misa", "kho"):                 # mã hàng, mã kho trong phần mềm kế toán (MISA)
+            if col not in cols:
+                self.db.execute(f"ALTER TABLE item_categories ADD COLUMN {col} TEXT")
         cols = {r["name"] for r in self.db.execute("PRAGMA table_info(companies)")}
         for col, kieu in (("email", "TEXT"), ("google_token", "BLOB"), ("google_email", "TEXT"),
                           ("google_at", "TEXT")):
@@ -282,12 +286,13 @@ class Storage:
                 for r in self.db.execute("SELECT * FROM item_categories")}
 
     def set_category(self, chieu: str, key_mst: str, ma_key: str, phan_loai: str,
-                     tai_khoan: str, at: str) -> None:
+                     tai_khoan: str, at: str, ma_misa: str | None = None, kho: str | None = None) -> None:
         self.db.execute(
-            """INSERT INTO item_categories(chieu, key_mst, ma_key, phan_loai, tai_khoan, updated_at)
-               VALUES(?,?,?,?,?,?) ON CONFLICT(chieu, key_mst, ma_key) DO UPDATE SET
-                   phan_loai=excluded.phan_loai, tai_khoan=excluded.tai_khoan, updated_at=excluded.updated_at""",
-            (chieu, key_mst, ma_key, phan_loai, tai_khoan, at))
+            """INSERT INTO item_categories(chieu, key_mst, ma_key, phan_loai, tai_khoan, updated_at, ma_misa, kho)
+               VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(chieu, key_mst, ma_key) DO UPDATE SET
+                   phan_loai=excluded.phan_loai, tai_khoan=excluded.tai_khoan, updated_at=excluded.updated_at,
+                   ma_misa=excluded.ma_misa, kho=excluded.kho""",
+            (chieu, key_mst, ma_key, phan_loai, tai_khoan, at, ma_misa or None, kho or None))
         self.db.commit()
 
     def item_lines(self, msts: list[str] | None = None, date_from: str | None = None,

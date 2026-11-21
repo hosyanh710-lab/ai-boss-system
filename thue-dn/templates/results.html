@@ -22,6 +22,7 @@
     </select></label>
   <button type="submit" class="ghost">Lọc</button>
   <a class="btn" href="{{ url_for('export_excel', mst=msts, tu=tu, den=den, chieu=chieu) }}">Xuất Excel</a>
+  <a class="btn" href="{{ url_for('export_misa', mst=msts, tu=tu, den=den) }}">File nhập MISA{{ ' (.zip, từng DN)' if msts|length > 1 }}</a>
   {% if msts|length > 1 %}<a class="btn ghost" href="{{ url_for('export_tung_dn', mst=msts, tu=tu, den=den, chieu=chieu) }}">Excel từng DN (.zip)</a>{% endif %}
   <a class="btn ghost" href="{{ url_for('export_xml', mst=msts, tu=tu, den=den, chieu=chieu) }}">Tải XML (.zip)</a>
 </form>

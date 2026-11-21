@@ -5,7 +5,8 @@
 <p class="muted">Mỗi dòng là một mặt hàng lấy từ chi tiết hóa đơn (cần tải kèm XML). Công cụ tự gợi ý theo tên hàng và đơn vị tính;
   anh chọn lại nếu chưa đúng rồi bấm Lưu. Lựa chọn được ghi nhớ cho các kỳ sau và dùng trong sheet "Tổng hợp hạch toán".
   Mua vào nhận diện theo người bán + mã hàng (mã hàng là mã của người bán).
-  Tài khoản gợi ý theo {{ che_do }} (đổi ở trang Cài đặt).</p>
+  Tài khoản gợi ý theo {{ che_do }} (đổi ở trang Cài đặt).
+  <b>Mã hàng trong MISA</b>: mã vật tư hàng hóa bên MISA của anh/chị (để trống thì dùng mã của người bán); <b>Mã kho</b>: chỉ cần cho hàng hóa, vật tư nhập kho.</p>
 
 <form class="card row" method="get">
   <label>Chiều
@@ -22,7 +23,7 @@
   <p class="muted">{{ rows|length }} mặt hàng{% if rows %} · bấm Lưu để xác nhận toàn bộ phân loại đang hiển thị{% endif %}</p>
   <table>
     <thead><tr>{% if chieu=='vao' %}<th>Người bán</th>{% endif %}<th>Mã hàng</th><th>Tên hàng hóa, dịch vụ</th><th>ĐVT</th>
-      <th class="num">Số HĐ</th><th class="num">Thành tiền</th><th>Phân loại</th><th>TK</th><th></th></tr></thead>
+      <th class="num">Số HĐ</th><th class="num">Thành tiền</th><th>Phân loại</th><th>TK</th><th>Mã hàng trong MISA</th><th>Mã kho</th><th></th></tr></thead>
     <tbody>
     {% for r in rows %}
       <tr>
@@ -35,10 +36,12 @@
             {% for k, v in loai.items() %}<option value="{{ k }}" data-tk="{{ v[1] }}" {{ 'selected' if r.phan_loai==k }}>{{ v[0] }}</option>{% endfor %}
           </select></td>
         <td><input name="tk_{{ loop.index }}" id="tk_{{ loop.index }}" value="{{ r.tai_khoan }}" size="6" aria-label="Tài khoản"></td>
+        <td><input name="ma_{{ loop.index }}" value="{{ r.ma_misa }}" size="10" placeholder="{{ r.ma_hang or '' }}" aria-label="Mã hàng trong MISA"></td>
+        <td><input name="kho_{{ loop.index }}" value="{{ r.kho }}" size="6" aria-label="Mã kho"></td>
         <td>{% if r.da_xac_nhan %}<span class="tag thap">Đã xác nhận</span>{% else %}<span class="tag trung_binh">Gợi ý</span>{% endif %}</td>
       </tr>
     {% else %}
-      <tr><td colspan="9" class="muted">Chưa có chi tiết hàng hóa. Tải hóa đơn với ô "Tải kèm XML" được tick.</td></tr>
+      <tr><td colspan="11" class="muted">Chưa có chi tiết hàng hóa. Tải hóa đơn với ô "Tải kèm XML" được tick.</td></tr>
     {% endfor %}
     </tbody>
   </table>

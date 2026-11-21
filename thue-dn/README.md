@@ -33,6 +33,18 @@ Một ứng dụng quản lý tất cả các công ty, **không cần cài nhi�
    - **Excel từng DN (.zip)**: mỗi công ty một file Excel riêng, tên file theo MST và tên công ty.
 4. Phân loại hàng hóa, kiểm tra đối tác, danh sách rủi ro dùng chung cho tất cả các công ty.
 
+## File nhập MISA (không phải hạch toán từng hóa đơn)
+
+Trang **Kết quả** → nút **File nhập MISA** (chọn nhiều công ty thì ra .zip, mỗi công ty một file vì MISA nhập theo từng công ty). File cũng được đẩy lên Google Drive cùng bảng kê.
+
+- Sheet **Mua hàng** / **Bán hàng**: mỗi dòng hàng hóa là một dòng chứng từ, các dòng cùng hóa đơn chung **Số chứng từ** (MV-/BR-<ký hiệu>-<số>), đã điền sẵn: ngày hạch toán, nhà cung cấp / khách hàng (mã = MST), diễn giải, số hóa đơn, mã hàng, kho, **TK Nợ / TK Có / TK thuế**, số lượng, đơn giá, thành tiền, thuế suất, tiền thuế.
+  - Mua vào: Nợ TK theo phân loại (156, 152, 153, 211, 6421, 6422, 154…) / Có 331; thuế 1331 (TSCĐ 1332).
+  - Bán ra: Nợ 131 / Có TK doanh thu (5111, 5112, 5113); thuế 33311.
+- Hóa đơn bị thay thế, bị hủy: **không nhập** (nhập hóa đơn thay thế). Hóa đơn điều chỉnh nhập thành chứng từ riêng, diễn giải ghi rõ điều chỉnh cho hóa đơn nào.
+- Sheet **Kiểm tra trước khi nhập**: các dòng cần xem (tô vàng trong sheet chứng từ): phân loại chưa xác nhận, chưa có TK, thiếu mã hàng, hóa đơn chưa có chi tiết hàng hóa; và các hóa đơn không nhập kèm lý do.
+- **Mã hàng / mã kho trong MISA** khai một lần ở trang **Phân loại hàng hóa**; để trống thì dùng mã hàng của người bán.
+- **Tên cột hiện là bản tạm.** Cần file mẫu nhập khẩu thật từ MISA ASP (Mua hàng, Bán hàng) để sửa `COT_MUA_HANG`, `COT_BAN_HANG` trong `thuedn/misa.py` cho khớp.
+
 ## Google Drive riêng cho từng công ty
 
 Mỗi công ty khai một **email Google riêng**; file của công ty nào chỉ đẩy vào Drive của email công ty đó:
@@ -130,6 +142,7 @@ Mỗi hàng là một hóa đơn điều chỉnh hoặc thay thế. Cột chia 3
 | Kết nối cổng hoadondientu (captcha, đăng nhập, tra cứu, XML) | **Đã viết, chưa chạy với cổng thật** — cần thử trên máy anh |
 | Kiểm tra đối tác, phiếu đánh giá, lịch sử, nhắc tra lại, danh sách rủi ro | Xong, đã kiểm thử |
 | Tổng hợp hạch toán theo loại và mã hàng, trang Phân loại hàng hóa | Xong, đã kiểm thử |
+| File chứng từ hạch toán sẵn để nhập MISA | Xong phần hạch toán, đã kiểm thử. **Tên cột cần khớp với file mẫu nhập khẩu thật của MISA ASP** |
 | Đẩy file lên Google Drive riêng của từng công ty | Xong, đã kiểm thử với Google giả lập. **Cần thử trên máy anh** với tài khoản Google thật |
 | Chi tiết hàng hóa bán ra / mua vào theo mã hàng (đọc XML) | Xong, đã kiểm thử với XML mẫu. **Cần kiểm tra trên máy anh** với XML thật |
 | Nối HĐ điều chỉnh / thay thế với HĐ gốc (Excel, trang Kết quả, đọc XML) | Xong, đã kiểm thử với dữ liệu giả. **Cần kiểm tra trên máy anh**: tên trường HĐ gốc trong danh sách cổng thuế, và dấu âm / dương của số tiền HĐ điều chỉnh giảm |

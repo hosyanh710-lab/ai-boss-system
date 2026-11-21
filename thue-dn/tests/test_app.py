@@ -699,15 +699,16 @@ def test_google_drive_moi_cong_ty_mot_email(client, google):
     assert r.status_code == 302
     for email, mst, so in (("ketoan.a@gmail.com", "0300000001", 11), ("ketoan.b@gmail.com", "0300000002", 22)):
         files = [f for f in google.drives[email] if f["content"] is not None]
+        thu_muc = f"Hóa đơn {mst} - Công ty {'A' if mst.endswith('1') else 'B'}/2026-06"
         assert [google.path(email, f) for f in files] == [
-            f"Hóa đơn {mst} - Công ty {'A' if mst.endswith('1') else 'B'}/2026-06/Bảng kê {mst} 2026-06.xlsx"]
+            f"{thu_muc}/Bảng kê {mst} 2026-06.xlsx", f"{thu_muc}/Nhập MISA {mst} 2026-06.xlsx"]
         ws = load_workbook(io.BytesIO(files[0]["content"]))["Mua vào"]
         rows = list(ws.iter_rows(min_row=2, values_only=True))
         assert [(r[1], r[5]) for r in rows] == [(mst, so)]               # chỉ dữ liệu của đúng công ty
 
     # đẩy lại cùng kỳ: ghi đè, không tạo file trùng
     c.post("/drive/day-len", data={"mst": "0300000001", "tu": "2026-06-01", "den": "2026-06-30"})
-    assert len([f for f in google.drives["ketoan.a@gmail.com"] if f["content"] is not None]) == 1
+    assert len([f for f in google.drives["ketoan.a@gmail.com"] if f["content"] is not None]) == 2
 
     # đổi email công ty A → tự ngắt kết nối cũ, không đẩy được nữa
     c.post("/companies", data={"name": "Công ty A", "mst": "0300000001", "password": "x", "email": "moi.a@gmail.com"})
@@ -729,7 +730,7 @@ def test_tai_hoa_don_xong_tu_day_len_drive(client, google):
     c.post("/captcha", data={"cvalue": "abc12"})
     c.get("/captcha")
     log = " | ".join(appmod.job["log"])
-    assert "DN A: đã đẩy 1 file lên Drive a@gmail.com" in log
+    assert "DN A: đã đẩy 2 file lên Drive a@gmail.com" in log
     assert "DN chưa kết nối: chưa kết nối Google Drive" in log
     assert list(google.drives) == ["a@gmail.com"]
 
@@ -753,3 +754,77 @@ def test_tai_khoan_theo_thong_tu_133(client):
     assert 'value="6422"' in page and "Thông tư 133" in page
     c.post("/cai-dat", data={"che_do": "TT200"})
     assert 'value="642"' in c.get("/phan-loai?chieu=vao").get_data(as_text=True)
+
+
+# ---------- File nhập MISA ----------
+def test_file_nhap_misa(client):
+    c, appmod = client
+    from thuedn.portal import normalize
+    st = appmod.store
+
+    def them(direction, nb, so, tthai, lines, goc=None, ngay="2026-10-05"):
+        r = _hd(nb, "C26TAA", so, ngay, 1, tthai, goc)
+        r.update({"nbten": f"NCC {nb[-1]}", "tgtcthue": 9_000_000, "tgtthue": 900_000})
+        if direction == "ra":
+            r.update({"nbmst": "0300000000", "nmmst": nb, "nmten": f"Khách {nb[-1]}"})
+        st.save_invoice("0300000000", direction, normalize(r))
+        iid = [i for i in st.invoices(direction=direction) if i["shdon"] == str(so)][0]["id"]
+        if lines:
+            appmod.luu_xml(iid, f"{so}.zip", _xml_zip(lines))
+
+    them("vao", "0100000001", 11, 1, [(1, "TP-1", "Thép cuộn", "kg", 1000, 18000, 18_000_000, "10%"),
+                                      (1, "VC", "Phí vận chuyển", "chuyến", 1, 500_000, 500_000, "8%"),
+                                      (4, "", "Hàng giao tại kho bên mua", "", "", "", "", "")])
+    them("vao", "0100000002", 12, 1, [(1, "ML", "Máy lạnh 2HP", "bộ", 1, 24_500_000, 24_500_000, "10%")])
+    them("vao", "0100000003", 13, 4, [(1, "X", "Hàng X", "cái", 1, 1, 1, "10%")])          # bị thay thế
+    them("vao", "0100000004", 14, 1, None)                                                 # chưa có XML
+    them("ra", "0400000001", 201, 1, [(1, "SP-1", "Thép cuộn", "kg", 500, 21000, 10_500_000, "10%"),
+                                      (1, "DV", "Phí giao hàng", "chuyến", 1, 800_000, 800_000, "8%")])
+    them("ra", "0400000001", 209, 3, [(1, "SP-1", "Thép cuộn", "kg", -10, 21000, -210_000, "10%")],
+         ("C26TAA", 201, "2026-10-05"), ngay="2026-10-15")
+    # anh/chị đã xác nhận: máy lạnh là TSCĐ, mã MISA "MAYLANH-01"; thép là hàng hóa nhập kho "KHO1"
+    st.set_category("vao", "0100000002", "ML", "tscd", "211", "x", "MAYLANH-01", None)
+    st.set_category("vao", "0100000001", "TP-1", "hang_hoa", "156", "x", "THEP-CB240", "KHO1")
+
+    x = c.get("/export-misa?mst=0300000000&tu=2026-10-01&den=2026-10-31")
+    assert "Nhap MISA 0300000000" in x.headers["Content-Disposition"]
+    wb = load_workbook(io.BytesIO(x.data))
+    assert wb.sheetnames == ["Mua hàng", "Bán hàng", "Kiểm tra trước khi nhập"]
+
+    def doc(ws):
+        head = [h.value for h in ws[1]]
+        return [dict(zip(head, r)) for r in ws.iter_rows(min_row=2, values_only=True)]
+
+    mua = doc(wb["Mua hàng"])
+    assert [(r["Số chứng từ (*)"], r["Tên hàng"]) for r in mua] == [
+        ("MV-C26TAA-11", "Thép cuộn"), ("MV-C26TAA-11", "Phí vận chuyển"),     # dòng ghi chú bị bỏ
+        ("MV-C26TAA-12", "Máy lạnh 2HP"), ("MV-C26TAA-14", "Theo HĐ C26TAA số 14")]   # HĐ 13 bị thay thế: không nhập
+    thep, vc, ml, thieu = mua
+    assert (thep["TK nợ (*)"], thep["TK có (*)"], thep["TK thuế GTGT"]) == ("156", "331", "1331")
+    assert thep["Mã hàng (*)"] == "THEP-CB240" and thep["Mã kho"] == "KHO1"
+    assert thep["Ngày hạch toán (*)"] == "05/10/2026" and thep["Mã nhà cung cấp"] == "0100000001"
+    assert thep["% thuế GTGT"] == 10 and thep["Tiền thuế GTGT"] == 1_800_000
+    assert vc["TK nợ (*)"] == "6422" and vc["% thuế GTGT"] == 8 and vc["Tiền thuế GTGT"] == 40_000   # TT133
+    assert (ml["TK nợ (*)"], ml["TK thuế GTGT"], ml["Mã hàng (*)"]) == ("211", "1332", "MAYLANH-01")
+    assert thieu["TK nợ (*)"] is None and thieu["Thành tiền"] == 9_000_000
+
+    ban = doc(wb["Bán hàng"])
+    assert [(r["Số chứng từ (*)"], r["TK nợ (*)"], r["TK có (*)"], r["TK thuế GTGT"]) for r in ban] == [
+        ("BR-C26TAA-201", "131", "5111", "33311"), ("BR-C26TAA-201", "131", "5113", "33311"),
+        ("BR-C26TAA-209", "131", "5111", "33311")]
+    assert "điều chỉnh cho HĐ C26TAA số 201" in ban[2]["Diễn giải"] and ban[2]["Thành tiền"] == -210_000
+
+    kt = doc(wb["Kiểm tra trước khi nhập"])
+    ly_do = {(r["Số hóa đơn"], r["Tên hàng"]): r["Cần xem"] for r in kt}
+    assert "chưa xác nhận" in ly_do[(11, "Phí vận chuyển")]
+    assert (11, "Thép cuộn") not in ly_do and (12, "Máy lạnh 2HP") not in ly_do        # đã xác nhận
+    assert "Chưa có chi tiết hàng hóa" in ly_do[(14, "Theo HĐ C26TAA số 14")]
+    assert ly_do[(13, "Bị thay thế")].startswith("KHÔNG NHẬP")
+
+    # nhiều công ty: mỗi công ty một file trong .zip
+    import zipfile
+    c.post("/companies", data={"name": "DN A", "mst": "0300000000", "password": "x"})
+    c.post("/companies", data={"name": "DN B", "mst": "0300000005", "password": "x"})
+    z = zipfile.ZipFile(io.BytesIO(c.get("/export-misa?tu=2026-10-01&den=2026-10-31").data))
+    assert sorted(z.namelist()) == ["Nhap MISA 0300000000 DN A 2026-10-01_2026-10-31.xlsx",
+                                    "Nhap MISA 0300000005 DN B 2026-10-01_2026-10-31.xlsx"]
