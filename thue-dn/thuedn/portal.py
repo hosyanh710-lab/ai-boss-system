@@ -139,5 +139,18 @@ def normalize(row: dict) -> dict:
         "tgtthue": row.get("tgtthue"),
         "tgtttbso": row.get("tgtttbso"),
         "tthai": row.get("tthai"),
+        # Hóa đơn gốc bị điều chỉnh / thay thế. Tên trường theo danh sách cổng thuế trả về;
+        # CẦN KIỂM TRA với dữ liệu thật. File XML (TTHDLQuan) sẽ ghi đè nếu tải XML.
+        "goc_khmshdon": _first(row, "khmshdgoc", "khmshdongoc"),
+        "goc_khhdon": _first(row, "khhdgoc", "khhdongoc"),
+        "goc_shdon": _first(row, "shdgoc", "shdongoc"),
+        "goc_tdlap": parse_portal_date(_first(row, "tdlhdgoc", "tdlapgoc")),
         "raw": row,
     }
+
+
+def _first(row: dict, *keys):
+    for k in keys:
+        if row.get(k) not in (None, ""):
+            return row[k]
+    return None

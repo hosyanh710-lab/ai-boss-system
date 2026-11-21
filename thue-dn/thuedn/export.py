@@ -36,12 +36,17 @@ def _fit(ws) -> None:
         ws.column_dimensions[get_column_letter(i)].width = min(max(10, width + 2), 45)
 
 
-def bang_ke_excel(invoices, suppliers: dict, company_names: dict[str, str]) -> bytes:
+def bang_ke_excel(invoices, suppliers: dict, company_names: dict[str, str],
+                  find_goc=None, find_adjusting=None) -> bytes:
+    """find_goc(inv) → HĐ gốc của một HĐ điều chỉnh / thay thế (tìm trong toàn bộ dữ liệu đã tải);
+    find_adjusting(goc) → các HĐ điều chỉnh / thay thế trỏ tới HĐ gốc đó."""
+    invoices = list(invoices)
     wb = Workbook()
     wb.remove(wb.active)
     ws_vao = _sheet(wb, "Mua vào", HEADERS_VAO)
     ws_ra = _sheet(wb, "Bán ra", HEADERS_RA)
-    ws_dc = _sheet(wb, "Điều chỉnh - thay thế", ["Chiều"] + HEADERS_RA)
+    _sheet_lien_ket(wb, invoices, company_names, find_goc or (lambda i: None),
+                    find_adjusting or (lambda g: []))
 
     for inv in invoices:
         dn = company_names.get(inv["company_mst"], inv["company_mst"])
@@ -57,19 +62,134 @@ def bang_ke_excel(invoices, suppliers: dict, company_names: dict[str, str]) -> b
             if muc == "cao":
                 for c in ws_vao[ws_vao.max_row]:
                     c.fill = RED
-            doi_tac = [inv["nbmst"], inv["nbten"]]
         else:
             ws_ra.append(common + [inv["nmmst"], inv["nmten"]] + money + [tc])
-            doi_tac = [inv["nmmst"], inv["nmten"]]
-        if inv["tthai"] not in (1, None):
-            ws_dc.append(["Mua vào" if inv["direction"] == "vao" else "Bán ra"]
-                         + common + doi_tac + money + [tc])
 
-    for ws in (ws_vao, ws_ra, ws_dc):
+    for ws in (ws_vao, ws_ra):
         _fit(ws)
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()
+
+
+# ---- Sheet nối HĐ điều chỉnh / thay thế với HĐ gốc: mỗi hàng một HĐ điều chỉnh / thay thế ----
+LK_INFO = ["Doanh nghiệp", "MST DN", "Chiều", "MST đối tác", "Tên đối tác", "Loại", "Lần"]
+LK_HD = ["Ký hiệu mẫu", "Ký hiệu", "Số HĐ", "Ngày lập", "Tiền chưa thuế", "Tiền thuế", "Tổng thanh toán"]
+LK_GOC = LK_HD + ["Trạng thái HĐ gốc"]
+LK_END = ["Tổng sau điều chỉnh (tạm tính)", "Ghi chú"]
+YELLOW = PatternFill("solid", fgColor="FFF3CD")
+GREY = PatternFill("solid", fgColor="EEF0F3")
+BLUE = PatternFill("solid", fgColor="DCE8F7")
+ORANGE = PatternFill("solid", fgColor="FBE3D0")
+
+
+def _hd_cols(inv) -> list:
+    if inv is None:
+        return [None] * len(LK_HD)
+    return [inv["khmshdon"], inv["khhdon"], _int(inv["shdon"]), inv["tdlap"],
+            inv["tgtcthue"], inv["tgtthue"], inv["tgtttbso"]]
+
+
+def _int(v):
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return v
+
+
+def _sheet_lien_ket(wb: Workbook, invoices, names, find_goc, find_adjusting) -> None:
+    ws = wb.create_sheet("Điều chỉnh - thay thế")
+    n_info, n_hd, n_goc = len(LK_INFO), len(LK_HD), len(LK_GOC)
+    # hàng 1: nhóm cột, hàng 2: tên cột
+    groups = [("THÔNG TIN CHUNG", n_info, GREY),
+              ("HÓA ĐƠN ĐIỀU CHỈNH / THAY THẾ", n_hd, BLUE),
+              ("HÓA ĐƠN GỐC (BỊ ĐIỀU CHỈNH / BỊ THAY THẾ)", n_goc, ORANGE),
+              ("", len(LK_END), GREY)]
+    col = 1
+    for title, width, fill in groups:
+        ws.cell(1, col, title).font = Font(bold=True)
+        ws.merge_cells(start_row=1, start_column=col, end_row=1, end_column=col + width - 1)
+        for c in range(col, col + width):
+            ws.cell(1, c).fill = fill
+            ws.cell(2, c).fill = fill
+        col += width
+    for i, h in enumerate(LK_INFO + LK_HD + LK_GOC + LK_END, start=1):
+        ws.cell(2, i, h).font = Font(bold=True)
+    ws.freeze_panes = f"{get_column_letter(n_info + 1)}3"
+
+    entries = []          # (khóa sắp xếp, hd điều chỉnh/thay thế hoặc None, hd gốc hoặc None, ghi chú)
+    done = set()
+
+    def add(adj, goc, note=""):
+        if adj is not None:
+            if adj["id"] in done:
+                return
+            done.add(adj["id"])
+        base = adj if adj is not None else goc
+        key = (base["company_mst"], base["direction"], base["nbmst"] if base["direction"] == "vao" else base["nmmst"],
+               goc["khhdon"] if goc is not None else (adj["goc_khhdon"] or ""),
+               _int(goc["shdon"]) if goc is not None else _int(adj["goc_shdon"] or 0),
+               adj["tdlap"] if adj is not None else "", adj["id"] if adj is not None else 0)
+        entries.append((tuple("" if k is None else str(k).zfill(12) if isinstance(k, int) else str(k) for k in key),
+                        adj, goc, note))
+
+    for inv in invoices:
+        if inv["tthai"] in (2, 3):
+            goc = find_goc(inv) if inv["goc_shdon"] else None
+            if not inv["goc_shdon"]:
+                note = "Chưa có thông tin HĐ gốc (tải kèm XML để lấy)"
+            elif goc is None:
+                note = "HĐ gốc chưa có trong dữ liệu đã tải (tải thêm kỳ của HĐ gốc)"
+            else:
+                note = ""
+            add(inv, goc, note)
+    for inv in invoices:
+        if inv["tthai"] in (4, 5):
+            adjs = find_adjusting(inv)
+            if not adjs:
+                add(None, inv, "Chưa có HĐ điều chỉnh / thay thế trong dữ liệu đã tải")
+            for a in adjs:
+                add(a, inv, "HĐ điều chỉnh / thay thế nằm ngoài kỳ đang lọc")
+
+    entries.sort(key=lambda e: e[0])
+    lan: dict = {}
+    cong_don: dict = {}
+    for _, adj, goc, note in entries:
+        base = adj if adj is not None else goc
+        vao = base["direction"] == "vao"
+        doi_tac = [base["nbmst"], base["nbten"]] if vao else [base["nmmst"], base["nmten"]]
+        loai = {2: "Thay thế", 3: "Điều chỉnh"}.get(adj["tthai"]) if adj is not None else None
+        so_lan = None
+        tong_sau = None
+        if adj is not None and goc is not None:
+            k = goc["id"]
+            lan[k] = lan.get(k, 0) + 1
+            so_lan = lan[k]
+            if adj["tthai"] == 3:
+                cong_don[k] = cong_don.get(k, goc["tgtttbso"] or 0) + (adj["tgtttbso"] or 0)
+                tong_sau = cong_don[k]
+            else:
+                tong_sau = adj["tgtttbso"]
+        ws.append([names.get(base["company_mst"], base["company_mst"]), base["company_mst"],
+                   "Mua vào" if vao else "Bán ra", *doi_tac, loai, so_lan,
+                   *_hd_cols(adj), *_hd_cols(goc),
+                   tinh_chat(goc["tthai"]) if goc is not None else None,
+                   tong_sau, note or None])
+        if note and not note.startswith("HĐ điều chỉnh / thay thế nằm ngoài"):
+            for c in ws[ws.max_row]:
+                c.fill = YELLOW
+        # khi chưa tìm thấy HĐ gốc trong dữ liệu, vẫn ghi ký hiệu / số gốc đọc được
+        if adj is not None and goc is None and adj["goc_shdon"]:
+            start = n_info + n_hd + 1
+            for off, v in enumerate([adj["goc_khmshdon"], adj["goc_khhdon"], _int(adj["goc_shdon"]),
+                                     adj["goc_tdlap"]]):
+                ws.cell(ws.max_row, start + off, v)
+    for row in ws.iter_rows(min_row=3):
+        for c in row:
+            if isinstance(c.value, (int, float)) and c.column not in (n_info, n_info + 3, n_info + n_hd + 3):
+                c.number_format = "#,##0"
+    _fit(ws)
+    ws.column_dimensions["A"].width = 30
 
 
 def zip_xml(invoices, base_dir: Path) -> bytes:

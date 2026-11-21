@@ -72,6 +72,10 @@ CREATE TABLE IF NOT EXISTS watchlist (
 """
 
 
+# Hóa đơn gốc mà hóa đơn điều chỉnh / thay thế trỏ tới
+GOC_COLS = ("goc_khmshdon", "goc_khhdon", "goc_shdon", "goc_tdlap")
+
+
 class Storage:
     def __init__(self, data_dir: Path):
         self.data_dir = Path(data_dir)
@@ -79,7 +83,16 @@ class Storage:
         self.db = sqlite3.connect(self.data_dir / "thuedn.sqlite3", check_same_thread=False)
         self.db.row_factory = sqlite3.Row
         self.db.executescript(SCHEMA)
+        self._migrate()
         self.fernet = Fernet(self._load_key())
+
+    def _migrate(self) -> None:
+        """Thêm cột thông tin hóa đơn gốc (HĐ bị điều chỉnh / bị thay thế) cho dữ liệu cũ."""
+        cols = {r["name"] for r in self.db.execute("PRAGMA table_info(invoices)")}
+        for col in GOC_COLS:
+            if col not in cols:
+                self.db.execute(f"ALTER TABLE invoices ADD COLUMN {col} TEXT")
+        self.db.commit()
 
     def _load_key(self) -> bytes:
         key_file = self.data_dir / "secret.key"
@@ -118,20 +131,54 @@ class Storage:
     def save_invoice(self, company_mst: str, direction: str, inv: dict) -> None:
         self.db.execute(
             """INSERT INTO invoices(company_mst, direction, nbmst, nbten, nmmst, nmten,
-                   khmshdon, khhdon, shdon, tdlap, tgtcthue, tgtthue, tgtttbso, tthai, raw)
-               VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                   khmshdon, khhdon, shdon, tdlap, tgtcthue, tgtthue, tgtttbso, tthai, raw,
+                   goc_khmshdon, goc_khhdon, goc_shdon, goc_tdlap)
+               VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                ON CONFLICT(company_mst, direction, nbmst, khmshdon, khhdon, shdon)
                DO UPDATE SET tthai=excluded.tthai, raw=excluded.raw,
-                   tgtcthue=excluded.tgtcthue, tgtthue=excluded.tgtthue, tgtttbso=excluded.tgtttbso""",
+                   tgtcthue=excluded.tgtcthue, tgtthue=excluded.tgtthue, tgtttbso=excluded.tgtttbso,
+                   goc_khmshdon=COALESCE(excluded.goc_khmshdon, goc_khmshdon),
+                   goc_khhdon=COALESCE(excluded.goc_khhdon, goc_khhdon),
+                   goc_shdon=COALESCE(excluded.goc_shdon, goc_shdon),
+                   goc_tdlap=COALESCE(excluded.goc_tdlap, goc_tdlap)""",
             (
                 company_mst, direction,
                 inv.get("nbmst"), inv.get("nbten"), inv.get("nmmst"), inv.get("nmten"),
                 str(inv.get("khmshdon", "")), inv.get("khhdon"), str(inv.get("shdon", "")),
                 inv.get("tdlap"), inv.get("tgtcthue"), inv.get("tgtthue"), inv.get("tgtttbso"),
                 inv.get("tthai"), json.dumps(inv.get("raw", {}), ensure_ascii=False),
+                *(_s(inv.get(c)) for c in GOC_COLS),
             ),
         )
         self.db.commit()
+
+    def set_goc(self, invoice_id: int, goc: dict) -> None:
+        """Ghi thông tin hóa đơn gốc lấy từ file XML (chính xác hơn danh sách cổng thuế)."""
+        self.db.execute(
+            "UPDATE invoices SET goc_khmshdon=?, goc_khhdon=?, goc_shdon=?, goc_tdlap=? WHERE id=?",
+            (*(_s(goc.get(c)) for c in GOC_COLS), invoice_id))
+        self.db.commit()
+
+    def find_invoice(self, company_mst: str, direction: str, nbmst: str,
+                     khmshdon, khhdon, shdon) -> sqlite3.Row | None:
+        """Tìm hóa đơn theo người bán + ký hiệu mẫu + ký hiệu + số (không giới hạn ngày)."""
+        sql = ("SELECT * FROM invoices WHERE company_mst=? AND direction=? AND nbmst=? "
+               "AND khhdon=? AND CAST(shdon AS INTEGER)=CAST(? AS INTEGER)")
+        args = [company_mst, direction, nbmst, khhdon, shdon]
+        if khmshdon:
+            sql += " AND khmshdon=?"
+            args.append(str(khmshdon))
+        return self.db.execute(sql, args).fetchone()
+
+    def find_adjusting(self, goc: sqlite3.Row) -> list[sqlite3.Row]:
+        """Các hóa đơn điều chỉnh / thay thế trỏ tới hóa đơn gốc này."""
+        return self.db.execute(
+            """SELECT * FROM invoices WHERE company_mst=? AND direction=? AND nbmst=?
+                   AND goc_khhdon=? AND CAST(goc_shdon AS INTEGER)=CAST(? AS INTEGER)
+                   AND (goc_khmshdon IS NULL OR goc_khmshdon='' OR goc_khmshdon=?)
+               ORDER BY tdlap, id""",
+            (goc["company_mst"], goc["direction"], goc["nbmst"], goc["khhdon"], goc["shdon"],
+             goc["khmshdon"])).fetchall()
 
     def set_xml_path(self, invoice_id: int, path: str) -> None:
         self.db.execute("UPDATE invoices SET xml_path=? WHERE id=?", (path, invoice_id))
@@ -252,3 +299,7 @@ class Storage:
                    SUM(CASE WHEN tthai NOT IN (1) THEN 1 ELSE 0 END) AS so_dc,
                    MIN(tdlap) AS dau, MAX(tdlap) AS cuoi
                FROM invoices WHERE direction='vao' AND nbmst=?""", (mst,)).fetchone()
+
+
+def _s(v) -> str | None:
+    return None if v in (None, "") else str(v)

@@ -102,7 +102,7 @@ def test_luong_day_du(client):
     wb = load_workbook(io.BytesIO(x.data))
     assert wb.sheetnames == ["Mua vào", "Bán ra", "Điều chỉnh - thay thế"]
     assert wb["Mua vào"].max_row == 3 and wb["Bán ra"].max_row == 2
-    assert wb["Điều chỉnh - thay thế"].max_row == 2
+    assert wb["Điều chỉnh - thay thế"].max_row == 3   # 2 hàng tiêu đề + 1 HĐ điều chỉnh
     cao = [r for r in wb["Mua vào"].iter_rows(values_only=True) if r[-1] == "CAO"]
     assert len(cao) == 1 and cao[0][6] == "0100000002"
 
@@ -179,3 +179,82 @@ def test_kiem_tra_doi_tac(client):
     assert wb.sheetnames == ["Phiếu kiểm tra", "Lịch sử kiểm tra"]
     assert wb["Lịch sử kiểm tra"].max_row == 3
     assert wb["Phiếu kiểm tra"]["B5"].value == "Không nên giao dịch"
+
+
+# ---------- Nối HĐ điều chỉnh / thay thế với HĐ gốc ----------
+from thuedn.xmlhd import hd_lien_quan_tu_xml, hd_lien_quan_tu_zip  # noqa: E402
+
+XML_DIEU_CHINH = """<?xml version="1.0" encoding="UTF-8"?>
+<HDon><DLHDon><TTChung><PBan>2.1.0</PBan><KHMSHDon>1</KHMSHDon><KHHDon>C26TAA</KHHDon><SHDon>30</SHDon>
+<TTHDLQuan><TCHDon>2</TCHDon><LHDCLQuan>1</LHDCLQuan><KHMSHDCLQuan>1</KHMSHDCLQuan>
+<KHHDCLQuan>C26TAA</KHHDCLQuan><SHDCLQuan>00000011</SHDCLQuan><NLHDCLQuan>2026-06-10</NLHDCLQuan>
+</TTHDLQuan></TTChung></DLHDon></HDon>""".encode()
+
+
+def test_doc_xml_hd_lien_quan():
+    assert hd_lien_quan_tu_xml(XML_DIEU_CHINH) == {
+        "tinh_chat": "dieu_chinh", "goc_khmshdon": "1", "goc_khhdon": "C26TAA",
+        "goc_shdon": "11", "goc_tdlap": "2026-06-10"}
+    buf = io.BytesIO()
+    import zipfile
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("hd.xml", XML_DIEU_CHINH)
+    assert hd_lien_quan_tu_zip(buf.getvalue())["goc_shdon"] == "11"
+    assert hd_lien_quan_tu_xml(b"<HDon><TTChung><SHDon>1</SHDon></TTChung></HDon>") is None
+
+
+def _hd(nb, kh, so, ngay, tien, tthai, goc=None):
+    r = {"nbmst": nb, "nbten": "NCC " + nb[-1], "nmmst": "0300000000", "nmten": "DN A", "khmshdon": 1,
+         "khhdon": kh, "shdon": so, "tdlap": ngay + "T00:00:00Z", "tgtcthue": tien,
+         "tgtthue": tien // 10, "tgtttbso": tien + tien // 10, "tthai": tthai}
+    if goc:
+        r.update({"khmshdgoc": 1, "khhdgoc": goc[0], "shdgoc": goc[1], "tdlhdgoc": goc[2] + "T00:00:00Z"})
+    return r
+
+
+def test_excel_noi_hd_goc(client):
+    c, appmod = client
+    from thuedn.portal import normalize
+    rows = [
+        _hd("0100000001", "C26TAA", 11, "2026-05-10", 10_000_000, 5),                              # gốc, bị điều chỉnh
+        _hd("0100000001", "C26TAA", 30, "2026-06-12", -2_000_000, 3, ("C26TAA", 11, "2026-05-10")),  # điều chỉnh lần 1
+        _hd("0100000001", "C26TAA", 41, "2026-06-25", -1_000_000, 3, ("C26TAA", 11, "2026-05-10")),  # điều chỉnh lần 2
+        _hd("0100000002", "C26TBB", 7, "2026-06-03", 5_000_000, 4),                                # gốc, bị thay thế
+        _hd("0100000002", "C26TBB", 9, "2026-06-05", 4_500_000, 2, ("C26TBB", 7, "2026-06-03")),     # thay thế
+        _hd("0100000003", "C26TCC", 2, "2026-06-08", 3_000_000, 5),                                # bị ĐC, chưa có HĐ ĐC
+        _hd("0100000004", "C26TDD", 5, "2026-06-09", 1_000_000, 3, ("C26TDD", 1, "2026-01-02")),     # gốc chưa tải
+    ]
+    for r in rows:
+        appmod.store.save_invoice("0300000000", "vao", normalize(r))
+
+    # lọc tháng 6: HĐ gốc tháng 5 vẫn được tìm thấy
+    x = c.get("/export.xlsx?mst=0300000000&tu=2026-06-01&den=2026-06-30")
+    ws = load_workbook(io.BytesIO(x.data))["Điều chỉnh - thay thế"]
+    head = [v for v in next(ws.iter_rows(min_row=2, max_row=2, values_only=True))]
+    data = [dict(zip(range(len(head)), r)) for r in ws.iter_rows(min_row=3, values_only=True)]
+    H = {h: i for i, h in enumerate(head) if h not in head[:head.index(h)]}   # vị trí lần xuất hiện đầu
+    adj_so, goc_so = 9, 16          # cột "Số HĐ" của HĐ điều chỉnh và HĐ gốc (0-based)
+    assert head[adj_so] == "Số HĐ" and head[goc_so] == "Số HĐ"
+    by_adj = {r[adj_so]: r for r in data if r[adj_so]}
+
+    assert len(data) == 5
+    dc1, dc2 = by_adj[30], by_adj[41]
+    assert dc1[goc_so] == 11 and dc2[goc_so] == 11
+    assert dc1[H["Lần"]] == 1 and dc2[H["Lần"]] == 2
+    assert dc1[goc_so + 4] == 11_000_000           # tổng thanh toán HĐ gốc
+    assert dc2[H["Tổng sau điều chỉnh (tạm tính)"]] == 11_000_000 - 2_200_000 - 1_100_000
+    assert dc1[H["Trạng thái HĐ gốc"]] == "Bị điều chỉnh"
+
+    tt = by_adj[9]
+    assert tt[H["Loại"]] == "Thay thế" and tt[goc_so] == 7 and tt[H["Trạng thái HĐ gốc"]] == "Bị thay thế"
+
+    chua_tai = by_adj[5]
+    assert chua_tai[goc_so] == 1 and "chưa có trong dữ liệu" in chua_tai[H["Ghi chú"]]
+
+    mo_coi = [r for r in data if not r[adj_so]]
+    assert len(mo_coi) == 1 and mo_coi[0][goc_so] == 2
+    assert "Chưa có HĐ điều chỉnh" in mo_coi[0][H["Ghi chú"]]
+
+    # các HĐ điều chỉnh của cùng một HĐ gốc nằm liền nhau
+    order = [r[adj_so] for r in data]
+    assert abs(order.index(30) - order.index(41)) == 1

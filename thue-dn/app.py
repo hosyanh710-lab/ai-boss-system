@@ -14,6 +14,7 @@ from thuedn.portal import PortalError, PortalSession, normalize
 from thuedn.rules import (DS_RUI_RO, KET_LUAN, NGAY_TRA_LAI, TRANG_THAI_NCC, chia_thang,
                           danh_gia_doi_tac, muc_rui_ro, parse_danh_sach_mst, tinh_chat, to_date)
 from thuedn.storage import Storage
+from thuedn.xmlhd import hd_lien_quan_tu_zip
 
 DATA_DIR = Path(os.environ.get("THUEDN_DATA", Path(__file__).parent / "data"))
 VERIFY_SSL = os.environ.get("THUEDN_VERIFY_SSL", "1") != "0"
@@ -170,6 +171,9 @@ def _save_xml(s: PortalSession, mst: str, direction: str, inv: dict, xml_dir: Pa
         (mst, direction, inv["nbmst"], inv["khhdon"], str(inv["shdon"]))).fetchone()
     if row:
         store.set_xml_path(row["id"], str(rel))
+        lq = hd_lien_quan_tu_zip(content)
+        if lq:
+            store.set_goc(row["id"], lq)
 
 
 # ---------- 3. Kết quả ----------
@@ -199,7 +203,11 @@ def results():
 def export_excel():
     _, tu, den, rows = _filtered()
     names = {c["mst"]: c["name"] for c in store.companies()}
-    data = export.bang_ke_excel(rows, store.supplier_map(), names)
+    data = export.bang_ke_excel(
+        rows, store.supplier_map(), names,
+        find_goc=lambda i: store.find_invoice(i["company_mst"], i["direction"], i["nbmst"],
+                                              i["goc_khmshdon"], i["goc_khhdon"], i["goc_shdon"]),
+        find_adjusting=store.find_adjusting)
     return send_file(io.BytesIO(data), as_attachment=True,
                      download_name=f"bang-ke_{tu}_{den}.xlsx",
                      mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")

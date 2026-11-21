@@ -37,7 +37,7 @@
         <td class="num">{{ '{:,.0f}'.format(r.tgtcthue or 0) }}</td>
         <td class="num">{{ '{:,.0f}'.format(r.tgtthue or 0) }}</td>
         <td class="num">{{ '{:,.0f}'.format(r.tgtttbso or 0) }}</td>
-        <td>{{ tinh_chat(r.tthai) }}</td>
+        <td>{{ tinh_chat(r.tthai) }}{% if r.goc_shdon %}<br><span class="muted">cho HĐ {{ r.goc_khmshdon or '' }}{{ r.goc_khhdon }} / {{ r.goc_shdon }}{% if r.goc_tdlap %} ngày {{ r.goc_tdlap }}{% endif %}</span>{% endif %}</td>
         <td>{% if muc %}<span class="tag {{ muc }}">{{ {'cao':'Rủi ro CAO','trung_binh':'Cần xem','thap':'Đang HĐ','chua_ro':'Chưa tra'}[muc] }}</span>{% endif %}</td>
       </tr>
     {% else %}
