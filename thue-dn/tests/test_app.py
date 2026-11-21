@@ -732,3 +732,24 @@ def test_tai_hoa_don_xong_tu_day_len_drive(client, google):
     assert "DN A: đã đẩy 1 file lên Drive a@gmail.com" in log
     assert "DN chưa kết nối: chưa kết nối Google Drive" in log
     assert list(google.drives) == ["a@gmail.com"]
+
+
+def test_tai_khoan_theo_thong_tu_133(client):
+    c, appmod = client
+    from thuedn.rules import bang_phan_loai
+    tt133, tt200 = bang_phan_loai("TT133"), bang_phan_loai("TT200")
+    assert tt133["vao"]["cp_qldn"][1] == "6422" and tt133["vao"]["cp_bh"][1] == "6421"
+    assert tt133["vao"]["cp_sx"][1] == "154" and tt133["ra"]["chiet_khau"][1] == "511"
+    assert tt133["vao"]["hang_hoa"][1] == "156" and tt200["vao"]["cp_qldn"][1] == "642"
+
+    from thuedn.portal import normalize
+    st = appmod.store
+    st.save_invoice("0300000000", "vao", normalize(_hd("0100000001", "C26TAA", 1, "2026-06-10", 1, 1)))
+    iid = st.invoices()[0]["id"]
+    appmod.luu_xml(iid, "1.zip", _xml_zip([(1, "VC", "Phí vận chuyển", "chuyến", 1, 500_000, 500_000, "8%")]))
+
+    assert "Thông tư 133" in c.get("/cai-dat").get_data(as_text=True)        # mặc định TT133
+    page = c.get("/phan-loai?chieu=vao").get_data(as_text=True)
+    assert 'value="6422"' in page and "Thông tư 133" in page
+    c.post("/cai-dat", data={"che_do": "TT200"})
+    assert 'value="642"' in c.get("/phan-loai?chieu=vao").get_data(as_text=True)

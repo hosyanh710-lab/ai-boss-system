@@ -11,8 +11,8 @@ from flask import Flask, flash, redirect, render_template, request, send_file, u
 
 from thuedn import export, gdrive
 from thuedn.portal import PortalError, PortalSession, normalize
-from thuedn.rules import (DS_RUI_RO, KET_LUAN, NGAY_TRA_LAI, PHAN_LOAI, TRANG_THAI_NCC, chia_thang,
-                          danh_gia_doi_tac, muc_rui_ro, parse_danh_sach_mst, tinh_chat, to_date)
+from thuedn.rules import (CHE_DO_KE_TOAN, DS_RUI_RO, KET_LUAN, NGAY_TRA_LAI, PHAN_LOAI, TRANG_THAI_NCC, chia_thang,
+                          bang_phan_loai, danh_gia_doi_tac, muc_rui_ro, parse_danh_sach_mst, tinh_chat, to_date)
 from thuedn.storage import Storage
 from thuedn.xmlhd import doc_zip
 from thuedn.tonghop import tong_hop_mat_hang
@@ -240,7 +240,7 @@ def _excel(msts: list[str], tu, den, rows) -> bytes:
         rows, store.supplier_map(), names,
         items=store.items_by_invoice([r["id"] for r in rows]),
         items_for=store.items_by_invoice,
-        tong_hop=tong_hop_mat_hang(store.item_lines(msts, tu, den), store.categories()),
+        tong_hop=tong_hop_mat_hang(store.item_lines(msts, tu, den), store.categories(), che_do=che_do()),
         find_goc=lambda i: store.find_invoice(i["company_mst"], i["direction"], i["nbmst"],
                                               i["goc_khmshdon"], i["goc_khhdon"], i["goc_shdon"]),
         find_adjusting=store.find_adjusting)
@@ -397,10 +397,10 @@ def phan_loai():
     if chieu not in PHAN_LOAI:
         chieu = "vao"
     chua_xn = request.args.get("chua_xn") == "1"
-    rows = [r for r in tong_hop_mat_hang(store.item_lines(), store.categories(), theo_dn=False)
+    rows = [r for r in tong_hop_mat_hang(store.item_lines(), store.categories(), theo_dn=False, che_do=che_do())
             if r["chieu"] == chieu and (not chua_xn or not r["da_xac_nhan"])]
     return render_template("phan_loai.html", rows=rows, chieu=chieu, chua_xn=chua_xn,
-                           loai=PHAN_LOAI[chieu])
+                           loai=bang_phan_loai(che_do())[chieu], che_do=CHE_DO_KE_TOAN[che_do()])
 
 
 @app.post("/phan-loai")
@@ -426,6 +426,12 @@ def luu_phan_loai():
 # ---------- 7. Google Drive: mỗi công ty một tài khoản Google riêng ----------
 REDIRECT_URI = "http://127.0.0.1:5000/google/callback"
 oauth_states: dict[str, str] = {}      # state → MST đang kết nối
+
+
+def che_do() -> str:
+    """Chế độ kế toán dùng để gợi ý tài khoản; mặc định Thông tư 133."""
+    v = store.setting("che_do")
+    return v if v in CHE_DO_KE_TOAN else "TT133"
 
 
 def ten_ky(tu: str, den: str) -> str:
@@ -477,17 +483,19 @@ def day_len_drive(mst: str, tu: str, den: str) -> str:
 @app.route("/cai-dat", methods=["GET", "POST"])
 def cai_dat():
     if request.method == "POST":
+        if request.form.get("che_do") in CHE_DO_KE_TOAN:
+            store.set_setting("che_do", request.form["che_do"])
         cid = request.form.get("client_id", "").strip()
         sec = request.form.get("client_secret", "").strip()
         if cid:
             store.set_setting("google_client_id", cid)
         if sec:
             store.set_setting("google_client_secret", sec, secret=True)
-        flash("Đã lưu cài đặt Google", "ok")
+        flash("Đã lưu cài đặt", "ok")
         return redirect(url_for("cai_dat"))
     return render_template("cai_dat.html", client_id=store.setting("google_client_id") or "",
                            co_secret=bool(store.setting("google_client_secret", secret=True)),
-                           redirect_uri=REDIRECT_URI)
+                           redirect_uri=REDIRECT_URI, che_do=che_do(), cac_che_do=CHE_DO_KE_TOAN)
 
 
 @app.post("/google/ket-noi/<mst>")

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from collections import Counter
 
-from .rules import PHAN_LOAI, goi_y_phan_loai, ma_key
+from .rules import PHAN_LOAI, bang_phan_loai, goi_y_phan_loai, ma_key
 
 
 def _tien_thue(thanh_tien, thue_suat):
@@ -15,7 +15,7 @@ def _tien_thue(thanh_tien, thue_suat):
         return 0
 
 
-def tong_hop_mat_hang(lines, categories: dict, theo_dn: bool = True) -> list[dict]:
+def tong_hop_mat_hang(lines, categories: dict, theo_dn: bool = True, che_do: str = "TT133") -> list[dict]:
     """Mỗi phần tử: một mặt hàng (theo DN nếu theo_dn, chiều, người bán / DN, mã hàng)."""
     nhom: dict = {}
     for d in lines:
@@ -41,6 +41,7 @@ def tong_hop_mat_hang(lines, categories: dict, theo_dn: bool = True) -> list[dic
         g["thanh_tien"] += d["thanh_tien"] or 0
         g["tien_thue"] += _tien_thue(d["thanh_tien"], d["thue_suat"])
 
+    bang = bang_phan_loai(che_do)
     out = []
     for g in nhom.values():
         ten = g["ten"].most_common(1)[0][0] or None
@@ -51,14 +52,14 @@ def tong_hop_mat_hang(lines, categories: dict, theo_dn: bool = True) -> list[dic
             pl, tk, xn = da_chon["phan_loai"], da_chon["tai_khoan"], True
         else:
             pl = goi_y_phan_loai(g["chieu"], ten, dvt, tc)
-            tk, xn = PHAN_LOAI[g["chieu"]][pl][1], False
+            tk, xn = bang[g["chieu"]][pl][1], False
         out.append({
             "company_mst": g["company_mst"], "chieu": g["chieu"], "key_mst": g["key_mst"],
             "ma_key": g["ma_key"], "ma_hang": g["ma_hang"], "ten_hang": ten, "dvt": dvt,
             "nguoi_ban": g["nguoi_ban"], "so_hd": len(g["hd"]), "so_luong": g["so_luong"],
             "don_gia_bq": round(g["thanh_tien"] / g["so_luong"]) if g["so_luong"] else None,
             "thanh_tien": g["thanh_tien"], "tien_thue": g["tien_thue"],
-            "phan_loai": pl, "ten_phan_loai": PHAN_LOAI[g["chieu"]][pl][0], "tai_khoan": tk or "",
+            "phan_loai": pl, "ten_phan_loai": bang[g["chieu"]][pl][0], "tai_khoan": tk or "",
             "da_xac_nhan": xn,
         })
     thu_tu = {c: i for chieu in PHAN_LOAI for i, c in enumerate(PHAN_LOAI[chieu])}

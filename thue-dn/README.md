@@ -109,7 +109,7 @@ Mỗi hàng là **một dòng hàng hóa / dịch vụ của một hóa đơn**:
 - **Phần 2 – Chi tiết theo mã hàng**: mỗi mặt hàng một dòng: phân loại, TK, người bán, mã hàng, tên, ĐVT, số HĐ, tổng số lượng, đơn giá bình quân, thành tiền, tiền thuế, và đã xác nhận phân loại hay mới là gợi ý (tô vàng).
 - Không tính hóa đơn bị thay thế, bị hủy; hóa đơn điều chỉnh cộng theo số tiền ghi trên hóa đơn.
 - Phân loại tự gợi ý theo tên hàng và ĐVT (phí, cước, thuê, dịch vụ, tháng, chuyến… → chi phí / doanh thu dịch vụ). Vào trang **Phân loại hàng hóa** để chọn lại và sửa tài khoản; lựa chọn được ghi nhớ cho các kỳ sau. Mua vào nhận diện theo người bán + mã hàng.
-- Tài khoản theo hệ thống TT200 / TT133 phổ biến, **chỉ là gợi ý**; kế toán quyết định cuối cùng.
+- Tài khoản gợi ý theo **Thông tư 133** (mặc định: 6421 chi phí bán hàng, 6422 chi phí QLDN, 154 chi phí sản xuất, chiết khấu bán hàng ghi giảm 511) hoặc Thông tư 200, chọn ở trang **Cài đặt**. Tài khoản **chỉ là gợi ý**; kế toán quyết định cuối cùng.
 
 ### Sheet "Điều chỉnh - thay thế"
 

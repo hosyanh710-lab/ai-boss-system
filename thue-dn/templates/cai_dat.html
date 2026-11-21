@@ -1,7 +1,17 @@
 {% extends "base.html" %}
 {% block title %}Cài đặt{% endblock %}
 {% block body %}
-<h1>Cài đặt Google Drive</h1>
+<h1>Cài đặt</h1>
+<form class="card" method="post">
+  <h2>Chế độ kế toán</h2>
+  <div class="row">
+    <label>Tài khoản gợi ý theo
+      <select name="che_do">{% for k, v in cac_che_do.items() %}<option value="{{ k }}" {{ 'selected' if k==che_do }}>{{ v }}</option>{% endfor %}</select></label>
+    <button type="submit">Lưu</button>
+  </div>
+  <p class="muted">Dùng cho trang Phân loại hàng hóa và sheet Tổng hợp hạch toán. Mặt hàng anh đã xác nhận giữ nguyên tài khoản đã chọn.</p>
+</form>
+<h2 style="margin-top:8px">Google Drive</h2>
 <div class="card">
   <h2>Làm một lần: tạo "OAuth client" trên Google Cloud</h2>
   <ol>

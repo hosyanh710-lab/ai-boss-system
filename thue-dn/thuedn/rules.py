@@ -184,3 +184,22 @@ def goi_y_phan_loai(chieu: str, ten_hang: str | None, dvt: str | None, tinh_chat
     if chieu == "ra":
         return "dt_dv" if dich_vu else "dt_hang"
     return "cp_qldn" if dich_vu else "hang_hoa"
+
+
+# Tài khoản gợi ý theo Thông tư 133 (khác TT200 ở các mục dưới; còn lại dùng chung)
+CHE_DO_KE_TOAN = {"TT133": "Thông tư 133/2016/TT-BTC (DN nhỏ và vừa)", "TT200": "Thông tư 200/2014/TT-BTC"}
+_TK_TT133 = {
+    "vao": {"cp_qldn": "6422", "cp_bh": "6421", "cp_sx": "154"},
+    "ra": {"chiet_khau": "511"},            # TT133 không dùng TK 521: ghi giảm trực tiếp doanh thu
+}
+
+
+def bang_phan_loai(che_do: str = "TT133") -> dict:
+    """PHAN_LOAI với tài khoản gợi ý theo chế độ kế toán."""
+    if che_do != "TT133":
+        return PHAN_LOAI
+    out = {}
+    for chieu, loai in PHAN_LOAI.items():
+        out[chieu] = {k: (("Chi phí sản xuất, kinh doanh dở dang" if k == "cp_sx" else ten),
+                          _TK_TT133[chieu].get(k, tk)) for k, (ten, tk) in loai.items()}
+    return out
