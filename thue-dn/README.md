@@ -5,7 +5,7 @@ Công cụ chạy trên máy Windows (giai đoạn 1) để:
 - Tải hóa đơn **mua vào**, **bán ra** từ cổng hoadondientu.gdt.gov.vn cho nhiều doanh nghiệp; tự tách hóa đơn **điều chỉnh / thay thế / bị hủy**.
 - **Kiểm tra người bán** trên hóa đơn đầu vào; cảnh báo **rủi ro CAO** khi hóa đơn lập sau ngày người bán ngừng / chấm dứt hoạt động.
 - **Kiểm tra đối tác trước khi ký hợp đồng** (chỉ cần MST): kết luận *Có thể giao dịch / Cần xem thêm / Không nên giao dịch*, lưu lịch sử làm bằng chứng, nhắc tra lại nhà cung cấp đang giao dịch.
-- Xuất **bảng kê Excel** (3 sheet: Mua vào, Bán ra, Điều chỉnh - thay thế) và **XML** dạng .zip. Sheet *Điều chỉnh - thay thế* ghi mỗi hóa đơn điều chỉnh / thay thế trên một hàng, **cùng hàng với hóa đơn gốc** mà nó điều chỉnh.
+- Xuất **bảng kê Excel** (5 sheet: Mua vào, Bán ra, Điều chỉnh - thay thế, Chi tiết bán ra, Chi tiết mua vào) và **XML** dạng .zip. Sheet *Điều chỉnh - thay thế* ghi mỗi hóa đơn điều chỉnh / thay thế trên một hàng, **cùng hàng với hóa đơn gốc** mà nó điều chỉnh.
 
 Kế hoạch: https://claude.ai/artifact/EXTBVqygPxvgwozX54Ze9e
 Giao diện mẫu: https://claude.ai/artifact/G5HVipgaXqbfMmqopAm14q
@@ -52,6 +52,14 @@ Hai sheet cùng cách xếp. Mỗi hàng là một hóa đơn. Hóa đơn bị �
 - Sheet Mua vào có thêm **Trạng thái người bán** và **Mức rủi ro** ngay trước cột Đánh giá; rủi ro CAO (tô đỏ) khi HĐ gốc hoặc HĐ điều chỉnh / thay thế lập sau ngày người bán ngừng hoạt động.
 - Đánh giá: Bình thường · Đã điều chỉnh (lần 1, 2…) · Đã thay thế · Hóa đơn đã hủy · các cảnh báo (tô vàng): chưa có HĐ điều chỉnh, HĐ gốc chưa tải, chưa có thông tin HĐ gốc; ghi chú thêm khi HĐ gốc hoặc HĐ điều chỉnh thuộc kỳ khác.
 
+### Sheet "Chi tiết bán ra" và "Chi tiết mua vào"
+
+Mỗi hàng là **một dòng hàng hóa / dịch vụ của một hóa đơn**: thông tin hóa đơn (ngày, ký hiệu, số, đối tác, tính chất, HĐ gốc nếu là HĐ điều chỉnh / thay thế) rồi STT dòng, **mã hàng**, tên hàng, ĐVT, số lượng, đơn giá, chiết khấu, thành tiền, thuế suất, tiền thuế (tính theo thuế suất), tính chất dòng (hàng hóa / khuyến mại / chiết khấu / ghi chú). Có sẵn bộ lọc trên dòng tiêu đề.
+
+- Chi tiết đọc từ file XML hóa đơn (khối `DSHHDVu`), nên cần tick **Tải kèm XML** (mặc định đã tick).
+- Hóa đơn chưa có XML vẫn có một hàng, tô vàng, ghi "Chưa có chi tiết hàng hóa".
+- XML không ghi tiền thuế theo từng dòng, nên tiền thuế dòng = thành tiền × thuế suất (có thể lệch vài đồng do làm tròn so với tổng thuế trên hóa đơn).
+
 ### Sheet "Điều chỉnh - thay thế"
 
 Mỗi hàng là một hóa đơn điều chỉnh hoặc thay thế. Cột chia 3 nhóm, từ trái sang phải: thông tin chung (DN, đối tác, loại, lần điều chỉnh) · hóa đơn gốc (bị điều chỉnh / bị thay thế) · hóa đơn điều chỉnh / thay thế, cuối cùng là tổng sau điều chỉnh (tạm tính) và ghi chú.
@@ -70,6 +78,7 @@ Mỗi hàng là một hóa đơn điều chỉnh hoặc thay thế. Cột chia 3
 | Xuất Excel, gộp nhiều DN, tô đỏ rủi ro cao | Xong, đã kiểm thử |
 | Kết nối cổng hoadondientu (captcha, đăng nhập, tra cứu, XML) | **Đã viết, chưa chạy với cổng thật** — cần thử trên máy anh |
 | Kiểm tra đối tác, phiếu đánh giá, lịch sử, nhắc tra lại, danh sách rủi ro | Xong, đã kiểm thử |
+| Chi tiết hàng hóa bán ra / mua vào theo mã hàng (đọc XML) | Xong, đã kiểm thử với XML mẫu. **Cần kiểm tra trên máy anh** với XML thật |
 | Nối HĐ điều chỉnh / thay thế với HĐ gốc (Excel, trang Kết quả, đọc XML) | Xong, đã kiểm thử với dữ liệu giả. **Cần kiểm tra trên máy anh**: tên trường HĐ gốc trong danh sách cổng thuế, và dấu âm / dương của số tiền HĐ điều chỉnh giảm |
 | Tự động lấy thông tin từ trang cơ quan thuế / cổng đăng ký DN | Chưa làm — hiện mở link tra rồi điền bằng tay; cần thử trên máy anh vì các trang này có captcha |
 

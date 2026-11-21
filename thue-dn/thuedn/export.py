@@ -42,7 +42,7 @@ def _fit(ws) -> None:
 
 
 def bang_ke_excel(invoices, suppliers: dict, company_names: dict[str, str],
-                  find_goc=None, find_adjusting=None) -> bytes:
+                  find_goc=None, find_adjusting=None, items: dict | None = None) -> bytes:
     """find_goc(inv) → HĐ gốc của một HĐ điều chỉnh / thay thế (tìm trong toàn bộ dữ liệu đã tải);
     find_adjusting(goc) → các HĐ điều chỉnh / thay thế trỏ tới HĐ gốc đó."""
     invoices = list(invoices)
@@ -54,6 +54,9 @@ def bang_ke_excel(invoices, suppliers: dict, company_names: dict[str, str],
     find_goc = find_goc or (lambda i: None)
     find_adjusting = find_adjusting or (lambda g: [])
     _sheet_lien_ket(wb, invoices, company_names, find_goc, find_adjusting)
+    items = items or {}
+    for title, d in (("Chi tiết bán ra", "ra"), ("Chi tiết mua vào", "vao")):
+        _sheet_chi_tiet(wb, title, [i for i in invoices if i["direction"] == d], items, company_names)
 
     _sheet_hd(ws_vao, [i for i in invoices if i["direction"] == "vao"], company_names, find_goc,
               find_adjusting, suppliers)
@@ -316,6 +319,55 @@ def _sheet_lien_ket(wb: Workbook, invoices, names, find_goc, find_adjusting) -> 
                 c.number_format = "#,##0"
     _fit(ws)
     ws.column_dimensions["A"].width = 30
+
+
+# ---- Sheet chi tiết hàng hóa: mỗi hàng một dòng hàng hóa / dịch vụ của một hóa đơn ----
+HEADERS_CT = ["Doanh nghiệp", "MST DN", "Ngày lập", "Ký hiệu mẫu", "Ký hiệu HĐ", "Số HĐ",
+              "MST đối tác", "Tên đối tác", "Tính chất HĐ", "HĐ gốc (nếu là HĐ ĐC/TT)",
+              "STT dòng", "Mã hàng", "Tên hàng hóa, dịch vụ", "ĐVT", "Số lượng", "Đơn giá",
+              "Tỷ lệ CK (%)", "Tiền chiết khấu", "Thành tiền chưa thuế", "Thuế suất",
+              "Tiền thuế (tính theo thuế suất)", "Tính chất dòng", "Ghi chú"]
+
+
+def _tien_thue(thanh_tien, thue_suat):
+    """Tiền thuế dòng = thành tiền × thuế suất. XML không ghi tiền thuế theo từng dòng."""
+    if thanh_tien is None or not thue_suat:
+        return None
+    ts = str(thue_suat).strip().rstrip("%")
+    try:
+        return round(thanh_tien * float(ts) / 100)
+    except ValueError:
+        return 0 if thue_suat.upper() in ("KCT", "KKKNT") else None
+
+
+def _sheet_chi_tiet(wb: Workbook, title: str, invoices, items: dict, names) -> None:
+    ws = _sheet(wb, title, HEADERS_CT)
+    so_cot = {HEADERS_CT.index(h) + 1 for h in ("Số HĐ", "STT dòng")}
+    for inv in sorted(invoices, key=lambda i: (i["company_mst"], i["tdlap"] or "", i["khhdon"] or "",
+                                                _int(i["shdon"]) if str(i["shdon"]).isdigit() else 0)):
+        vao = inv["direction"] == "vao"
+        goc = (_ten_hd(inv["goc_khmshdon"], inv["goc_khhdon"], inv["goc_shdon"], inv["goc_tdlap"])
+               if inv["goc_shdon"] else None)
+        dau = [names.get(inv["company_mst"], inv["company_mst"]), inv["company_mst"], inv["tdlap"],
+               inv["khmshdon"], inv["khhdon"], _int(inv["shdon"]),
+               inv["nbmst"] if vao else inv["nmmst"], inv["nbten"] if vao else inv["nmten"],
+               tinh_chat(inv["tthai"]), goc]
+        dong = items.get(inv["id"], [])
+        if not dong:
+            ws.append(dau + [None] * 12 + ["Chưa có chi tiết hàng hóa (tải kèm XML để lấy)"])
+            for c in ws[ws.max_row]:
+                c.fill = YELLOW
+            continue
+        for d in dong:
+            ws.append(dau + [d["stt"], d["ma_hang"], d["ten_hang"], d["dvt"], d["so_luong"], d["don_gia"],
+                             d["tl_ck"], d["tien_ck"], d["thanh_tien"], d["thue_suat"],
+                             _tien_thue(d["thanh_tien"], d["thue_suat"]), d["tinh_chat"], None])
+    for row in ws.iter_rows(min_row=2):
+        for c in row:
+            if isinstance(c.value, (int, float)) and c.column not in so_cot:
+                c.number_format = "#,##0.##" if isinstance(c.value, float) else "#,##0"
+    _fit(ws)
+    ws.auto_filter.ref = ws.dimensions
 
 
 def zip_xml(invoices, base_dir: Path) -> bytes:

@@ -14,7 +14,7 @@ from thuedn.portal import PortalError, PortalSession, normalize
 from thuedn.rules import (DS_RUI_RO, KET_LUAN, NGAY_TRA_LAI, TRANG_THAI_NCC, chia_thang,
                           danh_gia_doi_tac, muc_rui_ro, parse_danh_sach_mst, tinh_chat, to_date)
 from thuedn.storage import Storage
-from thuedn.xmlhd import hd_lien_quan_tu_zip
+from thuedn.xmlhd import doc_zip
 
 DATA_DIR = Path(os.environ.get("THUEDN_DATA", Path(__file__).parent / "data"))
 VERIFY_SSL = os.environ.get("THUEDN_VERIFY_SSL", "1") != "0"
@@ -159,21 +159,29 @@ def _save_xml(s: PortalSession, mst: str, direction: str, inv: dict, xml_dir: Pa
     rel = Path(mst) / direction / f"{inv['nbmst']}_{inv['khhdon']}_{inv['shdon']}.zip"
     target = xml_dir / rel
     if target.exists():
-        return
-    try:
-        content = s.export_xml(inv)
-    except PortalError:
-        return
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_bytes(content)
+        content = target.read_bytes()            # đã tải trước đây: đọc lại, không tải lại
+    else:
+        try:
+            content = s.export_xml(inv)
+        except PortalError:
+            return
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(content)
     row = store.db.execute(
         "SELECT id FROM invoices WHERE company_mst=? AND direction=? AND nbmst=? AND khhdon=? AND shdon=?",
         (mst, direction, inv["nbmst"], inv["khhdon"], str(inv["shdon"]))).fetchone()
     if row:
-        store.set_xml_path(row["id"], str(rel))
-        lq = hd_lien_quan_tu_zip(content)
-        if lq:
-            store.set_goc(row["id"], lq)
+        luu_xml(row["id"], str(rel), content)
+
+
+def luu_xml(invoice_id: int, rel: str, content: bytes) -> None:
+    """Ghi đường dẫn XML, thông tin HĐ gốc / nội dung điều chỉnh và các dòng hàng hóa."""
+    store.set_xml_path(invoice_id, rel)
+    lq, hang = doc_zip(content)
+    if lq:
+        store.set_goc(invoice_id, lq)
+    if hang:
+        store.set_items(invoice_id, hang)
 
 
 # ---------- 3. Kết quả ----------
@@ -205,6 +213,7 @@ def export_excel():
     names = {c["mst"]: c["name"] for c in store.companies()}
     data = export.bang_ke_excel(
         rows, store.supplier_map(), names,
+        items=store.items_by_invoice([r["id"] for r in rows]),
         find_goc=lambda i: store.find_invoice(i["company_mst"], i["direction"], i["nbmst"],
                                               i["goc_khmshdon"], i["goc_khhdon"], i["goc_shdon"]),
         find_adjusting=store.find_adjusting)

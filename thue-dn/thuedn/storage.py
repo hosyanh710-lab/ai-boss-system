@@ -60,6 +60,22 @@ CREATE TABLE IF NOT EXISTS partner_checks (
     checked_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_partner_checks_mst ON partner_checks(mst, checked_at);
+-- Dòng hàng hóa, dịch vụ của từng hóa đơn (đọc từ XML)
+CREATE TABLE IF NOT EXISTS invoice_items (
+    invoice_id INTEGER NOT NULL,
+    stt INTEGER,
+    tinh_chat TEXT,
+    ma_hang TEXT,
+    ten_hang TEXT,
+    dvt TEXT,
+    so_luong REAL,
+    don_gia REAL,
+    tl_ck REAL,
+    tien_ck REAL,
+    thanh_tien REAL,
+    thue_suat TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_invoice_items ON invoice_items(invoice_id, stt);
 -- Danh sách cơ quan thuế công bố: DN rủi ro cao, DN bị công khai nợ thuế
 CREATE TABLE IF NOT EXISTS watchlist (
     mst TEXT NOT NULL,
@@ -181,6 +197,26 @@ class Storage:
                ORDER BY tdlap, id""",
             (goc["company_mst"], goc["direction"], goc["nbmst"], goc["khhdon"], goc["shdon"],
              goc["khmshdon"])).fetchall()
+
+    def set_items(self, invoice_id: int, items: list[dict]) -> None:
+        self.db.execute("DELETE FROM invoice_items WHERE invoice_id=?", (invoice_id,))
+        self.db.executemany(
+            """INSERT INTO invoice_items(invoice_id, stt, tinh_chat, ma_hang, ten_hang, dvt, so_luong,
+                   don_gia, tl_ck, tien_ck, thanh_tien, thue_suat)
+               VALUES(:invoice_id,:stt,:tinh_chat,:ma_hang,:ten_hang,:dvt,:so_luong,:don_gia,:tl_ck,
+                   :tien_ck,:thanh_tien,:thue_suat)""",
+            [{**it, "invoice_id": invoice_id} for it in items])
+        self.db.commit()
+
+    def items_by_invoice(self, invoice_ids: list[int]) -> dict[int, list[sqlite3.Row]]:
+        out: dict[int, list[sqlite3.Row]] = {}
+        for i in range(0, len(invoice_ids), 500):
+            part = invoice_ids[i:i + 500]
+            for r in self.db.execute(
+                    f"SELECT * FROM invoice_items WHERE invoice_id IN ({','.join('?' * len(part))}) "
+                    "ORDER BY invoice_id, stt", part):
+                out.setdefault(r["invoice_id"], []).append(r)
+        return out
 
     def set_xml_path(self, invoice_id: int, path: str) -> None:
         self.db.execute("UPDATE invoices SET xml_path=? WHERE id=?", (path, invoice_id))

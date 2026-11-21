@@ -100,7 +100,7 @@ def test_luong_day_du(client):
 
     x = c.get("/export.xlsx?mst=0300000000&tu=2026-06-01&den=2026-06-30")
     wb = load_workbook(io.BytesIO(x.data))
-    assert wb.sheetnames == ["Mua vào", "Bán ra", "Điều chỉnh - thay thế"]
+    assert wb.sheetnames == ["Mua vào", "Bán ra", "Điều chỉnh - thay thế", "Chi tiết bán ra", "Chi tiết mua vào"]
     assert wb["Mua vào"].max_row == 3 and wb["Bán ra"].max_row == 2
     assert wb["Điều chỉnh - thay thế"].max_row == 3   # 2 hàng tiêu đề + 1 HĐ điều chỉnh
     head_vao = [h.value for h in wb["Mua vào"][1]]
@@ -345,3 +345,54 @@ def test_mua_vao_hd_dieu_chinh_cung_hang(client):
     assert dc["Mức rủi ro"] == "Chưa rõ" and bt["Đánh giá"] == "Bình thường"
     so_hd = [c for c in ws[1] if c.value in ("Số HĐ", "Số HĐ ĐC/TT")]
     assert all(ws.cell(2, c.column).number_format == "General" for c in so_hd)
+
+
+# ---------- Chi tiết hàng hóa ----------
+XML_BAN = """<?xml version="1.0" encoding="UTF-8"?>
+<HDon><DLHDon><TTChung><KHMSHDon>1</KHMSHDon><KHHDon>C26TMA</KHHDon><SHDon>201</SHDon></TTChung>
+<NDHDon><DSHHDVu>
+ <HHDVu><TChat>1</TChat><STT>1</STT><MHHDVu>SP-001</MHHDVu><THHDVu>Thép cuộn CB240</THHDVu><DVTinh>kg</DVTinh>
+  <SLuong>1500</SLuong><DGia>18500</DGia><TLCKhau>0</TLCKhau><STCKhau>0</STCKhau><ThTien>27750000</ThTien><TSuat>10%</TSuat></HHDVu>
+ <HHDVu><TChat>1</TChat><STT>2</STT><MHHDVu>SP-002</MHHDVu><THHDVu>Dây buộc</THHDVu><DVTinh>cuộn</DVTinh>
+  <SLuong>12.5</SLuong><DGia>40000</DGia><ThTien>500000</ThTien><TSuat>8%</TSuat></HHDVu>
+ <HHDVu><TChat>3</TChat><STT>3</STT><THHDVu>Chiết khấu thương mại</THHDVu><ThTien>-250000</ThTien><TSuat>10%</TSuat></HHDVu>
+</DSHHDVu></NDHDon></DLHDon></HDon>""".encode()
+
+
+def test_doc_hang_hoa_xml():
+    from thuedn.xmlhd import hang_hoa_tu_xml
+    h = hang_hoa_tu_xml(XML_BAN)
+    assert [d["ma_hang"] for d in h] == ["SP-001", "SP-002", None]
+    assert h[0]["so_luong"] == 1500 and h[0]["don_gia"] == 18500 and h[0]["thue_suat"] == "10%"
+    assert h[1]["so_luong"] == 12.5 and h[2]["tinh_chat"] == "Chiết khấu thương mại"
+
+
+def test_sheet_chi_tiet(client, tmp_path):
+    c, appmod = client
+    import zipfile
+    from thuedn.portal import normalize
+    ban = _hd("0300000000", "C26TMA", 201, "2026-06-08", 28_000_000, 1)
+    ban.update({"nmmst": "0400000000", "nmten": "Khách X"})
+    appmod.store.save_invoice("0300000000", "ra", normalize(ban))
+    appmod.store.save_invoice("0300000000", "vao", normalize(_hd("0100000001", "C26TAA", 11, "2026-06-05", 1_000_000, 1)))
+
+    # luồng thật: lưu file zip cổng thuế trả về → đọc ra các dòng hàng hóa
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("hd.xml", XML_BAN)
+    inv_id = appmod.store.invoices(direction="ra")[0]["id"]
+    appmod.luu_xml(inv_id, "x.zip", buf.getvalue())
+
+    x = c.get("/export.xlsx?mst=0300000000&tu=2026-06-01&den=2026-06-30")
+    wb = load_workbook(io.BytesIO(x.data))
+    ws = wb["Chi tiết bán ra"]
+    head = [h.value for h in ws[1]]
+    rows = [dict(zip(head, r)) for r in ws.iter_rows(min_row=2, values_only=True)]
+    assert len(rows) == 3 and all(r["Số HĐ"] == 201 and r["Tên đối tác"] == "Khách X" for r in rows)
+    assert rows[0]["Mã hàng"] == "SP-001" and rows[0]["Số lượng"] == 1500
+    assert rows[0]["Tiền thuế (tính theo thuế suất)"] == 2_775_000
+    assert rows[1]["Tiền thuế (tính theo thuế suất)"] == 40_000
+    assert rows[2]["Tính chất dòng"] == "Chiết khấu thương mại"
+
+    mv = [dict(zip(head, r)) for r in wb["Chi tiết mua vào"].iter_rows(min_row=2, values_only=True)]
+    assert len(mv) == 1 and mv[0]["Mã hàng"] is None and "Chưa có chi tiết" in mv[0]["Ghi chú"]
