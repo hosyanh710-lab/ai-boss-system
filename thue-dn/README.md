@@ -44,7 +44,7 @@ Nhà cung cấp có hóa đơn mua vào mà chưa tra, hoặc tra quá 30 ngày,
 
 ### Sheet "Điều chỉnh - thay thế"
 
-Mỗi hàng là một hóa đơn điều chỉnh hoặc thay thế. Cột chia 3 nhóm: thông tin chung (DN, đối tác, loại, lần điều chỉnh) · hóa đơn điều chỉnh / thay thế · hóa đơn gốc (bị điều chỉnh / bị thay thế), cuối cùng là tổng sau điều chỉnh (tạm tính) và ghi chú.
+Mỗi hàng là một hóa đơn điều chỉnh hoặc thay thế. Cột chia 3 nhóm, từ trái sang phải: thông tin chung (DN, đối tác, loại, lần điều chỉnh) · hóa đơn gốc (bị điều chỉnh / bị thay thế) · hóa đơn điều chỉnh / thay thế, cuối cùng là tổng sau điều chỉnh (tạm tính) và ghi chú.
 
 - Nhiều lần điều chỉnh cho cùng một hóa đơn gốc nằm liền nhau, đánh số Lần 1, 2…; tổng sau điều chỉnh cộng dồn.
 - Hóa đơn gốc được tìm trong **toàn bộ dữ liệu đã tải**, kể cả khác kỳ đang lọc.

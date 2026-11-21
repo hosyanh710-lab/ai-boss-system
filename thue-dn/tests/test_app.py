@@ -232,9 +232,10 @@ def test_excel_noi_hd_goc(client):
     ws = load_workbook(io.BytesIO(x.data))["Điều chỉnh - thay thế"]
     head = [v for v in next(ws.iter_rows(min_row=2, max_row=2, values_only=True))]
     data = [dict(zip(range(len(head)), r)) for r in ws.iter_rows(min_row=3, values_only=True)]
-    H = {h: i for i, h in enumerate(head) if h not in head[:head.index(h)]}   # vị trí lần xuất hiện đầu
-    adj_so, goc_so = 9, 16          # cột "Số HĐ" của HĐ điều chỉnh và HĐ gốc (0-based)
-    assert head[adj_so] == "Số HĐ" and head[goc_so] == "Số HĐ"
+    H = {h: i for i, h in enumerate(head) if h not in head[:i]}   # vị trí lần xuất hiện đầu
+    goc_so, adj_so = 9, 17          # cột "Số HĐ" của HĐ gốc (trước) và HĐ điều chỉnh (sau), 0-based
+    assert head[goc_so] == "Số HĐ" and head[adj_so] == "Số HĐ"
+    assert head[goc_so + 5] == "Trạng thái HĐ gốc" and head[adj_so - 2] == "Ký hiệu mẫu"
     by_adj = {r[adj_so]: r for r in data if r[adj_so]}
 
     assert len(data) == 5

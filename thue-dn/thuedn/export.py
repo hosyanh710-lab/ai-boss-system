@@ -72,7 +72,8 @@ def bang_ke_excel(invoices, suppliers: dict, company_names: dict[str, str],
     return buf.getvalue()
 
 
-# ---- Sheet nối HĐ điều chỉnh / thay thế với HĐ gốc: mỗi hàng một HĐ điều chỉnh / thay thế ----
+# ---- Sheet nối HĐ gốc với HĐ điều chỉnh / thay thế: mỗi hàng một HĐ điều chỉnh / thay thế,
+#      cột HĐ gốc trước, cột HĐ điều chỉnh / thay thế sau ----
 LK_INFO = ["Doanh nghiệp", "MST DN", "Chiều", "MST đối tác", "Tên đối tác", "Loại", "Lần"]
 LK_HD = ["Ký hiệu mẫu", "Ký hiệu", "Số HĐ", "Ngày lập", "Tiền chưa thuế", "Tiền thuế", "Tổng thanh toán"]
 LK_GOC = LK_HD + ["Trạng thái HĐ gốc"]
@@ -102,8 +103,8 @@ def _sheet_lien_ket(wb: Workbook, invoices, names, find_goc, find_adjusting) -> 
     n_info, n_hd, n_goc = len(LK_INFO), len(LK_HD), len(LK_GOC)
     # hàng 1: nhóm cột, hàng 2: tên cột
     groups = [("THÔNG TIN CHUNG", n_info, GREY),
-              ("HÓA ĐƠN ĐIỀU CHỈNH / THAY THẾ", n_hd, BLUE),
               ("HÓA ĐƠN GỐC (BỊ ĐIỀU CHỈNH / BỊ THAY THẾ)", n_goc, ORANGE),
+              ("HÓA ĐƠN ĐIỀU CHỈNH / THAY THẾ", n_hd, BLUE),
               ("", len(LK_END), GREY)]
     col = 1
     for title, width, fill in groups:
@@ -113,7 +114,7 @@ def _sheet_lien_ket(wb: Workbook, invoices, names, find_goc, find_adjusting) -> 
             ws.cell(1, c).fill = fill
             ws.cell(2, c).fill = fill
         col += width
-    for i, h in enumerate(LK_INFO + LK_HD + LK_GOC + LK_END, start=1):
+    for i, h in enumerate(LK_INFO + LK_GOC + LK_HD + LK_END, start=1):
         ws.cell(2, i, h).font = Font(bold=True)
     ws.freeze_panes = f"{get_column_letter(n_info + 1)}3"
 
@@ -172,21 +173,22 @@ def _sheet_lien_ket(wb: Workbook, invoices, names, find_goc, find_adjusting) -> 
                 tong_sau = adj["tgtttbso"]
         ws.append([names.get(base["company_mst"], base["company_mst"]), base["company_mst"],
                    "Mua vào" if vao else "Bán ra", *doi_tac, loai, so_lan,
-                   *_hd_cols(adj), *_hd_cols(goc),
+                   *_hd_cols(goc),
                    tinh_chat(goc["tthai"]) if goc is not None else None,
+                   *_hd_cols(adj),
                    tong_sau, note or None])
         if note and not note.startswith("HĐ điều chỉnh / thay thế nằm ngoài"):
             for c in ws[ws.max_row]:
                 c.fill = YELLOW
         # khi chưa tìm thấy HĐ gốc trong dữ liệu, vẫn ghi ký hiệu / số gốc đọc được
         if adj is not None and goc is None and adj["goc_shdon"]:
-            start = n_info + n_hd + 1
+            start = n_info + 1
             for off, v in enumerate([adj["goc_khmshdon"], adj["goc_khhdon"], _int(adj["goc_shdon"]),
                                      adj["goc_tdlap"]]):
                 ws.cell(ws.max_row, start + off, v)
     for row in ws.iter_rows(min_row=3):
         for c in row:
-            if isinstance(c.value, (int, float)) and c.column not in (n_info, n_info + 3, n_info + n_hd + 3):
+            if isinstance(c.value, (int, float)) and c.column not in (n_info, n_info + 3, n_info + n_goc + 3):
                 c.number_format = "#,##0"
     _fit(ws)
     ws.column_dimensions["A"].width = 30
