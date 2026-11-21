@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Tải hóa đơn{% endblock %} · thue-dn</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --text:#1d2430; --muted:#5b6575; --line:#dde1e7;
+          --accent:#1f5fbf; --red:#b42318; --red-bg:#fdecea; --amber:#8a5a00; --amber-bg:#fff4d6;
+          --green:#1e7a3c; --green-bg:#e6f4ea; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.5 system-ui, "Segoe UI", Roboto, sans-serif; background:var(--bg); color:var(--text); }
+  header { background:var(--card); border-bottom:1px solid var(--line); padding:12px 24px; display:flex; gap:24px; align-items:center; flex-wrap:wrap; }
+  header b { font-size:17px; }
+  header nav a { margin-right:16px; color:var(--muted); text-decoration:none; }
+  header nav a.on { color:var(--accent); font-weight:600; }
+  main { max-width:1280px; margin:0 auto; padding:24px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:20px; margin-bottom:20px; }
+  h1 { font-size:22px; margin:0 0 16px; } h2 { font-size:17px; margin:0 0 12px; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; background:#fafbfc; }
+  td.num { text-align:right; font-variant-numeric:tabular-nums; }
+  .scroll { overflow-x:auto; }
+  input, select, button { font:inherit; padding:8px 10px; border:1px solid var(--line); border-radius:6px; background:#fff; }
+  button, .btn { background:var(--accent); color:#fff; border-color:var(--accent); cursor:pointer; text-decoration:none; display:inline-block; padding:8px 14px; border-radius:6px; }
+  button.ghost, .btn.ghost { background:#fff; color:var(--accent); }
+  button.danger { background:#fff; color:var(--red); border-color:var(--line); }
+  .row { display:flex; gap:12px; flex-wrap:wrap; align-items:end; }
+  label { display:flex; flex-direction:column; gap:4px; font-size:13px; color:var(--muted); }
+  label.inline { flex-direction:row; align-items:center; gap:6px; color:var(--text); font-size:15px; }
+  .flash { padding:10px 14px; border-radius:6px; margin-bottom:12px; }
+  .flash.error { background:var(--red-bg); color:var(--red); } .flash.ok { background:var(--green-bg); color:var(--green); }
+  .tag { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:600; }
+  .tag.cao { background:var(--red-bg); color:var(--red); } .tag.trung_binh { background:var(--amber-bg); color:var(--amber); }
+  .tag.thap { background:var(--green-bg); color:var(--green); } .tag.chua_ro { background:#eef0f3; color:var(--muted); }
+  .muted { color:var(--muted); font-size:13px; }
+  tr.cao td { background:var(--red-bg); }
+</style>
+</head>
+<body>
+<header>
+  <b>Tải hóa đơn &amp; kiểm tra NCC</b>
+  <nav>
+    <a href="{{ url_for('index') }}" class="{{ 'on' if request.endpoint=='index' }}">Doanh nghiệp</a>
+    <a href="{{ url_for('results') }}" class="{{ 'on' if request.endpoint=='results' }}">Kết quả</a>
+    <a href="{{ url_for('suppliers') }}" class="{{ 'on' if request.endpoint=='suppliers' }}">Nhà cung cấp</a>
+  </nav>
+</header>
+<main>
+  {% for cat, msg in get_flashed_messages(with_categories=true) %}
+    <div class="flash {{ cat }}">{{ msg }}</div>
+  {% endfor %}
+  {% block body %}{% endblock %}
+</main>
+</body>
+</html>

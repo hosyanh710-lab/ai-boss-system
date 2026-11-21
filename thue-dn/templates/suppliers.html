@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Kiểm tra nhà cung cấp{% endblock %}
+{% block body %}
+<h1>Kiểm tra nhà cung cấp</h1>
+<p class="muted">Danh sách người bán lấy từ hóa đơn mua vào, mỗi MST một dòng. Bấm "Tra CQT" để mở trang tra cứu của cơ quan thuế,
+  rồi chọn trạng thái và ngày ngừng hoạt động (nếu có). Kết quả từ trang tổng hợp được đánh dấu "cần xác nhận".</p>
+
+<div class="card scroll">
+  <table>
+    <thead><tr><th>Người bán</th><th>Số HĐ</th><th>HĐ gần nhất</th><th>Tra cứu</th><th>Trạng thái</th></tr></thead>
+    <tbody>
+    {% for s in rows %}
+      <tr id="ncc-{{ s.mst }}">
+        <td>{{ s.ten }}<br><span class="muted">{{ s.mst }}</span>
+          {% if s.can_xac_nhan %}<br><span class="tag trung_binh">Cần xác nhận</span>{% endif %}</td>
+        <td>{{ s.so_hd }}</td>
+        <td>{{ s.hd_cuoi or '' }}</td>
+        <td><a href="https://tracuunnt.gdt.gov.vn/tcnnt/mstdn.jsp" target="_blank" rel="noopener">Tra CQT</a><br>
+            <a href="https://masothue.com/Search/?q={{ s.mst }}" target="_blank" rel="noopener">Tra nhanh</a></td>
+        <td>
+          <form method="post" action="{{ url_for('update_supplier', mst=s.mst) }}" class="row">
+            <label>Trạng thái
+              <select name="status">
+                {% for k, v in TRANG_THAI_NCC.items() %}<option value="{{ k }}" {{ 'selected' if s.status==k }}>{{ v }}</option>{% endfor %}
+              </select></label>
+            <label>Ngày ngừng <input type="date" name="ngay_ngung" value="{{ s.ngay_ngung or '' }}"></label>
+            <label>Nguồn
+              <select name="nguon">
+                <option value="cqt" {{ 'selected' if s.nguon=='cqt' }}>Cơ quan thuế</option>
+                <option value="tong_hop" {{ 'selected' if s.nguon=='tong_hop' }}>Trang tổng hợp</option>
+                <option value="nhap_tay" {{ 'selected' if s.nguon in (None,'nhap_tay') }}>Nhập tay</option>
+              </select></label>
+            <button type="submit" class="ghost">Lưu</button>
+          </form>
+          {% if s.checked_at %}<span class="muted">Tra lúc {{ s.checked_at }}</span>{% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="muted">Chưa có hóa đơn mua vào nào.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

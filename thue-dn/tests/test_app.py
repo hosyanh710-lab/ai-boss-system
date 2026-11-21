@@ -1,0 +1,113 @@
+"""Kiểm thử không cần mạng: thay cổng thuế bằng dữ liệu giả."""
+import io
+import os
+import sys
+from datetime import date
+from pathlib import Path
+
+import pytest
+from openpyxl import load_workbook
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from thuedn.rules import chia_thang, muc_rui_ro, tinh_chat  # noqa: E402
+
+
+def test_chia_thang():
+    assert chia_thang(date(2026, 1, 15), date(2026, 3, 10)) == [
+        (date(2026, 1, 15), date(2026, 1, 31)),
+        (date(2026, 2, 1), date(2026, 2, 28)),
+        (date(2026, 3, 1), date(2026, 3, 10)),
+    ]
+    with pytest.raises(ValueError):
+        chia_thang(date(2026, 2, 1), date(2026, 1, 1))
+
+
+def test_muc_rui_ro():
+    assert muc_rui_ro("cham_dut", "2026-05-01", "2026-06-01") == "cao"
+    assert muc_rui_ro("cham_dut", "2026-05-01", "2026-04-01") == "trung_binh"
+    assert muc_rui_ro("dang_hd", None, "2026-06-01") == "thap"
+    assert muc_rui_ro("chua_tra", None, "2026-06-01") == "chua_ro"
+    assert tinh_chat(3) == "Hóa đơn điều chỉnh"
+
+
+FAKE_PURCHASE = [
+    {"nbmst": "0100000001", "nbten": "NCC Một", "nmmst": "0300000000", "nmten": "DN A",
+     "khmshdon": 1, "khhdon": "C26TAA", "shdon": 11, "tdlap": "2026-06-10T00:00:00Z",
+     "tgtcthue": 1000000, "tgtthue": 100000, "tgtttbso": 1100000, "tthai": 1},
+    {"nbmst": "0100000002", "nbten": "NCC Hai", "nmmst": "0300000000", "nmten": "DN A",
+     "khmshdon": 1, "khhdon": "C26TBB", "shdon": 22, "tdlap": "2026-06-20T00:00:00Z",
+     "tgtcthue": 2000000, "tgtthue": 200000, "tgtttbso": 2200000, "tthai": 3},
+]
+FAKE_SOLD = [
+    {"nbmst": "0300000000", "nbten": "DN A", "nmmst": "0400000000", "nmten": "Khách X",
+     "khmshdon": 1, "khhdon": "C26TCC", "shdon": 5, "tdlap": "2026-06-05T00:00:00Z",
+     "tgtcthue": 500000, "tgtthue": 50000, "tgtttbso": 550000, "tthai": 1},
+]
+
+
+@pytest.fixture()
+def client(tmp_path, monkeypatch):
+    monkeypatch.setenv("THUEDN_DATA", str(tmp_path))
+    sys.modules.pop("app", None)
+    import app as appmod
+    from thuedn import portal
+
+    class FakeCaptcha:
+        key = "k1"
+        data_uri = "data:image/svg+xml;base64,PHN2Zy8+"
+
+    monkeypatch.setattr(portal.PortalSession, "get_captcha", lambda self: FakeCaptcha())
+
+    def fake_login(self, mst, pw, ckey, cval):
+        if cval != "abc12":
+            raise portal.PortalError("Sai captcha")
+        assert pw == "mat-khau" and ckey == "k1"
+        self.token = "t"
+
+    monkeypatch.setattr(portal.PortalSession, "login", fake_login)
+    monkeypatch.setattr(portal.PortalSession, "purchase", lambda self, tu, den: iter(FAKE_PURCHASE))
+    monkeypatch.setattr(portal.PortalSession, "sold", lambda self, tu, den: iter(FAKE_SOLD))
+    appmod.app.testing = True
+    yield appmod.app.test_client(), appmod
+
+
+def test_luong_day_du(client):
+    c, appmod = client
+    c.post("/companies", data={"name": "DN A", "mst": "0300000000", "password": "mat-khau"})
+    # mật khẩu không lưu dạng chữ thường
+    raw = appmod.store.db.execute("SELECT enc_password FROM companies").fetchone()[0]
+    assert b"mat-khau" not in raw
+
+    r = c.post("/download", data={"mst": "0300000000", "loai": ["vao", "ra"],
+                                  "tu": "2026-06-01", "den": "2026-06-30"})
+    assert r.headers["Location"].endswith("/captcha")
+    assert "Nhập captcha" in c.get("/captcha").get_data(as_text=True)
+
+    c.post("/captcha", data={"cvalue": "sai"})
+    assert appmod.job["pending"] == ["0300000000"]
+    c.post("/captcha", data={"cvalue": "abc12"})
+    r = c.get("/captcha")
+    assert r.headers["Location"].endswith("/results")
+
+    page = c.get("/results").get_data(as_text=True)
+    assert "NCC Hai" in page and "Khách X" in page and "Hóa đơn điều chỉnh" in page
+
+    # đánh dấu NCC Hai đã chấm dứt trước ngày lập → rủi ro cao
+    c.get("/suppliers")
+    c.post("/suppliers/0100000002", data={"status": "cham_dut", "ngay_ngung": "2026-06-15", "nguon": "cqt"})
+    assert "Rủi ro CAO" in c.get("/results").get_data(as_text=True)
+
+    x = c.get("/export.xlsx?mst=0300000000&tu=2026-06-01&den=2026-06-30")
+    wb = load_workbook(io.BytesIO(x.data))
+    assert wb.sheetnames == ["Mua vào", "Bán ra", "Điều chỉnh - thay thế"]
+    assert wb["Mua vào"].max_row == 3 and wb["Bán ra"].max_row == 2
+    assert wb["Điều chỉnh - thay thế"].max_row == 2
+    cao = [r for r in wb["Mua vào"].iter_rows(values_only=True) if r[-1] == "CAO"]
+    assert len(cao) == 1 and cao[0][6] == "0100000002"
+
+    # tải lại không bị trùng hóa đơn
+    c.post("/download", data={"mst": "0300000000", "loai": ["vao", "ra"],
+                              "tu": "2026-06-01", "den": "2026-06-30"})
+    c.get("/captcha")
+    assert len(appmod.store.invoices()) == 3

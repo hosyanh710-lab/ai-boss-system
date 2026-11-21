@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Danh sách doanh nghiệp{% endblock %}
+{% block body %}
+<h1>Danh sách doanh nghiệp</h1>
+
+<form class="card" method="post" action="{{ url_for('start_download') }}">
+  <h2>Tải hóa đơn</h2>
+  <div class="scroll">
+  <table>
+    <thead><tr><th><input type="checkbox" onclick="document.querySelectorAll('input[name=mst]').forEach(c=>c.checked=this.checked)" aria-label="Chọn tất cả"></th>
+      <th>Tên doanh nghiệp</th><th>MST</th><th>Phiên cổng thuế</th><th></th></tr></thead>
+    <tbody>
+    {% for c in companies %}
+      <tr>
+        <td><input type="checkbox" name="mst" value="{{ c.mst }}" aria-label="Chọn {{ c.name }}"></td>
+        <td>{{ c.name }}</td><td>{{ c.mst }}</td>
+        <td>{% if c.mst in logged %}<span class="tag thap">Đã đăng nhập</span>{% else %}<span class="tag chua_ro">Cần captcha</span>{% endif %}</td>
+        <td><button class="danger" formaction="{{ url_for('delete_company', mst=c.mst) }}"
+                    onclick='return confirm({{ ("Xóa " ~ c.name ~ "?")|tojson }})'>Xóa</button></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="muted">Chưa có doanh nghiệp nào. Thêm ở khung bên dưới.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <div class="row" style="margin-top:16px">
+    <label>Từ ngày <input type="date" name="tu" value="{{ tu }}" required></label>
+    <label>Đến ngày <input type="date" name="den" value="{{ den }}" required></label>
+    <label class="inline"><input type="checkbox" name="loai" value="vao" checked> Mua vào</label>
+    <label class="inline"><input type="checkbox" name="loai" value="ra" checked> Bán ra</label>
+    <label class="inline"><input type="checkbox" name="xml"> Tải kèm XML</label>
+    <button type="submit">Tải hóa đơn</button>
+  </div>
+  <p class="muted">Hóa đơn điều chỉnh / thay thế nằm chung trong mua vào và bán ra, được tách riêng ở trang Kết quả và trong file Excel.</p>
+</form>
+
+<form class="card" method="post" action="{{ url_for('add_company') }}">
+  <h2>Thêm doanh nghiệp</h2>
+  <div class="row">
+    <label>Tên doanh nghiệp <input name="name" required></label>
+    <label>Mã số thuế <input name="mst" required pattern="[0-9\-]{10,14}"></label>
+    <label>Mật khẩu cổng thuế <input name="password" type="password" required autocomplete="off"></label>
+    <button type="submit">Lưu</button>
+  </div>
+  <p class="muted">Mật khẩu được mã hóa và chỉ lưu trên máy này (thư mục data). Nhập lại cùng MST để đổi mật khẩu.</p>
+</form>
+{% endblock %}

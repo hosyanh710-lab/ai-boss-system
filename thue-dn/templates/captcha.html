@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Nhập captcha{% endblock %}
+{% block body %}
+<div class="card" style="max-width:480px">
+  <h1>Nhập captcha</h1>
+  <p><b>{{ name }}</b><br><span class="muted">MST {{ mst }} · còn {{ con_lai }} doanh nghiệp cần đăng nhập</span></p>
+  <form method="post">
+    {% if cap %}
+      <img src="{{ cap.data_uri }}" alt="Mã captcha" style="width:100%;max-width:300px;border:1px solid var(--line);border-radius:6px;background:#fff">
+      <p><a href="{{ url_for('captcha') }}">Đổi mã khác</a></p>
+      <label>Mã captcha <input name="cvalue" autofocus autocomplete="off" required></label>
+      <div class="row" style="margin-top:16px">
+        <button type="submit">Đăng nhập và tải</button>
+        <button type="submit" name="bo_qua" value="1" class="ghost" formnovalidate>Bỏ qua DN này</button>
+      </div>
+    {% else %}
+      <p class="muted">Không lấy được captcha. Kiểm tra mạng rồi <a href="{{ url_for('captcha') }}">thử lại</a>.</p>
+      <button type="submit" name="bo_qua" value="1" class="ghost" formnovalidate>Bỏ qua DN này</button>
+    {% endif %}
+  </form>
+</div>
+{% endblock %}

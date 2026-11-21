@@ -1,0 +1,5 @@
+# Dữ liệu, mật khẩu mã hóa và khóa — KHÔNG đưa lên GitHub
+data/
+.venv/
+__pycache__/
+.pytest_cache/

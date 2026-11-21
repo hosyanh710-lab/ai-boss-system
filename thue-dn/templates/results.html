@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Kết quả tải hóa đơn{% endblock %}
+{% block body %}
+<h1>Kết quả tải hóa đơn</h1>
+{% if log %}
+<div class="card"><h2>Lượt tải vừa rồi</h2><ul>{% for l in log %}<li>{{ l }}</li>{% endfor %}</ul></div>
+{% endif %}
+
+<form class="card row" method="get">
+  {% for m in msts %}<input type="hidden" name="mst" value="{{ m }}">{% endfor %}
+  <label>Từ ngày <input type="date" name="tu" value="{{ tu or '' }}"></label>
+  <label>Đến ngày <input type="date" name="den" value="{{ den or '' }}"></label>
+  <label>Chiều
+    <select name="chieu">
+      <option value="">Tất cả</option>
+      <option value="vao" {{ 'selected' if chieu=='vao' }}>Mua vào</option>
+      <option value="ra" {{ 'selected' if chieu=='ra' }}>Bán ra</option>
+    </select></label>
+  <button type="submit" class="ghost">Lọc</button>
+  <a class="btn" href="{{ url_for('export_excel', mst=msts, tu=tu, den=den, chieu=chieu) }}">Xuất Excel</a>
+  <a class="btn ghost" href="{{ url_for('export_xml', mst=msts, tu=tu, den=den, chieu=chieu) }}">Tải XML (.zip)</a>
+</form>
+
+<div class="card scroll">
+  <p class="muted">{{ rows|length }} hóa đơn</p>
+  <table>
+    <thead><tr><th>Doanh nghiệp</th><th>Chiều</th><th>Ngày lập</th><th>Ký hiệu / Số</th><th>Đối tác</th>
+      <th class="num">Chưa thuế</th><th class="num">Thuế</th><th class="num">Tổng</th><th>Tính chất</th><th>Người bán</th></tr></thead>
+    <tbody>
+    {% for r, s, muc in rows %}
+      <tr class="{{ 'cao' if muc=='cao' }}">
+        <td>{{ names.get(r.company_mst, r.company_mst) }}</td>
+        <td>{{ 'Mua vào' if r.direction=='vao' else 'Bán ra' }}</td>
+        <td>{{ r.tdlap }}</td>
+        <td>{{ r.khmshdon }}{{ r.khhdon }} / {{ r.shdon }}</td>
+        <td>{% if r.direction=='vao' %}{{ r.nbten }}<br><span class="muted">{{ r.nbmst }}</span>{% else %}{{ r.nmten }}<br><span class="muted">{{ r.nmmst }}</span>{% endif %}</td>
+        <td class="num">{{ '{:,.0f}'.format(r.tgtcthue or 0) }}</td>
+        <td class="num">{{ '{:,.0f}'.format(r.tgtthue or 0) }}</td>
+        <td class="num">{{ '{:,.0f}'.format(r.tgtttbso or 0) }}</td>
+        <td>{{ tinh_chat(r.tthai) }}</td>
+        <td>{% if muc %}<span class="tag {{ muc }}">{{ {'cao':'Rủi ro CAO','trung_binh':'Cần xem','thap':'Đang HĐ','chua_ro':'Chưa tra'}[muc] }}</span>{% endif %}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="10" class="muted">Chưa có hóa đơn nào trong khoảng này.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
