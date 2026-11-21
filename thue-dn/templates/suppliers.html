@@ -16,7 +16,8 @@
         <td>{{ s.so_hd }}</td>
         <td>{{ s.hd_cuoi or '' }}</td>
         <td><a href="https://tracuunnt.gdt.gov.vn/tcnnt/mstdn.jsp" target="_blank" rel="noopener">Tra CQT</a><br>
-            <a href="https://masothue.com/Search/?q={{ s.mst }}" target="_blank" rel="noopener">Tra nhanh</a></td>
+            <a href="https://masothue.com/Search/?q={{ s.mst }}" target="_blank" rel="noopener">Tra nhanh</a><br>
+            <a href="{{ url_for('doi_tac', mst=s.mst) }}">Kiểm tra đầy đủ</a></td>
         <td>
           <form method="post" action="{{ url_for('update_supplier', mst=s.mst) }}" class="row">
             <label>Trạng thái

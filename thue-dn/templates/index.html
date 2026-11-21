@@ -2,6 +2,8 @@
 {% block title %}Danh sách doanh nghiệp{% endblock %}
 {% block body %}
 <h1>Danh sách doanh nghiệp</h1>
+{% if trong_ds %}<div class="flash error"><b>{{ trong_ds|length }} nhà cung cấp đang giao dịch nằm trong danh sách rủi ro.</b> <a href="{{ url_for('doi_tac') }}">Xem chi tiết</a></div>{% endif %}
+{% if can_tra_lai %}<div class="flash" style="background:var(--amber-bg);color:var(--amber)">{{ can_tra_lai }} nhà cung cấp cần tra lại trạng thái. <a href="{{ url_for('doi_tac') }}">Tra lại</a></div>{% endif %}
 
 <form class="card" method="post" action="{{ url_for('start_download') }}">
   <h2>Tải hóa đơn</h2>

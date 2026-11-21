@@ -4,6 +4,7 @@ Công cụ chạy trên máy Windows (giai đoạn 1) để:
 
 - Tải hóa đơn **mua vào**, **bán ra** từ cổng hoadondientu.gdt.gov.vn cho nhiều doanh nghiệp; tự tách hóa đơn **điều chỉnh / thay thế / bị hủy**.
 - **Kiểm tra người bán** trên hóa đơn đầu vào; cảnh báo **rủi ro CAO** khi hóa đơn lập sau ngày người bán ngừng / chấm dứt hoạt động.
+- **Kiểm tra đối tác trước khi ký hợp đồng** (chỉ cần MST): kết luận *Có thể giao dịch / Cần xem thêm / Không nên giao dịch*, lưu lịch sử làm bằng chứng, nhắc tra lại nhà cung cấp đang giao dịch.
 - Xuất **bảng kê Excel** (3 sheet: Mua vào, Bán ra, Điều chỉnh - thay thế) và **XML** dạng .zip.
 
 Kế hoạch: https://claude.ai/artifact/EXTBVqygPxvgwozX54Ze9e
@@ -28,6 +29,18 @@ Giao diện mẫu: https://claude.ai/artifact/G5HVipgaXqbfMmqopAm14q
 3. **Nhập captcha** lần lượt cho từng DN. DN đã đăng nhập trong phiên thì không phải nhập lại.
 4. **Kết quả**: lọc, xuất Excel, tải XML.
 5. **Nhà cung cấp**: tra trạng thái từng MST người bán, lưu lại để lần sau không tra lại.
+6. **Kiểm tra đối tác**: nhập MST → mở các trang tra cứu → điền trạng thái, ngày thành lập, ngành nghề → xem phiếu đánh giá, tải phiếu Excel. Nhập thêm danh sách DN rủi ro cao / nợ thuế do cơ quan thuế công bố để công cụ tự đối chiếu.
+
+### Quy tắc đánh giá đối tác
+
+| Kết luận | Khi nào |
+|---|---|
+| Không nên giao dịch | MST tạm ngừng, ngừng hoạt động, chấm dứt, không hoạt động tại địa chỉ; hoặc có trong danh sách rủi ro / nợ thuế |
+| Cần xem thêm | Thành lập dưới 12 tháng; ngành nghề không khớp hoặc chưa đối chiếu; thông tin lấy từ trang tổng hợp |
+| Chưa đủ thông tin | Chưa tra trạng thái MST |
+| Có thể giao dịch | Không vướng điều nào ở trên |
+
+Nhà cung cấp có hóa đơn mua vào mà chưa tra, hoặc tra quá 30 ngày, được liệt kê để tra lại. Các mốc 12 tháng và 30 ngày sửa trong `thuedn/rules.py`.
 
 ## Tình trạng
 
@@ -37,7 +50,8 @@ Giao diện mẫu: https://claude.ai/artifact/G5HVipgaXqbfMmqopAm14q
 | Chia khoảng ngày theo tháng, phân loại tính chất HĐ | Xong, đã kiểm thử |
 | Xuất Excel, gộp nhiều DN, tô đỏ rủi ro cao | Xong, đã kiểm thử |
 | Kết nối cổng hoadondientu (captcha, đăng nhập, tra cứu, XML) | **Đã viết, chưa chạy với cổng thật** — cần thử trên máy anh |
-| Tra cứu NCC tự động trên trang cơ quan thuế | Chưa làm — hiện bấm link tra rồi chọn trạng thái bằng tay |
+| Kiểm tra đối tác, phiếu đánh giá, lịch sử, nhắc tra lại, danh sách rủi ro | Xong, đã kiểm thử |
+| Tự động lấy thông tin từ trang cơ quan thuế / cổng đăng ký DN | Chưa làm — hiện mở link tra rồi điền bằng tay; cần thử trên máy anh vì các trang này có captcha |
 
 Địa chỉ kết nối cổng thuế nằm trong `thuedn/portal.py`. Nếu cổng đổi, chỉ cần sửa file đó.
 

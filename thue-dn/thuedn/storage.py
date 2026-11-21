@@ -40,6 +40,35 @@ CREATE TABLE IF NOT EXISTS suppliers (
     can_xac_nhan INTEGER NOT NULL DEFAULT 0,
     checked_at TEXT
 );
+-- Mỗi lần kiểm tra đối tác là một dòng, giữ lại làm bằng chứng
+CREATE TABLE IF NOT EXISTS partner_checks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    mst TEXT NOT NULL,
+    ten TEXT,
+    status TEXT NOT NULL,
+    ngay_ngung TEXT,
+    ngay_thanh_lap TEXT,
+    dia_chi TEXT,
+    nguoi_dai_dien TEXT,
+    nganh_nghe TEXT,
+    nganh_khop INTEGER,               -- 1 khớp, 0 không khớp, NULL chưa xem
+    nguon TEXT,
+    ghi_chu TEXT,
+    ds_rui_ro TEXT,                   -- danh sách rủi ro đối tác nằm trong, lúc kiểm tra
+    ket_luan TEXT NOT NULL,           -- 'nen_ky' | 'can_xem' | 'khong_nen' | 'chua_du'
+    ly_do TEXT,
+    checked_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_partner_checks_mst ON partner_checks(mst, checked_at);
+-- Danh sách cơ quan thuế công bố: DN rủi ro cao, DN bị công khai nợ thuế
+CREATE TABLE IF NOT EXISTS watchlist (
+    mst TEXT NOT NULL,
+    loai TEXT NOT NULL,               -- 'rui_ro_cao' | 'no_thue'
+    ten TEXT,
+    nguon TEXT,
+    imported_at TEXT,
+    PRIMARY KEY (mst, loai)
+);
 """
 
 
@@ -155,3 +184,71 @@ class Storage:
             (status, ngay_ngung or None, nguon, 1 if nguon == "tong_hop" else 0, checked_at, mst),
         )
         self.db.commit()
+
+    # ---- kiểm tra đối tác ----
+    def add_partner_check(self, c: dict) -> int:
+        cur = self.db.execute(
+            """INSERT INTO partner_checks(mst, ten, status, ngay_ngung, ngay_thanh_lap, dia_chi,
+                   nguoi_dai_dien, nganh_nghe, nganh_khop, nguon, ghi_chu, ds_rui_ro, ket_luan, ly_do, checked_at)
+               VALUES(:mst,:ten,:status,:ngay_ngung,:ngay_thanh_lap,:dia_chi,:nguoi_dai_dien,:nganh_nghe,
+                   :nganh_khop,:nguon,:ghi_chu,:ds_rui_ro,:ket_luan,:ly_do,:checked_at)""", c)
+        # đồng bộ sang bảng nhà cung cấp để cảnh báo hóa đơn dùng chung kết quả
+        self.db.execute("INSERT OR IGNORE INTO suppliers(mst, ten) VALUES(?, ?)", (c["mst"], c["ten"]))
+        self.db.execute(
+            """UPDATE suppliers SET ten=COALESCE(NULLIF(?, ''), ten), status=?, ngay_ngung=?, nguon=?,
+                   can_xac_nhan=?, checked_at=? WHERE mst=?""",
+            (c["ten"], c["status"], c["ngay_ngung"], c["nguon"], 1 if c["nguon"] == "tong_hop" else 0,
+             c["checked_at"], c["mst"]))
+        self.db.commit()
+        return cur.lastrowid
+
+    def partner_checks(self, mst: str | None = None, limit: int = 200) -> list[sqlite3.Row]:
+        if mst:
+            return self.db.execute(
+                "SELECT * FROM partner_checks WHERE mst=? ORDER BY checked_at DESC, id DESC", (mst,)).fetchall()
+        return self.db.execute(
+            """SELECT p.* FROM partner_checks p
+               JOIN (SELECT mst, MAX(id) AS id FROM partner_checks GROUP BY mst) last ON last.id = p.id
+               ORDER BY p.checked_at DESC LIMIT ?""", (limit,)).fetchall()
+
+    def latest_partner_check(self, mst: str) -> sqlite3.Row | None:
+        return self.db.execute(
+            "SELECT * FROM partner_checks WHERE mst=? ORDER BY checked_at DESC, id DESC LIMIT 1", (mst,)).fetchone()
+
+    def import_watchlist(self, loai: str, rows: list[tuple[str, str]], nguon: str, at: str) -> int:
+        self.db.executemany(
+            """INSERT INTO watchlist(mst, loai, ten, nguon, imported_at) VALUES(?,?,?,?,?)
+               ON CONFLICT(mst, loai) DO UPDATE SET ten=excluded.ten, nguon=excluded.nguon,
+                   imported_at=excluded.imported_at""",
+            [(mst, loai, ten, nguon, at) for mst, ten in rows])
+        self.db.commit()
+        return len(rows)
+
+    def watchlist_hits(self, mst: str) -> list[sqlite3.Row]:
+        return self.db.execute("SELECT * FROM watchlist WHERE mst=?", (mst,)).fetchall()
+
+    def watchlist_summary(self) -> list[sqlite3.Row]:
+        return self.db.execute(
+            "SELECT loai, COUNT(*) AS so, MAX(imported_at) AS cap_nhat FROM watchlist GROUP BY loai").fetchall()
+
+    def suppliers_in_watchlist(self) -> list[sqlite3.Row]:
+        """Nhà cung cấp đã có hóa đơn mà nằm trong danh sách rủi ro."""
+        return self.db.execute(
+            """SELECT DISTINCT s.mst, s.ten, w.loai FROM suppliers s
+               JOIN watchlist w ON w.mst = s.mst
+               JOIN invoices i ON i.nbmst = s.mst AND i.direction = 'vao'""").fetchall()
+
+    def due_rechecks(self, older_than: str) -> list[sqlite3.Row]:
+        """Nhà cung cấp có hóa đơn mua vào mà chưa tra, hoặc tra trước ngày older_than."""
+        return self.db.execute(
+            """SELECT s.mst, s.ten, s.status, s.checked_at, MAX(i.tdlap) AS hd_cuoi
+               FROM suppliers s JOIN invoices i ON i.nbmst = s.mst AND i.direction = 'vao'
+               WHERE s.checked_at IS NULL OR s.checked_at < ?
+               GROUP BY s.mst ORDER BY s.checked_at IS NOT NULL, s.checked_at""", (older_than,)).fetchall()
+
+    def purchase_summary(self, mst: str) -> sqlite3.Row:
+        return self.db.execute(
+            """SELECT COUNT(*) AS so_hd, COALESCE(SUM(tgtttbso), 0) AS tong,
+                   SUM(CASE WHEN tthai NOT IN (1) THEN 1 ELSE 0 END) AS so_dc,
+                   MIN(tdlap) AS dau, MAX(tdlap) AS cuoi
+               FROM invoices WHERE direction='vao' AND nbmst=?""", (mst,)).fetchone()

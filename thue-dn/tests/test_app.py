@@ -111,3 +111,71 @@ def test_luong_day_du(client):
                               "tu": "2026-06-01", "den": "2026-06-30"})
     c.get("/captcha")
     assert len(appmod.store.invoices()) == 3
+
+
+# ---------- Kiểm tra đối tác ----------
+from thuedn.rules import danh_gia_doi_tac, parse_danh_sach_mst  # noqa: E402
+
+
+def test_danh_gia_doi_tac():
+    today = date(2026, 11, 21)
+    assert danh_gia_doi_tac("dang_hd", "2020-01-01", 1, [], "cqt", today)[0] == "nen_ky"
+    kl, ly_do = danh_gia_doi_tac("dang_hd", "2026-06-01", 1, [], "cqt", today)
+    assert kl == "can_xem" and "5 tháng" in ly_do[0]
+    assert danh_gia_doi_tac("dang_hd", "2020-01-01", 0, [], "cqt", today)[0] == "can_xem"
+    assert danh_gia_doi_tac("dang_hd", "2020-01-01", 1, [], "tong_hop", today)[0] == "can_xem"
+    assert danh_gia_doi_tac("cham_dut", "2020-01-01", 1, [], "cqt", today)[0] == "khong_nen"
+    kl, ly_do = danh_gia_doi_tac("dang_hd", "2020-01-01", 1, ["rui_ro_cao"], "cqt", today)
+    assert kl == "khong_nen" and "rủi ro cao" in ly_do[0]
+    assert danh_gia_doi_tac("chua_tra", "2020-01-01", 1, [], "cqt", today)[0] == "chua_du"
+
+
+def test_parse_danh_sach_mst():
+    text = "MST,Tên\n0100000001, Công ty A\n0100000002\tCông ty B\nabc\n0100000003-001\n0100000001,Trùng"
+    assert parse_danh_sach_mst(text) == [
+        ("0100000001", "Trùng"), ("0100000002", "Công ty B"), ("0100000003-001", "")]
+
+
+def test_kiem_tra_doi_tac(client):
+    c, appmod = client
+    # có hóa đơn mua vào từ NCC Hai → NCC Hai cần tra lại
+    c.post("/companies", data={"name": "DN A", "mst": "0300000000", "password": "mat-khau"})
+    c.post("/download", data={"mst": "0300000000", "loai": ["vao"], "tu": "2026-06-01", "den": "2026-06-30"})
+    c.get("/captcha")
+    c.post("/captcha", data={"cvalue": "abc12"})
+    c.get("/captcha")
+    assert "cần tra lại" in c.get("/").get_data(as_text=True)
+
+    # nhập danh sách rủi ro, NCC Hai có tên
+    r = c.post("/danh-sach-rui-ro", data={"loai": "rui_ro_cao", "nguon": "Cục Thuế 11/2026",
+                                          "noi_dung": "0100000002, NCC Hai\n0999999999"})
+    assert r.status_code == 302
+    page = c.get("/doi-tac").get_data(as_text=True)
+    assert "nằm trong danh sách rủi ro" in page and "NCC Hai" in page
+
+    # đối tác mới, chưa có hóa đơn: kiểm tra trước khi ký
+    r = c.post("/doi-tac", data={"mst": "0200000009", "ten": "Đối tác mới", "status": "dang_hd",
+                                 "ngay_thanh_lap": "2019-03-01", "nganh_khop": "1", "nguon": "cqt"})
+    assert r.headers["Location"].endswith("/doi-tac/0200000009")
+    page = c.get("/doi-tac/0200000009").get_data(as_text=True)
+    assert "Có thể giao dịch" in page and "Chưa có hóa đơn" in page
+
+    # NCC Hai: đang hoạt động nhưng nằm trong danh sách → không nên
+    c.post("/doi-tac", data={"mst": "0100000002", "ten": "NCC Hai", "status": "dang_hd",
+                             "ngay_thanh_lap": "2019-03-01", "nganh_khop": "1", "nguon": "cqt"})
+    page = c.get("/doi-tac/0100000002").get_data(as_text=True)
+    assert "Không nên giao dịch" in page and "1 hóa đơn" in page
+
+    # tra lại lần 2, đổi trạng thái → lịch sử giữ cả 2 lần, bảng NCC được đồng bộ
+    c.post("/doi-tac", data={"mst": "0100000002", "ten": "NCC Hai", "status": "cham_dut",
+                             "ngay_ngung": "2026-06-15", "nganh_khop": "1", "nguon": "cqt"})
+    assert len(appmod.store.partner_checks("0100000002")) == 2
+    assert appmod.store.supplier_map()["0100000002"]["status"] == "cham_dut"
+    assert "Rủi ro CAO" in c.get("/results").get_data(as_text=True)
+
+    # phiếu Excel làm bằng chứng
+    x = c.get("/doi-tac/0100000002/phieu.xlsx")
+    wb = load_workbook(io.BytesIO(x.data))
+    assert wb.sheetnames == ["Phiếu kiểm tra", "Lịch sử kiểm tra"]
+    assert wb["Lịch sử kiểm tra"].max_row == 3
+    assert wb["Phiếu kiểm tra"]["B5"].value == "Không nên giao dịch"

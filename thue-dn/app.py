@@ -4,14 +4,15 @@ from __future__ import annotations
 import os
 import zipfile
 import io
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from flask import Flask, flash, redirect, render_template, request, send_file, url_for
 
 from thuedn import export
 from thuedn.portal import PortalError, PortalSession, normalize
-from thuedn.rules import TRANG_THAI_NCC, chia_thang, muc_rui_ro, tinh_chat, to_date
+from thuedn.rules import (DS_RUI_RO, KET_LUAN, NGAY_TRA_LAI, TRANG_THAI_NCC, chia_thang,
+                          danh_gia_doi_tac, muc_rui_ro, parse_danh_sach_mst, tinh_chat, to_date)
 from thuedn.storage import Storage
 
 DATA_DIR = Path(os.environ.get("THUEDN_DATA", Path(__file__).parent / "data"))
@@ -24,7 +25,12 @@ store = Storage(DATA_DIR)
 sessions: dict[str, PortalSession] = {}   # phiên đăng nhập cổng thuế theo MST, chỉ trong bộ nhớ
 job: dict = {}                             # lượt tải hiện tại
 
-app.jinja_env.globals.update(tinh_chat=tinh_chat, TRANG_THAI_NCC=TRANG_THAI_NCC)
+app.jinja_env.globals.update(tinh_chat=tinh_chat, TRANG_THAI_NCC=TRANG_THAI_NCC,
+                             KET_LUAN=KET_LUAN, DS_RUI_RO=DS_RUI_RO)
+
+
+def han_tra_lai() -> str:
+    return (datetime.now() - timedelta(days=NGAY_TRA_LAI)).strftime("%Y-%m-%d %H:%M")
 
 
 def session_for(mst: str) -> PortalSession:
@@ -39,6 +45,8 @@ def index():
     today = date.today()
     return render_template(
         "index.html", companies=store.companies(),
+        can_tra_lai=len(store.due_rechecks(han_tra_lai())),
+        trong_ds=store.suppliers_in_watchlist(),
         logged={m for m, s in sessions.items() if s.logged_in},
         tu=today.replace(day=1).isoformat(), den=today.isoformat(),
     )
@@ -223,6 +231,100 @@ def update_supplier(mst):
                               datetime.now().strftime("%Y-%m-%d %H:%M"))
         flash(f"Đã cập nhật {mst}", "ok")
     return redirect(url_for("suppliers") + f"#ncc-{mst}")
+
+
+
+# ---------- 5. Kiểm tra đối tác (trước khi ký hợp đồng / trước khi nhận hóa đơn) ----------
+@app.get("/doi-tac")
+def doi_tac():
+    mst = request.args.get("mst", "").strip()
+    prefill = None
+    if mst:
+        prefill = store.latest_partner_check(mst) or store.supplier_map().get(mst)
+    return render_template(
+        "doi_tac.html", mst=mst, prefill=prefill,
+        hits=store.watchlist_hits(mst) if mst else [],
+        recent=store.partner_checks(limit=50),
+        due=store.due_rechecks(han_tra_lai()), ngay_tra_lai=NGAY_TRA_LAI,
+        trong_ds=store.suppliers_in_watchlist(),
+        ds_summary={r["loai"]: r for r in store.watchlist_summary()},
+    )
+
+
+@app.post("/doi-tac")
+def luu_doi_tac():
+    f = request.form
+    mst = f.get("mst", "").strip()
+    status = f.get("status", "chua_tra")
+    if not mst or status not in TRANG_THAI_NCC:
+        flash("Cần nhập MST và chọn trạng thái hợp lệ", "error")
+        return redirect(url_for("doi_tac", mst=mst))
+    ngay_tl = f.get("ngay_thanh_lap") or None
+    try:
+        if ngay_tl:
+            to_date(ngay_tl)
+    except ValueError:
+        flash("Ngày thành lập không hợp lệ", "error")
+        return redirect(url_for("doi_tac", mst=mst))
+    nganh_khop = {"1": 1, "0": 0}.get(f.get("nganh_khop", ""))
+    nguon = f.get("nguon", "nhap_tay")
+    ds = [r["loai"] for r in store.watchlist_hits(mst)]
+    ket_luan, ly_do = danh_gia_doi_tac(status, ngay_tl, nganh_khop, ds, nguon, date.today())
+    store.add_partner_check({
+        "mst": mst, "ten": f.get("ten", "").strip(), "status": status,
+        "ngay_ngung": f.get("ngay_ngung") or None, "ngay_thanh_lap": ngay_tl,
+        "dia_chi": f.get("dia_chi", "").strip(), "nguoi_dai_dien": f.get("nguoi_dai_dien", "").strip(),
+        "nganh_nghe": f.get("nganh_nghe", "").strip(), "nganh_khop": nganh_khop, "nguon": nguon,
+        "ghi_chu": f.get("ghi_chu", "").strip(), "ds_rui_ro": ",".join(ds),
+        "ket_luan": ket_luan, "ly_do": "; ".join(ly_do),
+        "checked_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+    })
+    return redirect(url_for("phieu_doi_tac", mst=mst))
+
+
+@app.get("/doi-tac/<mst>")
+def phieu_doi_tac(mst):
+    checks = store.partner_checks(mst)
+    if not checks:
+        return redirect(url_for("doi_tac", mst=mst))
+    return render_template("phieu_doi_tac.html", mst=mst, c=checks[0], history=checks,
+                           hits=store.watchlist_hits(mst), mua=store.purchase_summary(mst),
+                           qua_han=checks[0]["checked_at"] < han_tra_lai())
+
+
+@app.get("/doi-tac/<mst>/phieu.xlsx")
+def phieu_excel(mst):
+    data = export.phieu_kiem_tra(mst, store.partner_checks(mst), store.purchase_summary(mst))
+    return send_file(io.BytesIO(data), as_attachment=True, download_name=f"phieu-kiem-tra_{mst}.xlsx",
+                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+@app.post("/danh-sach-rui-ro")
+def nhap_danh_sach():
+    loai = request.form.get("loai")
+    if loai not in DS_RUI_RO:
+        flash("Chọn loại danh sách", "error")
+        return redirect(url_for("doi_tac"))
+    text = request.form.get("noi_dung", "")
+    up = request.files.get("tep")
+    if up and up.filename:
+        raw = up.read()
+        if up.filename.lower().endswith(".xlsx"):
+            from openpyxl import load_workbook
+            wb = load_workbook(io.BytesIO(raw), read_only=True, data_only=True)
+            text += "\n" + "\n".join(
+                "\t".join("" if v is None else str(v) for v in row[:2])
+                for ws in wb.worksheets for row in ws.iter_rows(values_only=True))
+        else:
+            text += "\n" + raw.decode("utf-8-sig", errors="replace")
+    rows = parse_danh_sach_mst(text)
+    if not rows:
+        flash("Không tìm thấy MST nào. Mỗi dòng cần bắt đầu bằng MST 10 số.", "error")
+        return redirect(url_for("doi_tac"))
+    n = store.import_watchlist(loai, rows, request.form.get("nguon", "").strip(),
+                               datetime.now().strftime("%Y-%m-%d %H:%M"))
+    flash(f"Đã nhập {n} MST vào danh sách {DS_RUI_RO[loai]}", "ok")
+    return redirect(url_for("doi_tac"))
 
 
 if __name__ == "__main__":

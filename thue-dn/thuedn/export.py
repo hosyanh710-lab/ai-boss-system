@@ -80,3 +80,54 @@ def zip_xml(invoices, base_dir: Path) -> bytes:
             if p and (base_dir / p).exists():
                 z.write(base_dir / p, arcname=p)
     return buf.getvalue()
+
+
+def phieu_kiem_tra(mst: str, checks, mua: dict | None) -> bytes:
+    """Phiếu kiểm tra đối tác: toàn bộ lịch sử tra cứu, làm bằng chứng đã thẩm định."""
+    from .rules import DS_RUI_RO, KET_LUAN
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Phiếu kiểm tra"
+    last = checks[0] if checks else None
+    ws.append(["PHIẾU KIỂM TRA ĐỐI TÁC"])
+    ws["A1"].font = Font(bold=True, size=14)
+    ws.append([])
+    info = [
+        ("Mã số thuế", mst),
+        ("Tên", last["ten"] if last else ""),
+        ("Kết luận gần nhất", KET_LUAN.get(last["ket_luan"], "") if last else "Chưa kiểm tra"),
+        ("Ngày kiểm tra gần nhất", last["checked_at"] if last else ""),
+        ("Trạng thái MST", TRANG_THAI_NCC.get(last["status"], "") if last else ""),
+        ("Ngày thành lập", last["ngay_thanh_lap"] if last else ""),
+        ("Địa chỉ", last["dia_chi"] if last else ""),
+        ("Người đại diện", last["nguoi_dai_dien"] if last else ""),
+        ("Ngành nghề", last["nganh_nghe"] if last else ""),
+    ]
+    if mua and mua["so_hd"]:
+        info.append(("Đã mua", f"{mua['so_hd']} hóa đơn, {mua['tong']:,.0f} đ, từ {mua['dau']} đến {mua['cuoi']}"))
+    for k, v in info:
+        ws.append([k, v])
+        ws.cell(ws.max_row, 1).font = Font(bold=True)
+    ws.column_dimensions["A"].width = 26
+    ws.column_dimensions["B"].width = 70
+
+    hs = wb.create_sheet("Lịch sử kiểm tra")
+    hs.append(["Ngày kiểm tra", "Kết luận", "Trạng thái MST", "Ngày ngừng", "Ngày thành lập",
+               "Ngành nghề khớp", "Danh sách rủi ro", "Nguồn", "Lý do", "Ghi chú"])
+    for c in hs[1]:
+        c.font = Font(bold=True)
+    nguon = {"cqt": "Cơ quan thuế", "tong_hop": "Trang tổng hợp", "nhap_tay": "Nhập tay"}
+    for c in checks:
+        ds = ", ".join(DS_RUI_RO.get(x, x) for x in (c["ds_rui_ro"] or "").split(",") if x)
+        hs.append([c["checked_at"], KET_LUAN.get(c["ket_luan"]), TRANG_THAI_NCC.get(c["status"]),
+                   c["ngay_ngung"], c["ngay_thanh_lap"],
+                   {1: "Khớp", 0: "Không khớp"}.get(c["nganh_khop"], "Chưa xem"), ds,
+                   nguon.get(c["nguon"], c["nguon"]), c["ly_do"], c["ghi_chu"]])
+        if c["ket_luan"] == "khong_nen":
+            for cell in hs[hs.max_row]:
+                cell.fill = RED
+    _fit(hs)
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()

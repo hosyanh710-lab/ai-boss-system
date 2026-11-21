@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Phiếu kiểm tra {{ mst }}{% endblock %}
+{% block body %}
+{% set mau = {'nen_ky':'thap','can_xem':'trung_binh','khong_nen':'cao','chua_du':'chua_ro'} %}
+<h1>Phiếu kiểm tra đối tác</h1>
+
+<div class="card">
+  <p style="margin:0 0 4px"><b style="font-size:18px">{{ c.ten or mst }}</b></p>
+  <p class="muted" style="margin:0 0 12px">MST {{ mst }} · kiểm tra lúc {{ c.checked_at }}</p>
+  <p style="margin:0 0 12px"><span class="tag {{ mau[c.ket_luan] }}" style="font-size:16px;padding:6px 14px">{{ KET_LUAN[c.ket_luan] }}</span></p>
+  {% if qua_han %}<div class="flash error">Lần kiểm tra này đã cũ. Nên <a href="{{ url_for('doi_tac', mst=mst) }}">tra lại</a> trước khi ký hoặc thanh toán.</div>{% endif %}
+  <h2>Lý do</h2>
+  <ul>{% for l in (c.ly_do or '').split('; ') if l %}<li>{{ l }}</li>{% endfor %}</ul>
+  <div class="row">
+    <a class="btn" href="{{ url_for('phieu_excel', mst=mst) }}">Tải phiếu Excel</a>
+    <a class="btn ghost" href="{{ url_for('doi_tac', mst=mst) }}">Kiểm tra lại</a>
+  </div>
+</div>
+
+<div class="card scroll">
+  <h2>Thông tin đã ghi</h2>
+  <table>
+    <tr><th>Trạng thái MST</th><td>{{ TRANG_THAI_NCC.get(c.status) }}{% if c.ngay_ngung %} từ {{ c.ngay_ngung }}{% endif %}</td></tr>
+    <tr><th>Ngày thành lập</th><td>{{ c.ngay_thanh_lap or 'Chưa nhập' }}</td></tr>
+    <tr><th>Địa chỉ</th><td>{{ c.dia_chi or '' }}</td></tr>
+    <tr><th>Người đại diện</th><td>{{ c.nguoi_dai_dien or '' }}</td></tr>
+    <tr><th>Ngành nghề</th><td>{{ c.nganh_nghe or '' }} ({{ {1:'khớp', 0:'không khớp'}.get(c.nganh_khop, 'chưa đối chiếu') }})</td></tr>
+    <tr><th>Danh sách rủi ro</th><td>{% for h in hits %}{{ DS_RUI_RO[h.loai] }}{{ ', ' if not loop.last }}{% else %}Không có tên{% endfor %}</td></tr>
+    <tr><th>Đã mua của đối tác</th><td>{% if mua.so_hd %}{{ mua.so_hd }} hóa đơn, {{ '{:,.0f}'.format(mua.tong) }} đ ({{ mua.dau }} → {{ mua.cuoi }}){% if mua.so_dc %}, trong đó {{ mua.so_dc }} hóa đơn điều chỉnh / thay thế / hủy{% endif %}{% else %}Chưa có hóa đơn{% endif %}</td></tr>
+    {% if c.ghi_chu %}<tr><th>Ghi chú</th><td>{{ c.ghi_chu }}</td></tr>{% endif %}
+  </table>
+</div>
+
+<div class="card scroll">
+  <h2>Lịch sử kiểm tra</h2>
+  <table>
+    <thead><tr><th>Kiểm tra lúc</th><th>Kết luận</th><th>Trạng thái MST</th><th>Lý do</th></tr></thead>
+    <tbody>
+    {% for h in history %}
+      <tr><td>{{ h.checked_at }}</td><td><span class="tag {{ mau[h.ket_luan] }}">{{ KET_LUAN[h.ket_luan] }}</span></td>
+        <td>{{ TRANG_THAI_NCC.get(h.status) }}</td><td style="white-space:normal">{{ h.ly_do }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Kiểm tra đối tác{% endblock %}
+{% block body %}
+<h1>Kiểm tra đối tác</h1>
+<p class="muted">Dùng trước khi ký hợp đồng hoặc trước khi nhận hóa đơn. Mỗi lần kiểm tra được lưu lại làm bằng chứng đã thẩm định đối tác.</p>
+
+{% if trong_ds %}
+<div class="flash error">
+  <b>{{ trong_ds|length }} nhà cung cấp đang giao dịch nằm trong danh sách rủi ro:</b>
+  {% for s in trong_ds %}<a href="{{ url_for('doi_tac', mst=s.mst) }}">{{ s.ten or s.mst }}</a> ({{ DS_RUI_RO[s.loai] }}){{ ', ' if not loop.last }}{% endfor %}
+</div>
+{% endif %}
+
+<form class="card" method="get" action="{{ url_for('doi_tac') }}">
+  <h2>1. Nhập mã số thuế đối tác</h2>
+  <div class="row">
+    <label>Mã số thuế <input name="mst" value="{{ mst }}" required pattern="[0-9\-]{10,14}" autofocus></label>
+    <button type="submit">Bắt đầu kiểm tra</button>
+  </div>
+</form>
+
+{% if mst %}
+{% set p = prefill %}
+<form class="card" method="post" action="{{ url_for('luu_doi_tac') }}">
+  <h2>2. Tra cứu và ghi kết quả cho MST {{ mst }}</h2>
+  <input type="hidden" name="mst" value="{{ mst }}">
+
+  {% if hits %}
+    <div class="flash error">MST này có trong danh sách: {% for h in hits %}<b>{{ DS_RUI_RO[h.loai] }}</b>{% if h.nguon %} (nguồn: {{ h.nguon }}){% endif %}{{ ', ' if not loop.last }}{% endfor %}</div>
+  {% endif %}
+
+  <p class="muted">Mở các trang dưới đây, xem thông tin rồi điền vào. Có captcha thì anh nhập trực tiếp trên trang đó.</p>
+  <ul>
+    <li><a href="https://tracuunnt.gdt.gov.vn/tcnnt/mstdn.jsp" target="_blank" rel="noopener">Tra cứu người nộp thuế (cơ quan thuế)</a>: trạng thái MST, ngày ngừng hoạt động</li>
+    <li><a href="https://dangkykinhdoanh.gov.vn" target="_blank" rel="noopener">Cổng đăng ký doanh nghiệp quốc gia</a>: ngày thành lập, người đại diện, ngành nghề</li>
+    <li><a href="https://masothue.com/Search/?q={{ mst }}" target="_blank" rel="noopener">Trang tổng hợp (tra nhanh)</a>: chỉ để tham khảo, cần xác nhận lại</li>
+  </ul>
+
+  <div class="row" style="margin-top:12px">
+    <label style="flex:2 1 280px">Tên doanh nghiệp <input name="ten" value="{{ p.ten if p and p.ten else '' }}"></label>
+    <label>Trạng thái MST
+      <select name="status">
+        {% for k, v in TRANG_THAI_NCC.items() %}<option value="{{ k }}" {{ 'selected' if p and p.status==k }}>{{ v }}</option>{% endfor %}
+      </select></label>
+    <label>Ngày ngừng (nếu có) <input type="date" name="ngay_ngung" value="{{ p.ngay_ngung if p and p.ngay_ngung else '' }}"></label>
+    <label>Ngày thành lập <input type="date" name="ngay_thanh_lap" value="{{ p.ngay_thanh_lap if p and p.ngay_thanh_lap else '' }}"></label>
+  </div>
+  <div class="row" style="margin-top:12px">
+    <label style="flex:2 1 280px">Địa chỉ <input name="dia_chi" value="{{ p.dia_chi if p and p.dia_chi else '' }}"></label>
+    <label style="flex:1 1 200px">Người đại diện <input name="nguoi_dai_dien" value="{{ p.nguoi_dai_dien if p and p.nguoi_dai_dien else '' }}"></label>
+  </div>
+  <div class="row" style="margin-top:12px">
+    <label style="flex:2 1 280px">Ngành nghề đăng ký chính <input name="nganh_nghe" value="{{ p.nganh_nghe if p and p.nganh_nghe else '' }}"></label>
+    <label>Ngành nghề có khớp hàng hóa / dịch vụ anh mua?
+      <select name="nganh_khop">
+        <option value="">Chưa xem</option>
+        <option value="1" {{ 'selected' if p and p.nganh_khop==1 }}>Khớp</option>
+        <option value="0" {{ 'selected' if p and p.nganh_khop==0 }}>Không khớp</option>
+      </select></label>
+    <label>Nguồn thông tin
+      <select name="nguon">
+        <option value="cqt" {{ 'selected' if p and p.nguon=='cqt' }}>Trang cơ quan thuế</option>
+        <option value="tong_hop" {{ 'selected' if p and p.nguon=='tong_hop' }}>Trang tổng hợp</option>
+        <option value="nhap_tay" {{ 'selected' if not p or p.nguon not in ('cqt','tong_hop') }}>Khác / nhập tay</option>
+      </select></label>
+  </div>
+  <label style="margin-top:12px">Ghi chú (hợp đồng dự kiến, giá trị, người liên hệ…) <input name="ghi_chu"></label>
+  <div class="row" style="margin-top:16px"><button type="submit">Lưu và xem phiếu đánh giá</button></div>
+</form>
+{% endif %}
+
+<div class="card scroll">
+  <h2>Nhà cung cấp cần tra lại</h2>
+  <p class="muted">Nhà cung cấp có hóa đơn mua vào mà chưa tra hoặc đã tra quá {{ ngay_tra_lai }} ngày. Trạng thái có thể đổi sau khi ký, nên tra lại định kỳ và trước các lần thanh toán lớn.</p>
+  <table>
+    <thead><tr><th>Người bán</th><th>Trạng thái đã lưu</th><th>Tra lần cuối</th><th>HĐ gần nhất</th><th></th></tr></thead>
+    <tbody>
+    {% for s in due %}
+      <tr><td>{{ s.ten }}<br><span class="muted">{{ s.mst }}</span></td>
+        <td>{{ TRANG_THAI_NCC.get(s.status, s.status) }}</td><td>{{ s.checked_at or 'Chưa tra' }}</td><td>{{ s.hd_cuoi }}</td>
+        <td><a class="btn ghost" href="{{ url_for('doi_tac', mst=s.mst) }}">Tra lại</a></td></tr>
+    {% else %}
+      <tr><td colspan="5" class="muted">Không có nhà cung cấp nào cần tra lại.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card scroll">
+  <h2>Đã kiểm tra gần đây</h2>
+  <table>
+    <thead><tr><th>Đối tác</th><th>Kết luận</th><th>Kiểm tra lúc</th></tr></thead>
+    <tbody>
+    {% for c in recent %}
+      <tr><td><a href="{{ url_for('phieu_doi_tac', mst=c.mst) }}">{{ c.ten or c.mst }}</a><br><span class="muted">{{ c.mst }}</span></td>
+        <td><span class="tag {{ {'nen_ky':'thap','can_xem':'trung_binh','khong_nen':'cao','chua_du':'chua_ro'}[c.ket_luan] }}">{{ KET_LUAN[c.ket_luan] }}</span></td>
+        <td>{{ c.checked_at }}</td></tr>
+    {% else %}
+      <tr><td colspan="3" class="muted">Chưa kiểm tra đối tác nào.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<form class="card" method="post" action="{{ url_for('nhap_danh_sach') }}" enctype="multipart/form-data">
+  <h2>Danh sách rủi ro do cơ quan thuế công bố</h2>
+  <p class="muted">Dán hoặc tải lên danh sách MST (mỗi dòng một MST, có thể kèm tên). Khi kiểm tra đối tác, công cụ tự đối chiếu với các danh sách này.</p>
+  <p class="muted">Hiện có:
+    {% for k, v in DS_RUI_RO.items() %}{{ v }}: <b>{{ ds_summary[k].so if k in ds_summary else 0 }}</b> MST{% if k in ds_summary %} (cập nhật {{ ds_summary[k].cap_nhat }}){% endif %}{{ ' · ' if not loop.last }}{% endfor %}</p>
+  <div class="row">
+    <label>Loại danh sách
+      <select name="loai">{% for k, v in DS_RUI_RO.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></label>
+    <label style="flex:1 1 240px">Nguồn (tên văn bản / trang, ngày công bố) <input name="nguon"></label>
+    <label>Tệp .xlsx, .csv hoặc .txt <input type="file" name="tep" accept=".xlsx,.csv,.txt"></label>
+  </div>
+  <label style="margin-top:12px">Hoặc dán danh sách <textarea name="noi_dung" rows="4" style="font:inherit;padding:8px;border:1px solid var(--line);border-radius:6px"></textarea></label>
+  <div class="row" style="margin-top:12px"><button type="submit" class="ghost">Nhập danh sách</button></div>
+</form>
+{% endblock %}
