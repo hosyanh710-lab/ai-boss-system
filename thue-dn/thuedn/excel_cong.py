@@ -110,7 +110,8 @@ def tthai_tu_chu(chu) -> int | None:
 
 def doc_danh_sach(content: bytes, nbmst: str, nbten: str | None) -> list[dict]:
     """Trả về các dòng giống dữ liệu cổng trả qua API (để dùng chung portal.normalize)."""
-    ws = load_workbook(io.BytesIO(content), read_only=True, data_only=True).active
+    # Không dùng read_only: file của cổng không ghi kích thước bảng, read_only đọc ra 1 ô trống
+    ws = load_workbook(io.BytesIO(content), data_only=True).active
     rows = [list(r) for r in ws.iter_rows(values_only=True)]
     dong_tieu_de = next((i for i, r in enumerate(rows[:30])
                          if any(_cot(c or "") == "shdon" for c in r)), None)
