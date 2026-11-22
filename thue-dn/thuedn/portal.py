@@ -38,12 +38,18 @@ URL_LOGIN = BASE + "/security-taxpayer/authenticate"
 URL_SOLD = BASE + "/query/invoices/sold"
 URL_PURCHASE = BASE + "/query/invoices/purchase"
 URL_XML = BASE + "/query/invoices/export-xml"
+# Hóa đơn có mã khởi tạo từ máy tính tiền (ký hiệu có chữ M ở vị trí thứ 4, ví dụ C26MAA):
+# tra danh sách phải kèm captcha cho MỖI trang (ckey/cvalue gửi cả ở tham số và header, như trang web);
+# tải XML thì không cần captcha.
+URL_SOLD_MTT = BASE + "/sco-query/invoices/sold"
+URL_XML_MTT = BASE + "/sco-query/invoices/export-xml"
 END_POINT = "/tra-cuu/tra-cuu-hoa-don"
 
 # Hóa đơn mua vào phải tra theo từng "Kết quả kiểm tra" (ttxly):
 # 5 = đã cấp mã, 6 = CQT đã nhận không mã, 8 = CQT đã nhận hóa đơn có mã khởi tạo từ máy tính tiền
 PURCHASE_TTXLY = (5, 6, 8)
 PAGE_SIZE = 50
+PAGE_SIZE_MTT = 1000
 TIMEOUT = 60
 # Cổng trả 429 "Too Many Requests" khi gọi khoảng 3 lần/giây (đo ngày 22/11/2026):
 # giãn mỗi lần gọi tối thiểu KHOANG_CACH giây, gặp 429 thì chờ rồi thử lại.
@@ -77,17 +83,22 @@ class PortalSession:
         self.verify = verify_ssl
         self.token: str | None = None
         self._lan_goi_cuoi = 0.0
+        # Trang web chỉ cho 15/30/50 HĐ/trang, mỗi trang một captcha (2000 HĐ/tháng = 40 captcha).
+        # Thử xin trang lớn trước; cổng không nhận thì tự về 50.
+        self.co_trang_mtt = PAGE_SIZE_MTT
 
     @property
     def logged_in(self) -> bool:
         return self.token is not None
 
-    def _send(self, method: str, url: str, action: str = "", **kw) -> requests.Response:
+    def _send(self, method: str, url: str, action: str = "", extra_headers: dict | None = None,
+              **kw) -> requests.Response:
         for lan, cho in enumerate((*CHO_KHI_429, None)):
             con_lai = self._lan_goi_cuoi + KHOANG_CACH - time.monotonic()
             if con_lai > 0:
                 time.sleep(con_lai)
-            headers = {"request-id": str(uuid.uuid4()), "End-Point": END_POINT, "Action": quote(action)}
+            headers = {"request-id": str(uuid.uuid4()), "End-Point": END_POINT, "Action": quote(action),
+                       **(extra_headers or {})}
             try:
                 r = self.http.request(method, url, headers=headers, timeout=TIMEOUT, verify=self.verify, **kw)
             except requests.RequestException as e:
@@ -96,7 +107,8 @@ class PortalSession:
             finally:
                 self._lan_goi_cuoi = time.monotonic()
             # Chỉ ghi địa chỉ, tham số tra cứu và mã trả về; không ghi mật khẩu, captcha, token.
-            log.info("%s %s %s -> %s", method, url, kw.get("params") or "", r.status_code)
+            ghi = {k: v for k, v in (kw.get("params") or {}).items() if k not in ("ckey", "cvalue")}
+            log.info("%s %s %s -> %s", method, url, ghi or "", r.status_code)
             if r.status_code == 429 and cho is not None:
                 cho = _so_giay(r.headers.get("Retry-After"), cho)
                 log.info("  cổng báo gọi quá nhanh, chờ %s giây rồi thử lại (lần %s)", cho, lan + 1)
@@ -163,16 +175,50 @@ class PortalSession:
             yield from self._query(URL_PURCHASE, self._search(tu, den, f"ttxly=={ttxly}"),
                                    "Tìm kiếm (hóa đơn mua vào)")
 
+    def sold_mtt_page(self, tu: date, den: date, state: str | None, ckey: str, cvalue: str
+                      ) -> tuple[list[dict], str | None, int | None]:
+        """Một trang hóa đơn bán ra khởi tạo từ máy tính tiền. Mỗi trang cần một captcha mới.
+        Trả về (các dòng, state trang sau hoặc None nếu hết, tổng số)."""
+        params = {"sort": "tdlap:desc", "size": self.co_trang_mtt, "search": self._search(tu, den)}
+        if state:
+            params["state"] = state
+        params.update(ckey=ckey, cvalue=cvalue)
+        r = self._send("GET", URL_SOLD_MTT, action="Tìm kiếm (hóa đơn máy tính tiền bán ra)",
+                       extra_headers={"ckey": ckey, "cvalue": cvalue}, params=params)
+        if r.status_code == 401:
+            self.token = None
+            raise PortalError("Phiên đăng nhập hết hạn, cần nhập lại captcha")
+        data = _json(r)
+        if r.status_code != 200:
+            msg = data.get("message") or ""
+            if self.co_trang_mtt > PAGE_SIZE and "captcha" not in msg.lower():
+                # Cổng không nhận trang lớn: lần sau xin trang 50 như trang web
+                log.info("  cổng không nhận %s HĐ/trang (%s), chuyển về %s", self.co_trang_mtt, msg, PAGE_SIZE)
+                self.co_trang_mtt = PAGE_SIZE
+                raise PortalError(f"Cổng không cho tra {params['size']} hóa đơn một lần, "
+                                  f"chuyển về {PAGE_SIZE} hóa đơn/trang. Gõ captcha mới để tra tiếp.")
+            raise PortalError(msg or f"Lỗi tra hóa đơn máy tính tiền (mã {r.status_code})")
+        rows = data.get("datas") or []
+        log.info("  %s hóa đơn máy tính tiền (tổng %s)", len(rows), data.get("total"))
+        nxt = data.get("state") if rows else None
+        return rows, nxt, data.get("total")
+
     def export_xml(self, inv: dict) -> bytes:
         """Trả về file .zip cổng thuế cung cấp cho một hóa đơn (chứa XML)."""
         params = {k: inv[k] for k in ("nbmst", "khhdon", "shdon", "khmshdon")}
-        r = self._send("GET", URL_XML, action="Xuất xml", params=params)
+        url = URL_XML_MTT if la_mtt(inv.get("khhdon")) else URL_XML
+        r = self._send("GET", url, action="Xuất xml", params=params)
         if r.status_code != 200 and "hồ sơ gốc" in (_json(r).get("message") or ""):
             raise KhongCoXML(f"Cổng không có XML hóa đơn {inv.get('khhdon')}-{inv.get('shdon')}")
         if r.status_code != 200 or not r.content.startswith(b"PK"):
             log.warning("  XML %s-%s không phải file zip: %s", inv.get("khhdon"), inv.get("shdon"), r.content[:150])
             raise PortalError(f"Không tải được XML hóa đơn {inv.get('khhdon')}-{inv.get('shdon')}")
         return r.content
+
+
+def la_mtt(khhdon) -> bool:
+    """Ký hiệu HĐ khởi tạo từ máy tính tiền có chữ M ở vị trí thứ 4 (giống trang web: /^.{3}M/)."""
+    return bool(khhdon) and len(str(khhdon)) > 3 and str(khhdon)[3] == "M"
 
 
 def _so_giay(retry_after: str | None, mac_dinh: float) -> float:

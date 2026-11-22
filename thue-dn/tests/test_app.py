@@ -125,6 +125,77 @@ def test_cong_thue_429_cho_roi_thu_lai(monkeypatch):
         s.export_xml(inv)
 
 
+def test_hoa_don_may_tinh_tien(client, monkeypatch):
+    """HĐ bán ra từ máy tính tiền: mỗi lần tra một captcha, lưu theo từng trang, xong thì tải ngầm."""
+    from thuedn import portal
+    c, appmod = client
+
+    def hd(so):
+        return {"nbmst": "0300000000", "nbten": "DN A", "nmmst": None, "nmten": "Khách lẻ", "khmshdon": 1,
+                "khhdon": "C26MAA", "shdon": so, "tdlap": "2026-06-15T00:00:00Z", "tgtcthue": 100000,
+                "tgtthue": 10000, "tgtttbso": 110000, "tthai": 1, "hsgoc": "x"}
+
+    goi = []
+
+    def trang_mtt(self, tu, den, state, ckey, cvalue):
+        goi.append((state, ckey, cvalue))
+        if cvalue != "mtt":
+            raise portal.PortalError("Mã captcha không đúng")
+        return ([hd(1), hd(2)], "s2", 3) if state is None else ([hd(3)], None, 3)
+
+    monkeypatch.setattr(portal.PortalSession, "sold_mtt_page", trang_mtt)
+    xml_goi = []
+    monkeypatch.setattr(portal.PortalSession, "export_xml", lambda self, inv: xml_goi.append(inv["shdon"]) or b"PK")
+    c.post("/companies", data={"name": "DN A", "mst": "0300000000", "password": "mat-khau"})
+    c.post("/download", data={"mst": "0300000000", "loai": ["ra"], "tu": "2026-06-01", "den": "2026-06-30",
+                              "mtt": "on", "xml_mtt": "on"})
+    c.get("/captcha")
+    c.post("/captcha", data={"cvalue": "abc12"})                       # đăng nhập
+    trang = c.get("/captcha").get_data(as_text=True)
+    assert "máy tính tiền" in trang and "06/2026" in trang
+    c.post("/captcha", data={"cvalue": "sai"})                         # sai captcha: tra lại trang đó
+    c.post("/captcha", data={"cvalue": "mtt"})                         # trang 1
+    assert "2/3" in c.get("/captcha").get_data(as_text=True)
+    c.post("/captcha", data={"cvalue": "mtt"})                         # trang 2, hết
+    assert [g[0] for g in goi] == [None, None, "s2"] and goi[1][1] == "k1"
+    assert c.get("/captcha").headers["Location"].endswith("/dang-tai")
+    so_mtt = [r for r in appmod.store.invoices() if r["khhdon"] == "C26MAA"]
+    assert len(so_mtt) == 3 and sorted(xml_goi) == [1, 2, 3]
+    assert "3 hóa đơn bán ra từ máy tính tiền" in c.get("/results").get_data(as_text=True)
+    assert portal.la_mtt("C26MAA") and not portal.la_mtt("C26TAA") and not portal.la_mtt(None)
+
+
+def test_mtt_cong_khong_nhan_trang_lon(monkeypatch):
+    from thuedn import portal
+    monkeypatch.setattr(portal.time, "sleep", lambda s: None)
+
+    class Resp:
+        def __init__(self, code, body):
+            import json
+            self.status_code, self.text, self.headers = code, json.dumps(body), {}
+            self.content = self.text.encode()
+
+        def json(self):
+            import json
+            return json.loads(self.text)
+
+    s = portal.PortalSession()
+    sizes = []
+
+    def req(method, url, params=None, headers=None, **k):
+        sizes.append(params["size"])
+        assert headers["ckey"] == "k" and params["cvalue"] == "v"
+        if params["size"] > 50:
+            return Resp(400, {"message": "size must be less than or equal to 50"})
+        return Resp(200, {"datas": [{"shdon": 1}], "state": None, "total": 1})
+
+    monkeypatch.setattr(s.http, "request", req)
+    with pytest.raises(portal.PortalError):
+        s.sold_mtt_page(date(2026, 6, 1), date(2026, 6, 30), None, "k", "v")
+    rows, nxt, tong = s.sold_mtt_page(date(2026, 6, 1), date(2026, 6, 30), None, "k", "v")
+    assert sizes == [portal.PAGE_SIZE_MTT, 50] and len(rows) == 1 and nxt is None
+
+
 def test_tai_chay_ngam_chi_mot_luot(client, monkeypatch):
     """Trang chờ bị gọi lại nhiều lần trong lúc tải: chỉ một lượt tải chạy, xong thì sang Kết quả."""
     import threading

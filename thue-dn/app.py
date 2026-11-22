@@ -102,7 +102,8 @@ def start_download():
     job.clear()
     job.update(msts=msts, loai=loai, tu=tu, den=den, xml="xml" in request.form, drive="drive" in request.form,
                pending=[m for m in msts if not session_for(m).logged_in], log=[], trang_thai="cho_captcha",
-               tien_do="")
+               tien_do="", mtt="mtt" in request.form and "ra" in loai, xml_mtt="xml_mtt" in request.form,
+               mtt_pending=None, mtt_inv={})
     return redirect(url_for("captcha"))
 
 
@@ -111,23 +112,67 @@ def start_download():
 def captcha():
     if not job:
         return redirect(url_for("index"))
-    if not job["pending"]:
-        bat_dau_tai()
-        return redirect(url_for("dang_tai"))
-    mst = job["pending"][0]
+    buoc = None
+    if job["pending"]:
+        mst = job["pending"][0]
+    else:
+        _lap_buoc_mtt()
+        if not job.get("mtt_pending"):
+            bat_dau_tai()
+            return redirect(url_for("dang_tai"))
+        buoc = job["mtt_pending"][0]
+        mst = buoc["mst"]
+    xem = dict(mst=mst, name=store.company_name(mst), con_lai=len(job["pending"]), buoc=buoc)
     try:
         cap = session_for(mst).get_captcha()
     except Exception as e:  # mạng / cổng lỗi
         flash(f"Không lấy được captcha cho {mst}: {e}", "error")
-        return render_template("captcha.html", mst=mst, name=store.company_name(mst), cap=None,
-                               con_lai=len(job["pending"]))
+        return render_template("captcha.html", cap=None, **xem)
     job["ckey"] = cap.key
-    return render_template("captcha.html", mst=mst, name=store.company_name(mst), cap=cap,
-                           con_lai=len(job["pending"]))
+    return render_template("captcha.html", cap=cap, **xem)
+
+
+def _lap_buoc_mtt() -> None:
+    """Sau khi đăng nhập xong: mỗi DN × mỗi tháng một bước tra HĐ bán ra từ máy tính tiền."""
+    if job.get("mtt_pending") is not None:
+        return
+    job["mtt_pending"] = [
+        {"mst": m, "tu": tu, "den": den, "state": None, "trang": 1, "da_tai": 0, "tong": None}
+        for m in job["msts"] if job.get("mtt") and sessions.get(m) and sessions[m].logged_in
+        for tu, den in chia_thang(job["tu"], job["den"])]
+
+
+def _tra_mtt(cvalue: str) -> None:
+    """Tra một trang HĐ máy tính tiền bằng captcha vừa gõ; lưu ngay, XML để lượt tải ngầm."""
+    b = job["mtt_pending"][0]
+    s = sessions[b["mst"]]
+    rows, nxt, tong = s.sold_mtt_page(b["tu"], b["den"], b["state"], job.get("ckey", ""), cvalue)
+    for row in rows:
+        inv = normalize(row)
+        store.save_invoice(b["mst"], "ra", inv)
+        job["mtt_inv"].setdefault(b["mst"], []).append(inv)
+    b.update(da_tai=b["da_tai"] + len(rows), tong=tong)
+    if nxt and rows:
+        b.update(state=nxt, trang=b["trang"] + 1)
+    else:
+        job["mtt_pending"].pop(0)
+        job["log"].append(f"{store.company_name(b['mst'])}: {b['da_tai']} hóa đơn bán ra từ máy tính tiền "
+                          f"({b['tu']:%m/%Y})")
 
 
 @app.post("/captcha")
 def submit_captcha():
+    if job and not job.get("pending") and job.get("mtt_pending") and job.get("trang_thai") == "cho_captcha":
+        b = job["mtt_pending"][0]
+        if "bo_qua" in request.form:
+            job["mtt_pending"].pop(0)
+            job["log"].append(f"{store.company_name(b['mst'])}: bỏ qua HĐ máy tính tiền {b['tu']:%m/%Y}")
+        else:
+            try:
+                _tra_mtt(request.form.get("cvalue", "").strip())
+            except PortalError as e:
+                flash(f"{store.company_name(b['mst'])}: {e}", "error")
+        return redirect(url_for("captcha"))
     if not job or not job.get("pending"):
         # Form gửi lại lần 2 (bấm 2 lần / tải lại trang) khi đã đăng nhập xong: chỉ cần đi tiếp
         return redirect(url_for("captcha") if job else url_for("index"))
@@ -208,6 +253,12 @@ def run_downloads() -> None:
                             thieu_xml += kq is False
                             khong_co_xml += kq is None
                         job["tien_do"] = f"{name}: {dem} hóa đơn" + (" (kèm XML)" if job["xml"] else "")
+            mtt = job.get("mtt_inv", {}).get(mst, []) if job.get("xml_mtt") else []
+            for i, inv in enumerate(mtt, 1):
+                kq = _save_xml(s, mst, "ra", inv, xml_dir)
+                thieu_xml += kq is False
+                khong_co_xml += kq is None
+                job["tien_do"] = f"{name}: XML hóa đơn máy tính tiền {i}/{len(mtt)}"
             job["log"].append(f"{name}: tải {dem} hóa đơn" + (
                 f"; {thieu_xml} hóa đơn chưa tải được XML — bấm Tải hóa đơn lại để lấy tiếp" if thieu_xml else "") + (
                 f"; {khong_co_xml} hóa đơn cổng thuế không có XML (thường là HĐ không mã của EVN, viễn thông…)"
