@@ -38,6 +38,12 @@ Lần đầu chạy, công cụ yêu cầu **tạo tài khoản Admin đầu ti�
 - Mật khẩu tối thiểu 8 ký tự, có chữ và số, lưu dạng băm (không lưu mật khẩu gốc).
 - Nhập sai mật khẩu 5 lần: tạm khóa đăng nhập 15 phút.
 - Quên mật khẩu: Admin / Quản trị đặt lại ở trang **Tài khoản**; mỗi người tự đổi ở **Đổi mật khẩu**.
+- Tạo tài khoản ngay trên máy (không cần trình duyệt; mật khẩu hỏi trực tiếp, không hiện ra màn hình):
+  ```
+  .venv\Scripts\python tao_tai_khoan.py <email> admin "Họ tên"
+  .venv\Scripts\python tao_tai_khoan.py <email> quan_tri "Họ tên"
+  ```
+  Chạy lại với email đã có để đổi vai trò, mở khóa, đặt lại mật khẩu (Enter để giữ mật khẩu cũ).
 - Quyền được kiểm tra ở máy chủ cho từng trang, không chỉ ẩn nút.
 
 ## Dùng cho nhiều công ty (ví dụ 10 công ty)

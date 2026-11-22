@@ -977,3 +977,24 @@ def test_quy_tac_quyen():
     assert quan_ly_duoc("quan_tri", "quan_tri") and not quan_ly_duoc("nguoi_dung", "nguoi_dung")
     assert gan_duoc("admin", "admin") and not gan_duoc("quan_tri", "admin") and not gan_duoc("admin", "vua")
     assert kiem_tra_mat_khau("abc12345") is None and kiem_tra_mat_khau("abcdefgh") and kiem_tra_mat_khau("a1")
+
+
+def test_lenh_tao_tai_khoan(tmp_path):
+    from thuedn.storage import Storage
+    from werkzeug.security import check_password_hash
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from tao_tai_khoan import tao_hoac_cap_nhat
+    st = Storage(tmp_path)
+    assert "Đã tạo" in tao_hoac_cap_nhat(st, "Sep@Cty.vn", "admin", "Sếp", "Abc12345")
+    tao_hoac_cap_nhat(st, "qt@cty.vn", "quan_tri", "QT", "Abc12345")
+    u = st.user_by_email("sep@cty.vn")
+    assert u["vai_tro"] == "admin" and check_password_hash(u["pw_hash"], "Abc12345")
+    with pytest.raises(ValueError):
+        tao_hoac_cap_nhat(st, "x@cty.vn", "vua", "", "Abc12345")
+    with pytest.raises(ValueError):
+        tao_hoac_cap_nhat(st, "x@cty.vn", "nguoi_dung", "", "yeu")
+    # đã có: đổi vai trò, mở khóa, giữ mật khẩu cũ khi không nhập
+    st.update_user(st.user_by_email("qt@cty.vn")["id"], hoat_dong=0)
+    tao_hoac_cap_nhat(st, "qt@cty.vn", "nguoi_dung", "", None)
+    u = st.user_by_email("qt@cty.vn")
+    assert u["vai_tro"] == "nguoi_dung" and u["hoat_dong"] == 1 and check_password_hash(u["pw_hash"], "Abc12345")
