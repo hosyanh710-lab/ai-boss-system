@@ -55,6 +55,11 @@ class PortalError(Exception):
     pass
 
 
+class KhongCoXML(PortalError):
+    """Cổng trả "Không tồn tại hồ sơ gốc của hóa đơn": cổng không lưu XML hóa đơn này
+    (thường là HĐ không mã của EVN, viễn thông...). Tải lại cũng không được."""
+
+
 @dataclass
 class Captcha:
     key: str
@@ -162,6 +167,8 @@ class PortalSession:
         """Trả về file .zip cổng thuế cung cấp cho một hóa đơn (chứa XML)."""
         params = {k: inv[k] for k in ("nbmst", "khhdon", "shdon", "khmshdon")}
         r = self._send("GET", URL_XML, action="Xuất xml", params=params)
+        if r.status_code != 200 and "hồ sơ gốc" in (_json(r).get("message") or ""):
+            raise KhongCoXML(f"Cổng không có XML hóa đơn {inv.get('khhdon')}-{inv.get('shdon')}")
         if r.status_code != 200 or not r.content.startswith(b"PK"):
             log.warning("  XML %s-%s không phải file zip: %s", inv.get("khhdon"), inv.get("shdon"), r.content[:150])
             raise PortalError(f"Không tải được XML hóa đơn {inv.get('khhdon')}-{inv.get('shdon')}")

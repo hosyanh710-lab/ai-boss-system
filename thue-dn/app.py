@@ -12,7 +12,7 @@ from flask import Flask, flash, g, redirect, render_template, request, send_file
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from thuedn import export, gdrive, misa
-from thuedn.portal import PortalError, PortalSession, normalize
+from thuedn.portal import KhongCoXML, PortalError, PortalSession, normalize
 from thuedn.rules import (CHE_DO_KE_TOAN, DS_RUI_RO, KET_LUAN, NGAY_TRA_LAI, PHAN_LOAI, TRANG_THAI_NCC, chia_thang,
                           bang_phan_loai, danh_gia_doi_tac, muc_rui_ro, parse_danh_sach_mst, tinh_chat, to_date)
 from thuedn.storage import Storage
@@ -190,7 +190,7 @@ def run_downloads() -> None:
         name = store.company_name(mst)
         if not s or not s.logged_in:
             continue
-        dem = thieu_xml = 0
+        dem = thieu_xml = khong_co_xml = 0
         try:
             for tu, den in chia_thang(job["tu"], job["den"]):
                 nguon = []
@@ -203,11 +203,15 @@ def run_downloads() -> None:
                         inv = normalize(row)
                         store.save_invoice(mst, direction, inv)
                         dem += 1
-                        if job["xml"] and not _save_xml(s, mst, direction, inv, xml_dir):
-                            thieu_xml += 1
+                        if job["xml"]:
+                            kq = _save_xml(s, mst, direction, inv, xml_dir)
+                            thieu_xml += kq is False
+                            khong_co_xml += kq is None
                         job["tien_do"] = f"{name}: {dem} hóa đơn" + (" (kèm XML)" if job["xml"] else "")
             job["log"].append(f"{name}: tải {dem} hóa đơn" + (
-                f"; {thieu_xml} hóa đơn chưa tải được XML — bấm Tải hóa đơn lại để lấy tiếp" if thieu_xml else ""))
+                f"; {thieu_xml} hóa đơn chưa tải được XML — bấm Tải hóa đơn lại để lấy tiếp" if thieu_xml else "") + (
+                f"; {khong_co_xml} hóa đơn cổng thuế không có XML (thường là HĐ không mã của EVN, viễn thông…)"
+                if khong_co_xml else ""))
         except PortalError as e:
             job["log"].append(f"{name}: lỗi — {e}")
     store.ensure_suppliers_from_invoices()
@@ -226,15 +230,24 @@ def run_downloads() -> None:
                 job["log"].append(f"{name}: KHÔNG đẩy lên Drive — {e}")
 
 
-def _save_xml(s: PortalSession, mst: str, direction: str, inv: dict, xml_dir: Path) -> bool:
-    """Trả về False nếu chưa tải được XML (lần tải sau sẽ thử lại)."""
+def _save_xml(s: PortalSession, mst: str, direction: str, inv: dict, xml_dir: Path) -> bool | None:
+    """True: có XML. False: chưa tải được (lần tải sau thử lại). None: cổng không có XML hóa đơn này."""
     rel = Path(mst) / direction / f"{inv['nbmst']}_{inv['khhdon']}_{inv['shdon']}.zip"
     target = xml_dir / rel
+    khong_co = target.with_suffix(".khong-co-xml")
+    raw = inv.get("raw") or {}
+    if khong_co.exists() or ("hsgoc" in raw and not raw["hsgoc"]):
+        # hsgoc rỗng trong danh sách cổng = cổng không lưu XML hóa đơn này (đã đối chiếu 116/116 HĐ thật)
+        return None
     if target.exists():
         content = target.read_bytes()            # đã tải trước đây: đọc lại, không tải lại
     else:
         try:
             content = s.export_xml(inv)
+        except KhongCoXML:
+            khong_co.parent.mkdir(parents=True, exist_ok=True)
+            khong_co.write_text("Cổng thuế: Không tồn tại hồ sơ gốc của hóa đơn", encoding="utf-8")
+            return None
         except PortalError:
             return False
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -621,6 +634,13 @@ def google_callback():
             gdrive.revoke(tok["refresh_token"])
         flash(f"{c['name']} (MST {mst}): anh đăng nhập {email}, nhưng email đã khai là {c['email']}. "
               "Không lưu kết nối để tránh nhầm Drive. Bấm Kết nối lại và chọn đúng email.", "error")
+        return redirect(url_for("index"))
+    if "scope" in tok and "auth/drive.file" not in tok["scope"]:
+        # Google cho bỏ tick từng quyền ở màn hình xin quyền; thiếu quyền Drive thì đẩy file sẽ lỗi 403
+        if tok.get("refresh_token"):
+            gdrive.revoke(tok["refresh_token"])
+        flash(f"{c['name']}: chưa cấp quyền Google Drive. Bấm Kết nối Drive lại, ở màn hình xin quyền nhớ tick ô "
+              "\"Xem, chỉnh sửa, tạo và xóa các tệp cụ thể trên Google Drive…\" rồi bấm Tiếp tục.", "error")
         return redirect(url_for("index"))
     if not tok.get("refresh_token"):
         flash(f"{c['name']}: Google không cấp quyền lâu dài, bấm Kết nối lại", "error")

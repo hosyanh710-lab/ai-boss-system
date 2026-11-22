@@ -101,6 +101,10 @@ def test_cong_thue_429_cho_roi_thu_lai(monkeypatch):
             self.status_code, self.content, self.headers = code, content, headers or {}
             self.text = content.decode()
 
+        def json(self):
+            import json
+            return json.loads(self.text)
+
     tra_ve = [Resp(429, b"Too Many Requests", {"Retry-After": "7"}), Resp(429, b"Too Many Requests"),
               Resp(200, b"PK\x03\x04zip")]
     s = portal.PortalSession()
@@ -110,7 +114,14 @@ def test_cong_thue_429_cho_roi_thu_lai(monkeypatch):
     assert 7 in ngu and portal.CHO_KHI_429[1] in ngu
 
     monkeypatch.setattr(s.http, "request", lambda *a, **k: Resp(429, b"Too Many Requests"))
-    with pytest.raises(portal.PortalError):
+    with pytest.raises(portal.PortalError) as loi:
+        s.export_xml(inv)
+    assert not isinstance(loi.value, portal.KhongCoXML)
+
+    # HĐ không mã của EVN / viễn thông: cổng không có XML, không thử lại vô ích
+    khong_co = '{"message":"Không tồn tại hồ sơ gốc của hóa đơn."}'.encode()
+    monkeypatch.setattr(s.http, "request", lambda *a, **k: Resp(500, khong_co))
+    with pytest.raises(portal.KhongCoXML):
         s.export_xml(inv)
 
 
@@ -677,7 +688,11 @@ class FakeGoogle:
         if url == gdrive.TOKEN_URL:
             if data["grant_type"] == "authorization_code":
                 e = data["code"].split("code:", 1)[1]
-                return _Resp({"access_token": f"at:{e}", "refresh_token": f"rt:{e}"})
+                # "|khong-drive": người dùng bỏ tick ô quyền Google Drive ở màn hình xin quyền
+                e, bo_drive = e.split("|")[0], e.endswith("|khong-drive")
+                scope = "openid https://www.googleapis.com/auth/userinfo.email" + (
+                    "" if bo_drive else " https://www.googleapis.com/auth/drive.file")
+                return _Resp({"access_token": f"at:{e}", "refresh_token": f"rt:{e}", "scope": scope})
             return _Resp({"access_token": "at:" + data["refresh_token"].split("rt:", 1)[1]})
         if url == gdrive.REVOKE_URL:
             self.revoked.append(data["token"])
@@ -767,6 +782,11 @@ def test_google_drive_moi_cong_ty_mot_email(client, google):
     assert q["login_hint"] == ["ketoan.a@gmail.com"]
     assert st.google_token("0300000001") is None and google.revoked == ["rt:ketoan.b@gmail.com"]
     assert "Không lưu kết nối" in c.get("/").get_data(as_text=True)
+
+    # đúng email nhưng bỏ tick ô quyền Google Drive → từ chối, báo rõ cần tick ô nào
+    r, _ = _ket_noi(c, "0300000001", "ketoan.a@gmail.com|khong-drive")
+    assert st.google_token("0300000001") is None and google.revoked[-1] == "rt:ketoan.a@gmail.com"
+    assert "tick" in c.get("/").get_data(as_text=True)
 
     # đăng nhập đúng email
     _ket_noi(c, "0300000001", "ketoan.a@gmail.com")
