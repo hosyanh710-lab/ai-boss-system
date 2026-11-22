@@ -11,7 +11,7 @@ from pathlib import Path
 from flask import Flask, flash, g, redirect, render_template, request, send_file, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from thuedn import export, gdrive, misa
+from thuedn import excel_cong, export, gdrive, misa
 from thuedn.portal import KhongCoXML, PortalError, PortalSession, normalize
 from thuedn.rules import (CHE_DO_KE_TOAN, DS_RUI_RO, KET_LUAN, NGAY_TRA_LAI, PHAN_LOAI, TRANG_THAI_NCC, chia_thang,
                           bang_phan_loai, danh_gia_doi_tac, muc_rui_ro, parse_danh_sach_mst, tinh_chat, to_date)
@@ -137,7 +137,7 @@ def _lap_buoc_mtt() -> None:
     if job.get("mtt_pending") is not None:
         return
     job["mtt_pending"] = [
-        {"mst": m, "tu": tu, "den": den, "state": None, "trang": 1, "da_tai": 0, "tong": None}
+        {"mst": m, "tu": tu, "den": den, "state": None, "trang": 1, "da_tai": 0, "tong": None, "kieu": "excel"}
         for m in job["msts"] if job.get("mtt") and sessions.get(m) and sessions[m].logged_in
         for tu, den in chia_thang(job["tu"], job["den"])]
 
@@ -146,6 +146,34 @@ def _tra_mtt(cvalue: str) -> None:
     """Tra một trang HĐ máy tính tiền bằng captcha vừa gõ; lưu ngay, XML để lượt tải ngầm."""
     b = job["mtt_pending"][0]
     s = sessions[b["mst"]]
+    if b["kieu"] == "excel":
+        try:
+            noi_dung = s.sold_mtt_excel(b["tu"], b["den"], job.get("ckey", ""), cvalue)
+        except PortalError as e:
+            if "captcha" in str(e).lower() or "xác thực" in str(e).lower() or s.token is None:
+                raise
+            b["kieu"] = "trang"          # cổng không cho xuất Excel: tra từng trang 50 HĐ như trang web
+            raise PortalError(f"Không xuất được Excel ({e}). Chuyển sang tra từng trang 50 hóa đơn, "
+                              "gõ captcha mới để tra tiếp.") from e
+        tep = DATA_DIR / "mtt" / b["mst"] / f"ban-ra-mtt_{b['tu']:%Y-%m-%d}_{b['den']:%Y-%m-%d}.xlsx"
+        tep.parent.mkdir(parents=True, exist_ok=True)
+        tep.write_bytes(noi_dung)                          # giữ file gốc của cổng để đối chiếu
+        try:
+            dong = excel_cong.doc_danh_sach(noi_dung, b["mst"], store.company_name(b["mst"]))
+        except Exception as e:
+            app.logger.exception("Đọc Excel HĐ máy tính tiền")
+            job["mtt_pending"].pop(0)
+            job["log"].append(f"{store.company_name(b['mst'])}: đã tải Excel HĐ máy tính tiền {b['tu']:%m/%Y} "
+                              f"nhưng chưa đọc được ({e}). File lưu ở {tep}")
+            return
+        for row in dong:
+            inv = normalize(row)
+            store.save_invoice(b["mst"], "ra", inv)
+            job["mtt_inv"].setdefault(b["mst"], []).append(inv)
+        job["mtt_pending"].pop(0)
+        job["log"].append(f"{store.company_name(b['mst'])}: {len(dong)} hóa đơn bán ra từ máy tính tiền "
+                          f"({b['tu']:%m/%Y}, lấy bằng Excel của cổng, 1 captcha)")
+        return
     rows, nxt, tong = s.sold_mtt_page(b["tu"], b["den"], b["state"], job.get("ckey", ""), cvalue)
     for row in rows:
         inv = normalize(row)
@@ -163,15 +191,20 @@ def _tra_mtt(cvalue: str) -> None:
 @app.post("/captcha")
 def submit_captcha():
     if job and not job.get("pending") and job.get("mtt_pending") and job.get("trang_thai") == "cho_captcha":
-        b = job["mtt_pending"][0]
-        if "bo_qua" in request.form:
-            job["mtt_pending"].pop(0)
-            job["log"].append(f"{store.company_name(b['mst'])}: bỏ qua HĐ máy tính tiền {b['tu']:%m/%Y}")
-        else:
-            try:
-                _tra_mtt(request.form.get("cvalue", "").strip())
-            except PortalError as e:
-                flash(f"{store.company_name(b['mst'])}: {e}", "error")
+        if not _khoa_mtt.acquire(blocking=False):
+            return redirect(url_for("captcha"))      # bấm 2 lần khi cổng đang tạo Excel: bỏ qua lần sau
+        try:
+            b = job["mtt_pending"][0]
+            if "bo_qua" in request.form:
+                job["mtt_pending"].pop(0)
+                job["log"].append(f"{store.company_name(b['mst'])}: bỏ qua HĐ máy tính tiền {b['tu']:%m/%Y}")
+            else:
+                try:
+                    _tra_mtt(request.form.get("cvalue", "").strip())
+                except PortalError as e:
+                    flash(f"{store.company_name(b['mst'])}: {e}", "error")
+        finally:
+            _khoa_mtt.release()
         return redirect(url_for("captcha"))
     if not job or not job.get("pending"):
         # Form gửi lại lần 2 (bấm 2 lần / tải lại trang) khi đã đăng nhập xong: chỉ cần đi tiếp
@@ -191,6 +224,7 @@ def submit_captcha():
 
 
 _khoa_tai = threading.Lock()
+_khoa_mtt = threading.Lock()
 
 
 def bat_dau_tai() -> None:

@@ -144,6 +144,11 @@ def test_hoa_don_may_tinh_tien(client, monkeypatch):
         return ([hd(1), hd(2)], "s2", 3) if state is None else ([hd(3)], None, 3)
 
     monkeypatch.setattr(portal.PortalSession, "sold_mtt_page", trang_mtt)
+
+    def excel_loi(self, tu, den, ckey, cvalue):
+        raise portal.PortalError("Không xuất được Excel (mã 500)")
+
+    monkeypatch.setattr(portal.PortalSession, "sold_mtt_excel", excel_loi)
     xml_goi = []
     monkeypatch.setattr(portal.PortalSession, "export_xml", lambda self, inv: xml_goi.append(inv["shdon"]) or b"PK")
     c.post("/companies", data={"name": "DN A", "mst": "0300000000", "password": "mat-khau"})
@@ -152,7 +157,9 @@ def test_hoa_don_may_tinh_tien(client, monkeypatch):
     c.get("/captcha")
     c.post("/captcha", data={"cvalue": "abc12"})                       # đăng nhập
     trang = c.get("/captcha").get_data(as_text=True)
-    assert "máy tính tiền" in trang and "06/2026" in trang
+    assert "máy tính tiền" in trang and "06/2026" in trang and "một captcha cho cả tháng" in trang
+    c.post("/captcha", data={"cvalue": "mtt"})                         # Excel lỗi → chuyển sang tra từng trang
+    assert "Chuyển sang tra từng trang" in c.get("/captcha").get_data(as_text=True)
     c.post("/captcha", data={"cvalue": "sai"})                         # sai captcha: tra lại trang đó
     c.post("/captcha", data={"cvalue": "mtt"})                         # trang 1
     assert "2/3" in c.get("/captcha").get_data(as_text=True)
@@ -163,6 +170,51 @@ def test_hoa_don_may_tinh_tien(client, monkeypatch):
     assert len(so_mtt) == 3 and sorted(xml_goi) == [1, 2, 3]
     assert "3 hóa đơn bán ra từ máy tính tiền" in c.get("/results").get_data(as_text=True)
     assert portal.la_mtt("C26MAA") and not portal.la_mtt("C26TAA") and not portal.la_mtt(None)
+
+
+def _excel_cong(dong):
+    """File Excel giống cổng xuất: tiêu đề 2 tầng, có dòng tổng cộng cuối."""
+    from openpyxl import Workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.append(["DANH SÁCH HÓA ĐƠN"])
+    ws.append(["Từ ngày 01/06/2026 đến ngày 30/06/2026"])
+    ws.append(["STT", "Ký hiệu mẫu số", "Ký hiệu hóa đơn", "Số hóa đơn", "Ngày lập", "Thông tin người mua", None,
+               "Tổng tiền chưa thuế", "Tổng tiền thuế", "Tổng tiền thanh toán", "Trạng thái hóa đơn"])
+    ws.append([None, None, None, None, None, "MST người mua", "Tên người mua"])
+    for d in dong:
+        ws.append(d)
+    ws.append(["Tổng cộng", None, None, None, None, None, None, 300000, 30000, 330000, None])
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def test_mtt_lay_bang_excel_mot_captcha(client, monkeypatch):
+    from thuedn import portal
+    c, appmod = client
+    tep = _excel_cong([
+        [1, 1, "C26MAA", "0000123", "15/06/2026", None, "Khách lẻ", "100.000", "10.000", "110.000", "Hóa đơn mới"],
+        [2, 1, "C26MAA", 124, "16/06/2026", "0312345678", "Công ty X", 200000, 20000, 220000,
+         "Hóa đơn đã bị điều chỉnh"],
+    ])
+    goi = []
+    monkeypatch.setattr(portal.PortalSession, "sold_mtt_excel",
+                        lambda self, tu, den, ckey, cvalue: goi.append(cvalue) or tep)
+    c.post("/companies", data={"name": "DN A", "mst": "0300000000", "password": "mat-khau"})
+    c.post("/download", data={"mst": "0300000000", "loai": ["ra"], "tu": "2026-06-01", "den": "2026-06-30",
+                              "mtt": "on"})
+    c.get("/captcha")
+    c.post("/captcha", data={"cvalue": "abc12"})
+    c.get("/captcha")
+    c.post("/captcha", data={"cvalue": "x1"})
+    assert goi == ["x1"]                                              # một captcha cho cả tháng
+    assert c.get("/captcha").headers["Location"].endswith("/dang-tai")
+    hd = {r["shdon"]: r for r in appmod.store.invoices() if r["khhdon"] == "C26MAA"}
+    assert set(hd) == {"123", "124"}
+    assert hd["123"]["tgtttbso"] == 110000 and hd["123"]["tdlap"] == "2026-06-15" and hd["123"]["tthai"] == 1
+    assert hd["124"]["nmmst"] == "0312345678" and hd["124"]["tthai"] == 5
+    assert (Path(appmod.DATA_DIR) / "mtt" / "0300000000" / "ban-ra-mtt_2026-06-01_2026-06-30.xlsx").exists()
 
 
 def test_mtt_cong_khong_nhan_trang_lon(monkeypatch):

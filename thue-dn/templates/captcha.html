@@ -4,9 +4,15 @@
 <div class="card" style="max-width:480px">
   <h1>Nhập captcha</h1>
   {% if buoc %}
+  {% if buoc.kieu == "excel" %}
+  <p><b>{{ name }}</b><br>Lấy <b>hóa đơn bán ra từ máy tính tiền</b> tháng {{ buoc.tu.strftime('%m/%Y') }}
+    bằng file Excel của cổng thuế: <b>một captcha cho cả tháng</b>.<br>
+    <span class="muted">Cổng có thể mất vài chục giây để tạo file, bấm một lần rồi chờ.</span></p>
+  {% else %}
   <p><b>{{ name }}</b><br>Tra <b>hóa đơn bán ra từ máy tính tiền</b> tháng {{ buoc.tu.strftime('%m/%Y') }}
     – lần tra thứ {{ buoc.trang }}{% if buoc.tong %} · đã lấy {{ buoc.da_tai }}/{{ buoc.tong }} hóa đơn{% endif %}<br>
     <span class="muted">Cổng thuế bắt gõ captcha cho mỗi lần tra loại hóa đơn này.</span></p>
+  {% endif %}
   {% else %}
   <p><b>{{ name }}</b><br><span class="muted">MST {{ mst }} · còn {{ con_lai }} doanh nghiệp cần đăng nhập</span></p>
   {% endif %}

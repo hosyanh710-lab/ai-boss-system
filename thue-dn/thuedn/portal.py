@@ -42,6 +42,9 @@ URL_XML = BASE + "/query/invoices/export-xml"
 # tra danh sách phải kèm captcha cho MỖI trang (ckey/cvalue gửi cả ở tham số và header, như trang web);
 # tải XML thì không cần captcha.
 URL_SOLD_MTT = BASE + "/sco-query/invoices/sold"
+# Tra từng trang thì cổng chỉ trả 50 HĐ/trang dù xin nhiều hơn (đo 22/11/2026: 1824 HĐ = 37 captcha).
+# Nút "Xuất hóa đơn" ra Excel lấy cả khoảng ngày bằng MỘT captcha.
+URL_EXCEL_SOLD_MTT = BASE + "/sco-query/invoices/export-excel-sold"
 URL_XML_MTT = BASE + "/sco-query/invoices/export-xml"
 END_POINT = "/tra-cuu/tra-cuu-hoa-don"
 
@@ -92,7 +95,7 @@ class PortalSession:
         return self.token is not None
 
     def _send(self, method: str, url: str, action: str = "", extra_headers: dict | None = None,
-              **kw) -> requests.Response:
+              timeout_dai: bool = False, **kw) -> requests.Response:
         for lan, cho in enumerate((*CHO_KHI_429, None)):
             con_lai = self._lan_goi_cuoi + KHOANG_CACH - time.monotonic()
             if con_lai > 0:
@@ -100,7 +103,8 @@ class PortalSession:
             headers = {"request-id": str(uuid.uuid4()), "End-Point": END_POINT, "Action": quote(action),
                        **(extra_headers or {})}
             try:
-                r = self.http.request(method, url, headers=headers, timeout=TIMEOUT, verify=self.verify, **kw)
+                r = self.http.request(method, url, headers=headers, timeout=TIMEOUT * (5 if timeout_dai else 1),
+                                      verify=self.verify, **kw)
             except requests.RequestException as e:
                 log.warning("%s %s -> lỗi mạng: %s", method, url, e)
                 raise PortalError(f"Không kết nối được cổng thuế: {e}") from e
@@ -202,6 +206,18 @@ class PortalSession:
         log.info("  %s hóa đơn máy tính tiền (tổng %s)", len(rows), data.get("total"))
         nxt = data.get("state") if rows else None
         return rows, nxt, data.get("total")
+
+    def sold_mtt_excel(self, tu: date, den: date, ckey: str, cvalue: str) -> bytes:
+        """File Excel danh sách HĐ bán ra từ máy tính tiền trong khoảng ngày (một captcha)."""
+        params = {"sort": "tdlap:desc", "search": self._search(tu, den), "ckey": ckey, "cvalue": cvalue}
+        r = self._send("GET", URL_EXCEL_SOLD_MTT, action="Xuất hóa đơn (hóa đơn máy tính tiền bán ra)",
+                       extra_headers={"ckey": ckey, "cvalue": cvalue}, params=params, timeout_dai=True)
+        if r.status_code == 401:
+            self.token = None
+            raise PortalError("Phiên đăng nhập hết hạn, cần nhập lại captcha")
+        if r.status_code != 200 or not r.content.startswith(b"PK"):
+            raise PortalError(_json(r).get("message") or f"Không xuất được Excel (mã {r.status_code})")
+        return r.content
 
     def export_xml(self, inv: dict) -> bytes:
         """Trả về file .zip cổng thuế cung cấp cho một hóa đơn (chứa XML)."""
