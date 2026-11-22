@@ -97,6 +97,10 @@ Chống nhầm công ty:
    - Sheet chi tiết hàng hóa có đủ mã hàng, số lượng, đơn giá.
 4. Ổn rồi mới thêm 9 công ty còn lại.
 
+## Chạy trên Mac
+
+Mở **Terminal** trong thư mục `thue-dn` và gõ `bash run.sh`. Lần đầu tự cài thư viện (cần Python 3: python.org), sau đó trình duyệt mở `http://127.0.0.1:5000`. Lệnh tạo tài khoản trên Mac: `.venv/bin/python tao_tai_khoan.py <email> admin "Họ tên"`.
+
 ## Cách dùng
 
 1. **Doanh nghiệp**: thêm tên, MST, mật khẩu cổng thuế (mật khẩu mã hóa, chỉ lưu trong thư mục `data/` trên máy).
