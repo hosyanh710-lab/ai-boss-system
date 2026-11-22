@@ -177,7 +177,7 @@ Mỗi hàng là một hóa đơn điều chỉnh hoặc thay thế. Cột chia 3
 | Danh sách DN, mã hóa mật khẩu | Xong, đã kiểm thử |
 | Chia khoảng ngày theo tháng, phân loại tính chất HĐ | Xong, đã kiểm thử |
 | Xuất Excel, gộp nhiều DN, tô đỏ rủi ro cao | Xong, đã kiểm thử |
-| Kết nối cổng hoadondientu (captcha, đăng nhập, tra cứu, XML) | **Đã chạy với cổng thật** (22/11/2026). Địa chỉ mới `https://hoadondientu.gdt.gov.vn/api/...`; tải XML giãn 1,2 giây/lần, tự chờ khi cổng báo 429. **Chưa tải hóa đơn khởi tạo từ máy tính tiền** (cổng bắt nhập captcha cho mỗi lần tìm) |
+| Kết nối cổng hoadondientu (captcha, đăng nhập, tra cứu, XML) | **Đã chạy với cổng thật** (22/11/2026). Địa chỉ mới `https://hoadondientu.gdt.gov.vn/api/...`; tải XML giãn 1,2 giây/lần, tự chờ khi cổng báo 429. Mua vào đủ 3 loại: có mã, không mã, máy tính tiền. **HĐ máy tính tiền** (mua vào và bán ra) lấy bằng file Excel của cổng: mỗi chiều mỗi tháng 1 captcha (tra từng trang thì cổng bắt 1 captcha / 50 HĐ). Đã đối chiếu tháng 10/2026 công ty thật: 79 có mã + 37 không mã + 40 máy tính tiền mua vào, 1824 HĐ bán ra máy tính tiền |
 | Kiểm tra đối tác, phiếu đánh giá, lịch sử, nhắc tra lại, danh sách rủi ro | Xong, đã kiểm thử |
 | Tổng hợp hạch toán theo loại và mã hàng, trang Phân loại hàng hóa | Xong, đã kiểm thử |
 | File chứng từ hạch toán sẵn để nhập MISA | Xong phần hạch toán, đã kiểm thử. **Tên cột cần khớp với file mẫu nhập khẩu thật của MISA ASP** |
