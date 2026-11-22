@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import threading
 import zipfile
 import io
 from datetime import date, datetime, timedelta
@@ -95,9 +96,13 @@ def start_download():
     except (KeyError, ValueError) as e:
         flash(f"Khoảng ngày không hợp lệ: {e}", "error")
         return redirect(url_for("index"))
+    if job.get("trang_thai") == "dang_chay":
+        flash("Đang có một lượt tải chạy, chờ xong rồi tải tiếp", "error")
+        return redirect(url_for("dang_tai"))
     job.clear()
     job.update(msts=msts, loai=loai, tu=tu, den=den, xml="xml" in request.form, drive="drive" in request.form,
-               pending=[m for m in msts if not session_for(m).logged_in], log=[])
+               pending=[m for m in msts if not session_for(m).logged_in], log=[], trang_thai="cho_captcha",
+               tien_do="")
     return redirect(url_for("captcha"))
 
 
@@ -107,8 +112,8 @@ def captcha():
     if not job:
         return redirect(url_for("index"))
     if not job["pending"]:
-        run_downloads()
-        return redirect(url_for("results"))
+        bat_dau_tai()
+        return redirect(url_for("dang_tai"))
     mst = job["pending"][0]
     try:
         cap = session_for(mst).get_captcha()
@@ -123,6 +128,9 @@ def captcha():
 
 @app.post("/captcha")
 def submit_captcha():
+    if not job or not job.get("pending"):
+        # Form gửi lại lần 2 (bấm 2 lần / tải lại trang) khi đã đăng nhập xong: chỉ cần đi tiếp
+        return redirect(url_for("captcha") if job else url_for("index"))
     mst = job["pending"][0]
     if "bo_qua" in request.form:
         job["pending"].pop(0)
@@ -137,6 +145,44 @@ def submit_captcha():
     return redirect(url_for("captcha"))
 
 
+_khoa_tai = threading.Lock()
+
+
+def bat_dau_tai() -> None:
+    """Tải chạy ngầm, mỗi lúc chỉ một lượt: tải hàng trăm XML mất vài phút (cổng giới hạn tốc độ),
+    trang chờ không được giữ request lâu (bị gửi lại nhiều lần → nhiều lượt tải đè nhau)."""
+    if not _khoa_tai.acquire(blocking=False):
+        return                                    # đang có lượt tải chạy
+    if job.get("trang_thai") in ("dang_chay", "xong"):
+        _khoa_tai.release()
+        return
+    job["trang_thai"] = "dang_chay"
+
+    def chay():
+        try:
+            run_downloads()
+        except Exception as e:                    # pragma: no cover - lỗi bất ngờ vẫn phải mở khóa
+            app.logger.exception("Lỗi khi tải hóa đơn")
+            job["log"].append(f"Lỗi khi tải: {e}")
+        finally:
+            job["trang_thai"] = "xong"
+            _khoa_tai.release()
+
+    if app.testing:
+        chay()
+    else:
+        threading.Thread(target=chay, name="tai-hoa-don", daemon=True).start()
+
+
+@app.get("/dang-tai")
+def dang_tai():
+    if not job:
+        return redirect(url_for("index"))
+    if job.get("trang_thai") != "dang_chay":
+        return redirect(url_for("results") if job.get("trang_thai") == "xong" else url_for("captcha"))
+    return render_template("dang_tai.html", log=job["log"], tien_do=job.get("tien_do", ""))
+
+
 def run_downloads() -> None:
     xml_dir = DATA_DIR / "xml"
     for mst in job["msts"]:
@@ -144,7 +190,7 @@ def run_downloads() -> None:
         name = store.company_name(mst)
         if not s or not s.logged_in:
             continue
-        dem = 0
+        dem = thieu_xml = 0
         try:
             for tu, den in chia_thang(job["tu"], job["den"]):
                 nguon = []
@@ -157,9 +203,11 @@ def run_downloads() -> None:
                         inv = normalize(row)
                         store.save_invoice(mst, direction, inv)
                         dem += 1
-                        if job["xml"]:
-                            _save_xml(s, mst, direction, inv, xml_dir)
-            job["log"].append(f"{name}: tải {dem} hóa đơn")
+                        if job["xml"] and not _save_xml(s, mst, direction, inv, xml_dir):
+                            thieu_xml += 1
+                        job["tien_do"] = f"{name}: {dem} hóa đơn" + (" (kèm XML)" if job["xml"] else "")
+            job["log"].append(f"{name}: tải {dem} hóa đơn" + (
+                f"; {thieu_xml} hóa đơn chưa tải được XML — bấm Tải hóa đơn lại để lấy tiếp" if thieu_xml else ""))
         except PortalError as e:
             job["log"].append(f"{name}: lỗi — {e}")
     store.ensure_suppliers_from_invoices()
@@ -178,7 +226,8 @@ def run_downloads() -> None:
                 job["log"].append(f"{name}: KHÔNG đẩy lên Drive — {e}")
 
 
-def _save_xml(s: PortalSession, mst: str, direction: str, inv: dict, xml_dir: Path) -> None:
+def _save_xml(s: PortalSession, mst: str, direction: str, inv: dict, xml_dir: Path) -> bool:
+    """Trả về False nếu chưa tải được XML (lần tải sau sẽ thử lại)."""
     rel = Path(mst) / direction / f"{inv['nbmst']}_{inv['khhdon']}_{inv['shdon']}.zip"
     target = xml_dir / rel
     if target.exists():
@@ -187,7 +236,7 @@ def _save_xml(s: PortalSession, mst: str, direction: str, inv: dict, xml_dir: Pa
         try:
             content = s.export_xml(inv)
         except PortalError:
-            return
+            return False
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(content)
     row = store.db.execute(
@@ -195,6 +244,7 @@ def _save_xml(s: PortalSession, mst: str, direction: str, inv: dict, xml_dir: Pa
         (mst, direction, inv["nbmst"], inv["khhdon"], str(inv["shdon"]))).fetchone()
     if row:
         luu_xml(row["id"], str(rel), content)
+    return True
 
 
 def luu_xml(invoice_id: int, rel: str, content: bytes) -> None:
@@ -812,8 +862,24 @@ def ip_noi_bo() -> str | None:
         return None
 
 
+def bat_log() -> None:
+    """Ghi nhật ký kết nối cổng thuế ra màn hình và data/logs/cong-thue.log (không ghi mật khẩu)."""
+    import logging
+    from logging.handlers import RotatingFileHandler
+    (DATA_DIR / "logs").mkdir(parents=True, exist_ok=True)
+    fmt = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+    lg = logging.getLogger("thuedn")
+    lg.setLevel(logging.INFO)
+    for h in (logging.StreamHandler(),
+              RotatingFileHandler(DATA_DIR / "logs" / "cong-thue.log", maxBytes=2_000_000,
+                                  backupCount=3, encoding="utf-8")):
+        h.setFormatter(fmt)
+        lg.addHandler(h)
+
+
 if __name__ == "__main__":
     import sys
+    bat_log()
     if "--mang-noi-bo" in sys.argv or os.environ.get("THUEDN_LAN") == "1":
         # Máy chính: cho các máy khác cùng mạng mở bằng trình duyệt (vẫn phải đăng nhập)
         ip = ip_noi_bo()

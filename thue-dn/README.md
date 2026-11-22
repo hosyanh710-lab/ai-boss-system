@@ -177,14 +177,14 @@ Mỗi hàng là một hóa đơn điều chỉnh hoặc thay thế. Cột chia 3
 | Danh sách DN, mã hóa mật khẩu | Xong, đã kiểm thử |
 | Chia khoảng ngày theo tháng, phân loại tính chất HĐ | Xong, đã kiểm thử |
 | Xuất Excel, gộp nhiều DN, tô đỏ rủi ro cao | Xong, đã kiểm thử |
-| Kết nối cổng hoadondientu (captcha, đăng nhập, tra cứu, XML) | **Đã viết, chưa chạy với cổng thật** — cần thử trên máy anh |
+| Kết nối cổng hoadondientu (captcha, đăng nhập, tra cứu, XML) | **Đã chạy với cổng thật** (22/11/2026). Địa chỉ mới `https://hoadondientu.gdt.gov.vn/api/...`; tải XML giãn 1,2 giây/lần, tự chờ khi cổng báo 429. **Chưa tải hóa đơn khởi tạo từ máy tính tiền** (cổng bắt nhập captcha cho mỗi lần tìm) |
 | Kiểm tra đối tác, phiếu đánh giá, lịch sử, nhắc tra lại, danh sách rủi ro | Xong, đã kiểm thử |
 | Tổng hợp hạch toán theo loại và mã hàng, trang Phân loại hàng hóa | Xong, đã kiểm thử |
 | File chứng từ hạch toán sẵn để nhập MISA | Xong phần hạch toán, đã kiểm thử. **Tên cột cần khớp với file mẫu nhập khẩu thật của MISA ASP** |
 | Đăng nhập, 3 cấp tài khoản (Admin, Quản trị, Người sử dụng) | Xong, đã kiểm thử |
 | Đẩy file lên Google Drive riêng của từng công ty | Xong, đã kiểm thử với Google giả lập. **Cần thử trên máy anh** với tài khoản Google thật |
 | Chi tiết hàng hóa bán ra / mua vào theo mã hàng (đọc XML) | Xong, đã kiểm thử với XML mẫu. **Cần kiểm tra trên máy anh** với XML thật |
-| Nối HĐ điều chỉnh / thay thế với HĐ gốc (Excel, trang Kết quả, đọc XML) | Xong, đã kiểm thử với dữ liệu giả. **Cần kiểm tra trên máy anh**: tên trường HĐ gốc trong danh sách cổng thuế, và dấu âm / dương của số tiền HĐ điều chỉnh giảm |
+| Nối HĐ điều chỉnh / thay thế với HĐ gốc (Excel, trang Kết quả, đọc XML) | Xong. Tên trường HĐ gốc trong danh sách cổng thuế **đã xác nhận** với dữ liệu thật: `khmshdgoc`, `khhdgoc`, `shdgoc`, `tdlhdgoc`. **Còn cần kiểm tra**: dấu âm / dương của số tiền HĐ điều chỉnh giảm (chưa gặp HĐ điều chỉnh giảm thật) |
 | Tự động lấy thông tin từ trang cơ quan thuế / cổng đăng ký DN | Chưa làm — hiện mở link tra rồi điền bằng tay; cần thử trên máy anh vì các trang này có captcha |
 
 Địa chỉ kết nối cổng thuế nằm trong `thuedn/portal.py`. Nếu cổng đổi, chỉ cần sửa file đó.
@@ -196,6 +196,10 @@ Mỗi hàng là một hóa đơn điều chỉnh hoặc thay thế. Cột chia 3
 ```
 
 ## Lưu ý
+
+- Máy có phần mềm diệt virus quét HTTPS (ví dụ Avast): công cụ dùng kho chứng chỉ của Windows qua thư viện `truststore`, không tắt kiểm tra SSL.
+- Tải hóa đơn chạy ngầm: trang **Đang tải** tự cập nhật, không cần bấm lại. Hóa đơn nào chưa tải được XML thì bấm **Tải hóa đơn** lại cùng khoảng ngày để lấy tiếp (hóa đơn không bị trùng).
+- Nhật ký kết nối cổng thuế: `data/logs/cong-thue.log` (không ghi mật khẩu, captcha, token).
 
 - Thư mục `data/` chứa mật khẩu đã mã hóa và khóa giải mã: **không gửi cho ai, không đưa lên GitHub** (đã chặn bằng `.gitignore`).
 - Kết quả kiểm tra nhà cung cấp chỉ để tham khảo; trường hợp rủi ro cao nên tra lại trên trang cơ quan thuế trước khi kê khai khấu trừ.

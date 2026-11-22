@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import threading
 from pathlib import Path
 
 from cryptography.fernet import Fernet
@@ -117,12 +118,63 @@ CREATE TABLE IF NOT EXISTS watchlist (
 GOC_COLS = ("goc_khmshdon", "goc_khhdon", "goc_shdon", "goc_tdlap")
 
 
+class _KetQua:
+    """Kết quả một câu lệnh, đã đọc hết dòng ngay trong lúc giữ khóa."""
+
+    def __init__(self, cur: sqlite3.Cursor):
+        self._rows = cur.fetchall() if cur.description else []
+        self.lastrowid, self.rowcount, self.description = cur.lastrowid, cur.rowcount, cur.description
+
+    def fetchone(self):
+        return self._rows.pop(0) if self._rows else None
+
+    def fetchall(self):
+        rows, self._rows = self._rows, []
+        return rows
+
+    def __iter__(self):
+        return iter(self.fetchall())
+
+
+class _KetNoiAnToan:
+    """Một kết nối SQLite dùng chung cho nhiều luồng (nhiều máy mở cùng lúc, tải hóa đơn chạy ngầm):
+    mỗi lệnh chạy trong khóa, tránh lỗi "cannot commit - no transaction is active" khi hai luồng đụng nhau."""
+
+    def __init__(self, path: Path):
+        self._conn = sqlite3.connect(path, check_same_thread=False)
+        self._conn.row_factory = sqlite3.Row
+        self.lock = threading.RLock()
+
+    def execute(self, *a) -> _KetQua:
+        with self.lock:
+            return _KetQua(self._conn.execute(*a))
+
+    def executemany(self, *a) -> _KetQua:
+        with self.lock:
+            return _KetQua(self._conn.executemany(*a))
+
+    def executescript(self, *a):
+        with self.lock:
+            return self._conn.executescript(*a)
+
+    def commit(self) -> None:
+        with self.lock:
+            if self._conn.in_transaction:
+                self._conn.commit()
+
+    def rollback(self) -> None:
+        with self.lock:
+            self._conn.rollback()
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
+
 class Storage:
     def __init__(self, data_dir: Path):
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
-        self.db = sqlite3.connect(self.data_dir / "thuedn.sqlite3", check_same_thread=False)
-        self.db.row_factory = sqlite3.Row
+        self.db = _KetNoiAnToan(self.data_dir / "thuedn.sqlite3")
         self.db.executescript(SCHEMA)
         self._migrate()
         self.fernet = Fernet(self._load_key())

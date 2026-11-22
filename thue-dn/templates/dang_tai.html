@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Đang tải hóa đơn{% endblock %}
+{% block body %}
+<meta http-equiv="refresh" content="3">
+<div class="card" style="max-width:560px">
+  <h1>Đang tải hóa đơn…</h1>
+  <p>{{ tien_do or "Đang tra cứu danh sách hóa đơn" }}</p>
+  <p class="muted">Tải XML từng hóa đơn chậm (cổng thuế giới hạn tốc độ), 100 hóa đơn mất khoảng 2–3 phút.
+    Không cần bấm gì: trang tự cập nhật và chuyển sang Kết quả khi xong. Có thể đóng trang này, việc tải vẫn chạy tiếp.</p>
+  {% if log %}<ul>{% for l in log %}<li>{{ l }}</li>{% endfor %}</ul>{% endif %}
+</div>
+{% endblock %}

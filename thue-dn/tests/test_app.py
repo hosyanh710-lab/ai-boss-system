@@ -89,6 +89,67 @@ def dang_nhap(c, email, mk=MAT_KHAU):
     return c.post("/dang-nhap", data={"email": email, "mat_khau": mk})
 
 
+def test_cong_thue_429_cho_roi_thu_lai(monkeypatch):
+    """Cổng trả 429 khi gọi quá nhanh: giãn nhịp, chờ rồi thử lại; hết lượt thì báo lỗi."""
+    from thuedn import portal
+
+    ngu = []
+    monkeypatch.setattr(portal.time, "sleep", lambda s: ngu.append(s))
+
+    class Resp:
+        def __init__(self, code, content=b"", headers=None):
+            self.status_code, self.content, self.headers = code, content, headers or {}
+            self.text = content.decode()
+
+    tra_ve = [Resp(429, b"Too Many Requests", {"Retry-After": "7"}), Resp(429, b"Too Many Requests"),
+              Resp(200, b"PK\x03\x04zip")]
+    s = portal.PortalSession()
+    monkeypatch.setattr(s.http, "request", lambda *a, **k: tra_ve.pop(0))
+    inv = {"nbmst": "0100000001", "khhdon": "C26TAA", "shdon": 1, "khmshdon": 1}
+    assert s.export_xml(inv).startswith(b"PK")
+    assert 7 in ngu and portal.CHO_KHI_429[1] in ngu
+
+    monkeypatch.setattr(s.http, "request", lambda *a, **k: Resp(429, b"Too Many Requests"))
+    with pytest.raises(portal.PortalError):
+        s.export_xml(inv)
+
+
+def test_tai_chay_ngam_chi_mot_luot(client, monkeypatch):
+    """Trang chờ bị gọi lại nhiều lần trong lúc tải: chỉ một lượt tải chạy, xong thì sang Kết quả."""
+    import threading
+    from thuedn import portal
+    c, appmod = client
+    cho, so_luot = threading.Event(), []
+
+    def mua_vao_cham(self, tu, den):
+        so_luot.append(1)
+        cho.wait(10)
+        yield from FAKE_PURCHASE
+
+    monkeypatch.setattr(portal.PortalSession, "purchase", mua_vao_cham)
+    c.post("/companies", data={"name": "DN A", "mst": "0300000000", "password": "mat-khau"})
+    c.post("/download", data={"mst": "0300000000", "loai": ["vao"], "tu": "2026-06-01", "den": "2026-06-30"})
+    c.get("/captcha")
+    c.post("/captcha", data={"cvalue": "abc12"})
+    appmod.app.testing = False
+    try:
+        assert c.get("/captcha").headers["Location"].endswith("/dang-tai")
+        assert "Đang tải hóa đơn" in c.get("/dang-tai").get_data(as_text=True)
+        c.get("/captcha")
+        c.post("/captcha", data={"cvalue": "abc12"})
+        r = c.post("/download", data={"mst": "0300000000", "loai": ["vao"], "tu": "2026-06-01", "den": "2026-06-30"})
+        assert r.headers["Location"].endswith("/dang-tai")      # không cho bắt đầu lượt mới khi đang tải
+        cho.set()
+        for t in threading.enumerate():
+            if t.name == "tai-hoa-don":
+                t.join(10)
+    finally:
+        appmod.app.testing = True
+    assert len(so_luot) == 1
+    assert c.get("/dang-tai").headers["Location"].endswith("/results")
+    assert len(appmod.store.invoices()) == 2
+
+
 def test_luong_day_du(client):
     c, appmod = client
     c.post("/companies", data={"name": "DN A", "mst": "0300000000", "password": "mat-khau"})
@@ -104,8 +165,14 @@ def test_luong_day_du(client):
     c.post("/captcha", data={"cvalue": "sai"})
     assert appmod.job["pending"] == ["0300000000"]
     c.post("/captcha", data={"cvalue": "abc12"})
+    # bấm "Đăng nhập và tải" 2 lần: lần 2 không còn DN chờ, không được lỗi 500
+    r = c.post("/captcha", data={"cvalue": "abc12"})
+    assert r.status_code == 302
     r = c.get("/captcha")
-    assert r.headers["Location"].endswith("/results")
+    assert r.headers["Location"].endswith("/dang-tai")   # tải chạy ngầm, trang tiến độ tự chuyển
+    assert c.get("/dang-tai").headers["Location"].endswith("/results")
+    # vào lại /captcha khi đã tải xong: không tải lần nữa
+    assert c.get("/captcha").headers["Location"].endswith("/dang-tai")
 
     page = c.get("/results").get_data(as_text=True)
     assert "NCC Hai" in page and "Khách X" in page and "Hóa đơn điều chỉnh" in page
