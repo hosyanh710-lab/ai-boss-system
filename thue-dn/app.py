@@ -102,7 +102,7 @@ def start_download():
     job.clear()
     job.update(msts=msts, loai=loai, tu=tu, den=den, xml="xml" in request.form, drive="drive" in request.form,
                pending=[m for m in msts if not session_for(m).logged_in], log=[], trang_thai="cho_captcha",
-               tien_do="", mtt="mtt" in request.form and "ra" in loai, xml_mtt="xml_mtt" in request.form,
+               tien_do="", mtt="mtt" in request.form, xml_mtt="xml_mtt" in request.form,
                mtt_pending=None, mtt_inv={})
     return redirect(url_for("captcha"))
 
@@ -137,48 +137,61 @@ def _lap_buoc_mtt() -> None:
     if job.get("mtt_pending") is not None:
         return
     job["mtt_pending"] = [
-        {"mst": m, "tu": tu, "den": den, "state": None, "trang": 1, "da_tai": 0, "tong": None, "kieu": "excel"}
+        {"mst": m, "tu": tu, "den": den, "chieu": chieu, "state": None, "trang": 1, "da_tai": 0, "tong": None,
+         "kieu": "excel"}
         for m in job["msts"] if job.get("mtt") and sessions.get(m) and sessions[m].logged_in
-        for tu, den in chia_thang(job["tu"], job["den"])]
+        for tu, den in chia_thang(job["tu"], job["den"])
+        for chieu in ("vao", "ra") if chieu in job["loai"]]
 
 
 def _tra_mtt(cvalue: str) -> None:
     """Tra một trang HĐ máy tính tiền bằng captcha vừa gõ; lưu ngay, XML để lượt tải ngầm."""
     b = job["mtt_pending"][0]
     s = sessions[b["mst"]]
+    chieu = b.get("chieu", "ra")
+    ten_chieu = "bán ra" if chieu == "ra" else "mua vào"
+    ten_dn = store.company_name(b["mst"])
     if b["kieu"] == "excel":
         try:
-            noi_dung = s.sold_mtt_excel(b["tu"], b["den"], job.get("ckey", ""), cvalue)
+            noi_dung = s.mtt_excel(chieu, b["tu"], b["den"], job.get("ckey", ""), cvalue)
         except PortalError as e:
             if "captcha" in str(e).lower() or "xác thực" in str(e).lower() or s.token is None:
                 raise
+            if chieu != "ra":            # mua vào chỉ lấy được bằng Excel: báo lỗi, đi tiếp
+                job["mtt_pending"].pop(0)
+                job["log"].append(f"{ten_dn}: KHÔNG lấy được HĐ mua vào từ máy tính tiền {b['tu']:%m/%Y} — {e}")
+                return
             b["kieu"] = "trang"          # cổng không cho xuất Excel: tra từng trang 50 HĐ như trang web
             raise PortalError(f"Không xuất được Excel ({e}). Chuyển sang tra từng trang 50 hóa đơn, "
                               "gõ captcha mới để tra tiếp.") from e
-        tep = DATA_DIR / "mtt" / b["mst"] / f"ban-ra-mtt_{b['tu']:%Y-%m-%d}_{b['den']:%Y-%m-%d}.xlsx"
+        tien_to = "ban-ra-mtt" if chieu == "ra" else "mua-vao-mtt"
+        tep = DATA_DIR / "mtt" / b["mst"] / f"{tien_to}_{b['tu']:%Y-%m-%d}_{b['den']:%Y-%m-%d}.xlsx"
         tep.parent.mkdir(parents=True, exist_ok=True)
         tep.write_bytes(noi_dung)                          # giữ file gốc của cổng để đối chiếu
         try:
-            dong = excel_cong.doc_danh_sach(noi_dung, b["mst"], store.company_name(b["mst"]))
+            if chieu == "ra":
+                dong = excel_cong.doc_danh_sach(noi_dung, nbmst=b["mst"], nbten=ten_dn)
+            else:
+                dong = excel_cong.doc_danh_sach(noi_dung, nmmst=b["mst"], nmten=ten_dn)
         except Exception as e:
             app.logger.exception("Đọc Excel HĐ máy tính tiền")
             job["mtt_pending"].pop(0)
-            job["log"].append(f"{store.company_name(b['mst'])}: đã tải Excel HĐ máy tính tiền {b['tu']:%m/%Y} "
+            job["log"].append(f"{ten_dn}: đã tải Excel HĐ {ten_chieu} máy tính tiền {b['tu']:%m/%Y} "
                               f"nhưng chưa đọc được ({e}). File lưu ở {tep}")
             return
         for row in dong:
             inv = normalize(row)
-            store.save_invoice(b["mst"], "ra", inv)
-            job["mtt_inv"].setdefault(b["mst"], []).append(inv)
+            store.save_invoice(b["mst"], chieu, inv)
+            job["mtt_inv"].setdefault(b["mst"], []).append((chieu, inv))
         job["mtt_pending"].pop(0)
-        job["log"].append(f"{store.company_name(b['mst'])}: {len(dong)} hóa đơn bán ra từ máy tính tiền "
+        job["log"].append(f"{ten_dn}: {len(dong)} hóa đơn {ten_chieu} từ máy tính tiền "
                           f"({b['tu']:%m/%Y}, lấy bằng Excel của cổng, 1 captcha)")
         return
     rows, nxt, tong = s.sold_mtt_page(b["tu"], b["den"], b["state"], job.get("ckey", ""), cvalue)
     for row in rows:
         inv = normalize(row)
         store.save_invoice(b["mst"], "ra", inv)
-        job["mtt_inv"].setdefault(b["mst"], []).append(inv)
+        job["mtt_inv"].setdefault(b["mst"], []).append(("ra", inv))
     b.update(da_tai=b["da_tai"] + len(rows), tong=tong)
     if nxt and rows:
         b.update(state=nxt, trang=b["trang"] + 1)
@@ -197,7 +210,8 @@ def submit_captcha():
             b = job["mtt_pending"][0]
             if "bo_qua" in request.form:
                 job["mtt_pending"].pop(0)
-                job["log"].append(f"{store.company_name(b['mst'])}: bỏ qua HĐ máy tính tiền {b['tu']:%m/%Y}")
+                job["log"].append(f"{store.company_name(b['mst'])}: bỏ qua HĐ "
+                              f"{'bán ra' if b.get('chieu', 'ra') == 'ra' else 'mua vào'} máy tính tiền {b['tu']:%m/%Y}")
             else:
                 try:
                     _tra_mtt(request.form.get("cvalue", "").strip())
@@ -288,8 +302,8 @@ def run_downloads() -> None:
                             khong_co_xml += kq is None
                         job["tien_do"] = f"{name}: {dem} hóa đơn" + (" (kèm XML)" if job["xml"] else "")
             mtt = job.get("mtt_inv", {}).get(mst, []) if job.get("xml_mtt") else []
-            for i, inv in enumerate(mtt, 1):
-                kq = _save_xml(s, mst, "ra", inv, xml_dir)
+            for i, (chieu, inv) in enumerate(mtt, 1):
+                kq = _save_xml(s, mst, chieu, inv, xml_dir)
                 thieu_xml += kq is False
                 khong_co_xml += kq is None
                 job["tien_do"] = f"{name}: XML hóa đơn máy tính tiền {i}/{len(mtt)}"

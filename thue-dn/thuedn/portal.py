@@ -45,6 +45,9 @@ URL_SOLD_MTT = BASE + "/sco-query/invoices/sold"
 # Tra từng trang thì cổng chỉ trả 50 HĐ/trang dù xin nhiều hơn (đo 22/11/2026: 1824 HĐ = 37 captcha).
 # Nút "Xuất hóa đơn" ra Excel lấy cả khoảng ngày bằng MỘT captcha.
 URL_EXCEL_SOLD_MTT = BASE + "/sco-query/invoices/export-excel-sold"
+URL_EXCEL_MTT = BASE + "/sco-query/invoices/export-excel"        # mua vào: kèm type=purchase như trang web
+# Mua vào từ máy tính tiền có "Kết quả kiểm tra" = 8 (CQT đã nhận HĐ có mã khởi tạo từ máy tính tiền)
+TTXLY_MTT = 8
 URL_XML_MTT = BASE + "/sco-query/invoices/export-xml"
 END_POINT = "/tra-cuu/tra-cuu-hoa-don"
 
@@ -209,8 +212,19 @@ class PortalSession:
 
     def sold_mtt_excel(self, tu: date, den: date, ckey: str, cvalue: str) -> bytes:
         """File Excel danh sách HĐ bán ra từ máy tính tiền trong khoảng ngày (một captcha)."""
-        params = {"sort": "tdlap:desc", "search": self._search(tu, den), "ckey": ckey, "cvalue": cvalue}
-        r = self._send("GET", URL_EXCEL_SOLD_MTT, action="Xuất hóa đơn (hóa đơn máy tính tiền bán ra)",
+        return self.mtt_excel("ra", tu, den, ckey, cvalue)
+
+    def mtt_excel(self, chieu: str, tu: date, den: date, ckey: str, cvalue: str) -> bytes:
+        """File Excel HĐ máy tính tiền ('ra' bán ra / 'vao' mua vào) trong khoảng ngày (một captcha)."""
+        if chieu == "ra":
+            url, ten = URL_EXCEL_SOLD_MTT, "bán ra"
+            params = {"sort": "tdlap:desc", "search": self._search(tu, den)}
+        else:
+            url, ten = URL_EXCEL_MTT, "mua vào"
+            params = {"sort": "tdlap:desc", "search": self._search(tu, den, f"ttxly=={TTXLY_MTT}"),
+                      "type": "purchase"}
+        params.update(ckey=ckey, cvalue=cvalue)
+        r = self._send("GET", url, action=f"Xuất hóa đơn (hóa đơn máy tính tiền {ten})",
                        extra_headers={"ckey": ckey, "cvalue": cvalue}, params=params, timeout_dai=True)
         if r.status_code == 401:
             self.token = None

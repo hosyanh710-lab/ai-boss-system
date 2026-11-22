@@ -145,10 +145,10 @@ def test_hoa_don_may_tinh_tien(client, monkeypatch):
 
     monkeypatch.setattr(portal.PortalSession, "sold_mtt_page", trang_mtt)
 
-    def excel_loi(self, tu, den, ckey, cvalue):
+    def excel_loi(self, chieu, tu, den, ckey, cvalue):
         raise portal.PortalError("Không xuất được Excel (mã 500)")
 
-    monkeypatch.setattr(portal.PortalSession, "sold_mtt_excel", excel_loi)
+    monkeypatch.setattr(portal.PortalSession, "mtt_excel", excel_loi)
     xml_goi = []
     monkeypatch.setattr(portal.PortalSession, "export_xml", lambda self, inv: xml_goi.append(inv["shdon"]) or b"PK")
     c.post("/companies", data={"name": "DN A", "mst": "0300000000", "password": "mat-khau"})
@@ -199,8 +199,8 @@ def test_mtt_lay_bang_excel_mot_captcha(client, monkeypatch):
          "Hóa đơn đã bị điều chỉnh"],
     ])
     goi = []
-    monkeypatch.setattr(portal.PortalSession, "sold_mtt_excel",
-                        lambda self, tu, den, ckey, cvalue: goi.append(cvalue) or tep)
+    monkeypatch.setattr(portal.PortalSession, "mtt_excel",
+                        lambda self, chieu, tu, den, ckey, cvalue: goi.append(cvalue) or tep)
     c.post("/companies", data={"name": "DN A", "mst": "0300000000", "password": "mat-khau"})
     c.post("/download", data={"mst": "0300000000", "loai": ["ra"], "tu": "2026-06-01", "den": "2026-06-30",
                               "mtt": "on"})
@@ -215,6 +215,67 @@ def test_mtt_lay_bang_excel_mot_captcha(client, monkeypatch):
     assert hd["123"]["tgtttbso"] == 110000 and hd["123"]["tdlap"] == "2026-06-15" and hd["123"]["tthai"] == 1
     assert hd["124"]["nmmst"] == "0312345678" and hd["124"]["tthai"] == 5
     assert (Path(appmod.DATA_DIR) / "mtt" / "0300000000" / "ban-ra-mtt_2026-06-01_2026-06-30.xlsx").exists()
+
+
+TIEU_DE_THAT = ["STT", "Ký hiệu mẫu số", "Ký hiệu hóa đơn", "Số hóa đơn", "Ngày lập",
+                "MST người bán/MST người xuất hàng", "Tên người bán/Tên người xuất hàng", "Địa chỉ người bán",
+                "MST người mua/MST người nhận hàng", "Tên người mua/Tên người nhận hàng", "Căn cước công dân",
+                "Tổng tiền chưa thuế", "Tổng tiền thuế", "Tổng tiền chiết khấu thương mại", "Tổng tiền thanh toán",
+                "Trạng thái hóa đơn", "Kết quả kiểm tra hóa đơn"]   # đúng file cổng xuất ngày 22/11/2026
+
+
+def _excel_that(dong):
+    from openpyxl import Workbook
+    wb = Workbook()
+    ws = wb.active
+    for r in ([None], [None], ["DANH SÁCH HÓA ĐƠN MÁY TÍNH TIỀN"], ["Từ ngày 01/06/2026 đến ngày 30/06/2026"], [None],
+              TIEU_DE_THAT, *dong):
+        ws.append(r)
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def test_mtt_mua_vao_va_ban_ra(client, monkeypatch):
+    """Mua vào có 3 loại: có mã (ttxly 5), không mã (6), từ máy tính tiền (Excel của cổng, đọc người bán)."""
+    from thuedn import portal
+    c, appmod = client
+    ten_cot_nmmst = TIEU_DE_THAT.index("MST người mua/MST người nhận hàng")
+    mua = _excel_that([[1.0, "1", "C26MBH", "501", "12/06/2026", "0101234567", "Siêu thị Y", "HN", "0300000000",
+                        "DN A", None, 50000.0, 4000.0, 0.0, 54000.0, "Hóa đơn mới", "Cục Thuế đã nhận"]])
+    ban = _excel_that([[1.0, "1", "C26MQM", "10000", "21/06/2026", "0300000000", "DN A", "HCM", None,
+                        "Bán hàng cho người tiêu dùng", None, 100.0, 10.0, 0.0, 110.0, "Hóa đơn mới", "x"]])
+    assert ten_cot_nmmst == 8
+    goi = []
+    monkeypatch.setattr(portal.PortalSession, "mtt_excel",
+                        lambda self, chieu, tu, den, ckey, cvalue: goi.append(chieu) or (mua if chieu == "vao" else ban))
+    c.post("/companies", data={"name": "DN A", "mst": "0300000000", "password": "mat-khau"})
+    c.post("/download", data={"mst": "0300000000", "loai": ["vao", "ra"], "tu": "2026-06-01", "den": "2026-06-30",
+                              "mtt": "on"})
+    c.get("/captcha")
+    c.post("/captcha", data={"cvalue": "abc12"})
+    assert "mua vào từ máy tính tiền" in c.get("/captcha").get_data(as_text=True)
+    c.post("/captcha", data={"cvalue": "m1"})
+    assert "bán ra từ máy tính tiền" in c.get("/captcha").get_data(as_text=True)
+    c.post("/captcha", data={"cvalue": "m2"})
+    assert goi == ["vao", "ra"]
+    c.get("/captcha")
+    hd = {(r["direction"], r["khhdon"]): r for r in appmod.store.invoices()}
+    v = hd[("vao", "C26MBH")]
+    assert v["nbmst"] == "0101234567" and v["nbten"] == "Siêu thị Y" and v["nmmst"] == "0300000000"
+    assert hd[("ra", "C26MQM")]["nbmst"] == "0300000000"
+    log = c.get("/results").get_data(as_text=True)
+    assert "1 hóa đơn mua vào từ máy tính tiền" in log and "1 hóa đơn bán ra từ máy tính tiền" in log
+
+
+def test_doc_excel_mtt_that():
+    """File Excel thật của cổng (lưu ở data/mtt) nếu có trên máy: đọc đủ dòng."""
+    from thuedn import excel_cong
+    tep = Path(__file__).resolve().parents[1] / "data" / "mtt" / "1702102519" / "ban-ra-mtt_2026-10-01_2026-10-31.xlsx"
+    if not tep.exists():
+        pytest.skip("không có file Excel thật trên máy này")
+    dong = excel_cong.doc_danh_sach(tep.read_bytes(), nbmst="1702102519")
+    assert len(dong) == 1824 and all(d["nbmst"] == "1702102519" for d in dong)
 
 
 def test_mtt_cong_khong_nhan_trang_lon(monkeypatch):

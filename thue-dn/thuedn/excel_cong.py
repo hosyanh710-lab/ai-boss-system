@@ -37,6 +37,14 @@ def _cot(ten: str) -> str | None:
         return "shdon"
     if "ngay lap" in t:
         return "tdlap"
+    if "nguoi ban" in t or "nguoi xuat hang" in t:
+        if "dia chi" in t:
+            return None
+        if "mst" in t or "ma so thue" in t:
+            return "nbmst"
+        if "ten" in t:
+            return "nbten"
+        return None
     if "nguoi mua" in t or "khach hang" in t:
         if "mst" in t or "ma so thue" in t:
             return "nmmst"
@@ -108,8 +116,10 @@ def tthai_tu_chu(chu) -> int | None:
     return None
 
 
-def doc_danh_sach(content: bytes, nbmst: str, nbten: str | None) -> list[dict]:
-    """Trả về các dòng giống dữ liệu cổng trả qua API (để dùng chung portal.normalize)."""
+def doc_danh_sach(content: bytes, nbmst: str | None = None, nbten: str | None = None,
+                  nmmst: str | None = None, nmten: str | None = None) -> list[dict]:
+    """Trả về các dòng giống dữ liệu cổng trả qua API (để dùng chung portal.normalize).
+    nbmst/nbten (bán ra) hoặc nmmst/nmten (mua vào): dùng khi file không có cột tương ứng."""
     # Không dùng read_only: file của cổng không ghi kích thước bảng, read_only đọc ra 1 ô trống
     ws = load_workbook(io.BytesIO(content), data_only=True).active
     rows = [list(r) for r in ws.iter_rows(values_only=True)]
@@ -152,8 +162,8 @@ def doc_danh_sach(content: bytes, nbmst: str, nbten: str | None) -> list[dict]:
             ms, kh = kh[0], kh[1:]
         ngay = _ngay(lay.get("tdlap"))
         ket_qua.append({
-            "nbmst": nbmst, "nbten": nbten,
-            "nmmst": _mst(lay.get("nmmst")), "nmten": lay.get("nmten"),
+            "nbmst": _mst(lay.get("nbmst")) or nbmst, "nbten": lay.get("nbten") or nbten,
+            "nmmst": _mst(lay.get("nmmst")) or nmmst, "nmten": lay.get("nmten") or nmten,
             "khmshdon": int(ms) if ms and ms.isdigit() else (ms or 1), "khhdon": kh, "shdon": int(so),
             "tdlap": f"{ngay}T00:00:00" if ngay else None,
             "tgtcthue": _so(lay.get("tgtcthue")), "tgtthue": _so(lay.get("tgtthue")),

@@ -5,7 +5,7 @@
   <h1>Nhập captcha</h1>
   {% if buoc %}
   {% if buoc.kieu == "excel" %}
-  <p><b>{{ name }}</b><br>Lấy <b>hóa đơn bán ra từ máy tính tiền</b> tháng {{ buoc.tu.strftime('%m/%Y') }}
+  <p><b>{{ name }}</b><br>Lấy <b>hóa đơn {{ "mua vào" if buoc.chieu == "vao" else "bán ra" }} từ máy tính tiền</b> tháng {{ buoc.tu.strftime('%m/%Y') }}
     bằng file Excel của cổng thuế: <b>một captcha cho cả tháng</b>.<br>
     <span class="muted">Cổng có thể mất vài chục giây để tạo file, bấm một lần rồi chờ.</span></p>
   {% else %}
