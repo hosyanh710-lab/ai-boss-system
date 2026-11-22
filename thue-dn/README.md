@@ -97,6 +97,16 @@ Chống nhầm công ty:
    - Sheet chi tiết hàng hóa có đủ mã hàng, số lượng, đơn giá.
 4. Ổn rồi mới thêm 9 công ty còn lại.
 
+## Nhiều máy dùng chung một bộ số liệu (mạng văn phòng / cùng wifi)
+
+Chọn **một máy làm máy chính** (nên là máy luôn bật, ví dụ máy Windows của Quản trị); các máy khác chỉ mở trình duyệt, không cài gì.
+
+1. Trên máy chính (Windows): bấm đúp **`run_mang_noi_bo.bat`** (Mac: `.venv/bin/python app.py --mang-noi-bo`). Windows hỏi tường lửa: chọn **Private networks** → **Allow**.
+2. Cửa sổ hiện địa chỉ, ví dụ `http://192.168.1.10:5000`. Máy khác cùng mạng mở địa chỉ đó và **đăng nhập** bằng tài khoản của mình.
+3. **Kết nối Google Drive** cho các công ty phải làm **trên chính máy chính** (mở `http://127.0.0.1:5000`).
+4. Chỉ một bộ dữ liệu (thư mục `data/` trên máy chính) — không cài thêm bản thứ hai trên máy khác để tránh lệch số liệu.
+5. Hai máy ở hai nơi khác mạng: cần máy chủ VPS (xem giai đoạn 2).
+
 ## Chạy trên Mac
 
 Mở **Terminal** trong thư mục `thue-dn` và gõ `bash run.sh`. Lần đầu tự cài thư viện (cần Python 3: python.org), sau đó trình duyệt mở `http://127.0.0.1:5000`. Lệnh tạo tài khoản trên Mac: `.venv/bin/python tao_tai_khoan.py <email> admin "Họ tên"`.

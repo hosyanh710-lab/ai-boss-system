@@ -998,3 +998,26 @@ def test_lenh_tao_tai_khoan(tmp_path):
     tao_hoac_cap_nhat(st, "qt@cty.vn", "nguoi_dung", "", None)
     u = st.user_by_email("qt@cty.vn")
     assert u["vai_tro"] == "nguoi_dung" and u["hoat_dong"] == 1 and check_password_hash(u["pw_hash"], "Abc12345")
+
+
+def test_ket_noi_drive_chi_tren_may_chinh(client, google):
+    c, appmod = client
+    c.post("/companies", data={"name": "DN A", "mst": "0300000001", "password": "x", "email": "a@gmail.com"})
+    # mở từ máy khác trong mạng (địa chỉ IP): đăng nhập được, nhưng không cho bắt đầu kết nối Google
+    lan = "http://192.168.1.10:5000"
+    c.post("/dang-nhap", data={"email": "admin@test.vn", "mat_khau": MAT_KHAU}, base_url=lan)
+    assert c.get("/results", base_url=lan).status_code == 200
+    r = c.post("/google/ket-noi/0300000001", base_url=lan)
+    assert r.headers["Location"] == "/"
+    assert "phải làm trên máy chính" in c.get("/", base_url=lan).get_data(as_text=True)
+    # trên chính máy đó (127.0.0.1) thì được
+    may_chinh = "http://127.0.0.1:5000"
+    c.post("/dang-nhap", data={"email": "admin@test.vn", "mat_khau": MAT_KHAU}, base_url=may_chinh)
+    r = c.post("/google/ket-noi/0300000001", base_url=may_chinh)
+    assert r.headers["Location"].startswith("https://accounts.google.com/")
+
+
+def test_ip_noi_bo_khong_loi():
+    import importlib
+    ip = importlib.import_module("app").ip_noi_bo() if "app" in sys.modules else None
+    assert ip is None or ip.count(".") == 3

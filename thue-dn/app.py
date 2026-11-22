@@ -531,6 +531,10 @@ def cai_dat():
 
 @app.post("/google/ket-noi/<mst>")
 def google_ket_noi(mst):
+    if request.host.split(":")[0] not in ("127.0.0.1", "localhost"):
+        # Google chỉ trả kết quả về 127.0.0.1 của máy đang mở trình duyệt
+        flash("Kết nối Google Drive phải làm trên máy chính (máy đang chạy công cụ), mở http://127.0.0.1:5000", "error")
+        return redirect(url_for("index"))
     c = store.company(mst)
     if c is None or not c["email"]:
         flash("Khai email Google cho công ty trước (nhập lại công ty với ô Email)", "error")
@@ -797,6 +801,27 @@ def xoa_tai_khoan(uid):
     return redirect(url_for("tai_khoan"))
 
 
+def ip_noi_bo() -> str | None:
+    """Địa chỉ IP của máy này trong mạng văn phòng / wifi (không gửi dữ liệu ra ngoài)."""
+    import socket
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))
+            return s.getsockname()[0]
+    except OSError:
+        return None
+
+
 if __name__ == "__main__":
-    print("Mở trình duyệt vào: http://127.0.0.1:5000")
-    app.run(host="127.0.0.1", port=5000, debug=False)
+    import sys
+    if "--mang-noi-bo" in sys.argv or os.environ.get("THUEDN_LAN") == "1":
+        # Máy chính: cho các máy khác cùng mạng mở bằng trình duyệt (vẫn phải đăng nhập)
+        ip = ip_noi_bo()
+        print("CHẾ ĐỘ MẠNG NỘI BỘ: máy này là máy chính.")
+        print("  Trên máy này mở:      http://127.0.0.1:5000")
+        print(f"  Máy khác cùng mạng:   http://{ip or '<IP máy này>'}:5000")
+        print("  Kết nối Google Drive phải làm trên chính máy này.")
+        app.run(host="0.0.0.0", port=5000, debug=False, threaded=True)
+    else:
+        print("Mở trình duyệt vào: http://127.0.0.1:5000")
+        app.run(host="127.0.0.1", port=5000, debug=False)
